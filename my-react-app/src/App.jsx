@@ -1,19 +1,26 @@
-import React from "react" ;
-import BookingForm from "./components/BookingForm";
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Login from './pages/Login';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminNotification from './pages/AdminNotification';
+import AdminViewReports from './pages/AdminViewReports';
+import BookingForm from './pages/BookingForm';
 
-
-function App() {
-
-
+const App = () => {
   return (
-    <div className="min-h-screen bg-green-100 flex items-center justify-center  ">
-   
-     <BookingForm />
-        
+    <div className="min-h-screen bg-green-100 flex items-center justify-center">
+      {/* Routes for different pages */}
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/AdminNotification" element={<AdminNotification />} />
+        <Route path="/admin-reports" element={<AdminViewReports />} />
+      </Routes>
 
-     </div>
-    
+      {/* Booking Form Component */}
+      <BookingForm />
+    </div>
   );
-}
+};
 
 export default App;
