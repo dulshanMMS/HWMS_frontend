@@ -3,12 +3,12 @@ import { FaHome, FaBell, FaUser, FaCog, FaCalendarAlt } from "react-icons/fa";
 import useAuthGuard from "../components/AuthGuard";
 
 const UserDashboard = () => {
-  useAuthGuard("admin");
+  useAuthGuard("user");
 
   return (
     <div className="dashboard-container">
       <div className="sidebar">
-        <h2 className="logo">ADMIN DASHBOARD</h2>
+        <h2 className="logo">USER DASHBOARD</h2>
         <nav>
           <ul>
             <li className="active"><FaHome /> Dashboard</li>
