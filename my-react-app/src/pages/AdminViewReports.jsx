@@ -10,16 +10,14 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  PieChart,
-  Pie,
-  Cell,
   ResponsiveContainer,
   LineChart,
   Line
 } from 'recharts';
-import { FaCalendar } from 'react-icons/fa';
+import { FaCalendar, FaSearch, FaUser } from 'react-icons/fa';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
+import { PROGRAM_COLORS } from '../constants/colors';
 
 const AdminViewReports = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
@@ -27,37 +25,44 @@ const AdminViewReports = () => {
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState([null, null]);
   const [startDate, endDate] = dateRange;
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+  const [userId, setUserId] = useState('');
+  const [userBookings, setUserBookings] = useState(null);
+  const [userLoading, setUserLoading] = useState(false);
+  const [userError, setUserError] = useState(null);
+  const [bookings, setBookings] = useState([]);
 
   useEffect(() => {
-    console.log('Fetching analytics data...');
     fetchAnalyticsData();
+    fetchBookings();
   }, [dateRange]);
 
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true);
-      console.log('Making API request to /reports/analytics');
       const token = localStorage.getItem('token');
-      console.log('Token exists:', !!token);
+      console.log('Fetching analytics data...', {
+        token: !!token,
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString()
+      });
       
-      const response = await api.get('/reports/analytics', {
+      const response = await api.get('/api/reports/analytics', {
         params: {
           startDate: startDate?.toISOString(),
           endDate: endDate?.toISOString()
         }
       });
       
-      console.log('API Response:', response.data);
+      console.log('Received analytics data:', response.data);
       setAnalyticsData(response.data);
       setError(null);
     } catch (err) {
-      console.error('Detailed error:', {
+      console.error('Error details:', {
         message: err.message,
         status: err.response?.status,
         statusText: err.response?.statusText,
-        data: err.response?.data
+        data: err.response?.data,
+        config: err.config
       });
       setError(`Failed to fetch analytics data: ${err.response?.data?.message || err.message}`);
     } finally {
@@ -65,37 +70,143 @@ const AdminViewReports = () => {
     }
   };
 
-  // Transform data for the daily trends chart
+  const fetchUserBookings = async () => {
+    if (!userId.trim()) {
+      setUserError('Please enter a user ID');
+      return;
+    }
+
+    try {
+      setUserLoading(true);
+      setUserError(null);
+      const response = await api.get(`/api/reports/user-bookings/${userId}`);
+      setUserBookings(response.data);
+    } catch (err) {
+      console.error('Error fetching user bookings:', err);
+      setUserError(`Failed to fetch user bookings: ${err.response?.data?.message || err.message}`);
+      setUserBookings(null);
+    } finally {
+      setUserLoading(false);
+    }
+  };
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      console.log('Attempting to fetch bookings...');
+      const response = await api.get('/api/reports/recent');
+      console.log('Response received:', response);
+      setBookings(response.data);
+    } catch (error) {
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response,
+        status: error.response?.status
+      });
+      setError('Failed to fetch recent bookings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const transformDailyTrends = () => {
-    if (!analyticsData?.dailyTrends) return [];
-    return analyticsData.dailyTrends.map(item => ({
-      date: item._id.date,
-      type: item._id.type,
-      bookings: item.count,
-      confirmed: item.confirmed,
-      cancelled: item.cancelled
+    if (!analyticsData?.dailyTrends) {
+      console.log('No daily trends data available');
+      return [];
+    }
+    const transformed = analyticsData.dailyTrends.map(item => {
+      const date = item._id.date ? new Date(item._id.date) : new Date(); // Default to current date if invalid
+      return {
+        date: date.toLocaleDateString(), // Format the date correctly
+        seats: item.seatsCount || 0,
+        parking: item.parkingCount || 0,
+        total: (item.seatsCount || 0) + (item.parkingCount || 0)
+      };
+    });
+    console.log('Transformed daily trends:', transformed);
+    return transformed;
+  };
+
+  const transformMonthlyStats = () => {
+    if (!analyticsData?.monthlyStats) return [];
+    return analyticsData.monthlyStats.map(item => {
+      const month = item._id.month ? new Date(item._id.month) : new Date(); // Default to current month if invalid
+      return {
+        month: month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        seats: item.seatsCount || 0,
+        parking: item.parkingCount || 0,
+        total: (item.seatsCount || 0) + (item.parkingCount || 0)
+      };
+    });
+  };
+
+  const transformProgramBookings = (analyticsData) => {
+    if (!analyticsData?.programBookings?.length) return [];
+    
+    return analyticsData.programBookings.map(booking => ({
+        ...booking,
+        month: new Date(booking.month).toLocaleDateString('en-US', { 
+            year: 'numeric',
+            month: 'short'
+        })
     }));
   };
 
-  // Transform data for the status distribution pie chart
-  const transformStatusDistribution = () => {
-    if (!analyticsData?.statusDistribution) return [];
-    return analyticsData.statusDistribution.map(item => ({
-      name: item._id,
-      value: item.count,
-      parking: item.parkingCount,
-      seats: item.seatsCount
-    }));
+  const renderUserBookings = () => {
+    if (userLoading) return <div className="text-center">Loading user bookings...</div>;
+    if (userError) return <div className="text-red-500">{userError}</div>;
+    if (!userBookings) return null;
+
+    return (
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold mb-3">Booking History</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border rounded-lg">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {userBookings.map((booking, index) => (
+                <tr key={index}>
+                  <td className="px-6 py-4 whitespace-nowrap">{booking.type}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{new Date(booking.date).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                      booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {booking.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{booking.details}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
   };
 
-  // Transform data for peak hours chart
-  const transformPeakHours = () => {
-    if (!analyticsData?.peakHours) return [];
-    return analyticsData.peakHours.map(item => ({
-      hour: item._id.hour,
-      type: item._id.type,
-      bookings: item.count
-    }));
+  const renderAvatar = (userId, program) => {
+    const backgroundColor = PROGRAM_COLORS[program] || '#9E9E9E';
+    
+    return (
+      <div className="h-10 w-10 flex-shrink-0">
+        <div 
+          className="h-10 w-10 rounded-full flex items-center justify-center text-white"
+          style={{ backgroundColor }}
+        >
+          <FaUser className="h-5 w-5" />
+        </div>
+      </div>
+    );
   };
 
   const renderContent = () => {
@@ -119,6 +230,7 @@ const AdminViewReports = () => {
     return (
       <div className="max-w-7xl mx-auto p-4">
         <div className="bg-white rounded-lg shadow-lg p-6">
+          {/* Header with Date Range Picker */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
             <h1 className="text-2xl font-semibold text-gray-800">Analytics & Reports</h1>
             <div className="flex items-center gap-2">
@@ -134,6 +246,7 @@ const AdminViewReports = () => {
             </div>
           </div>
 
+          {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold text-blue-700">Total Bookings</h3>
@@ -155,67 +268,203 @@ const AdminViewReports = () => {
             </div>
           </div>
 
+          {/* Charts Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Daily Trends */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <h2 className="text-lg font-semibold mb-4 text-gray-700">Daily Booking Trends</h2>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={transformDailyTrends()}>
+                  <BarChart data={transformDailyTrends()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="confirmed" stroke="#0088FE" name="Confirmed" />
-                    <Line type="monotone" dataKey="cancelled" stroke="#FF8042" name="Cancelled" />
+                    <Bar dataKey="seats" fill={PROGRAM_COLORS.SENG} name="Seats" />
+                    <Bar dataKey="parking" fill={PROGRAM_COLORS.BM} name="Parking" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Monthly Stats */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h2 className="text-lg font-semibold mb-4 text-gray-700">Monthly Statistics</h2>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={transformMonthlyStats()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="seats" 
+                      stroke={PROGRAM_COLORS.SENG} 
+                      name="Seats" 
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="parking" 
+                      stroke={PROGRAM_COLORS.BM} 
+                      name="Parking" 
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="total" 
+                      stroke="#FF0000"
+                      name="Total"
+                      strokeWidth={2}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Status Distribution */}
+            {/* Monthly Desk Bookings By Program */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h2 className="text-lg font-semibold mb-4 text-gray-700">Booking Status Distribution</h2>
+              <h2 className="text-xl font-semibold mb-4">Monthly Desk Bookings By Program</h2>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={transformStatusDistribution()}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      label
-                    >
-                      {transformStatusDistribution().map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
+                  <BarChart data={transformProgramBookings(analyticsData)}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
                     <Tooltip />
                     <Legend />
-                  </PieChart>
+                    <Bar 
+                      dataKey="SENG" 
+                      stackId="a" 
+                      fill={PROGRAM_COLORS.SENG} 
+                      name="Software Engineering" 
+                    />
+                    <Bar 
+                      dataKey="BM" 
+                      stackId="a" 
+                      fill={PROGRAM_COLORS.BM} 
+                      name="Business Management" 
+                    />
+                    <Bar 
+                      dataKey="IT" 
+                      stackId="a" 
+                      fill={PROGRAM_COLORS.IT} 
+                      name="Information Technology" 
+                    />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
           </div>
-
-          {/* Peak Hours */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold mb-4 text-gray-700">Peak Hours Analysis</h2>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={transformPeakHours()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="hour" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="bookings" fill="#0088FE" name="Bookings" />
-                </BarChart>
-              </ResponsiveContainer>
+          
+          {/* Recent Bookings Table */}
+          <div className="bg-white rounded-lg shadow-lg mt-6 overflow-hidden">
+            <div className="p-4 border-b border-gray-200 bg-gray-50">
+              <h2 className="text-xl font-semibold text-gray-800">Recent Bookings</h2>
             </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User ID
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Program
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {bookings && bookings.length > 0 ? (
+                    bookings.map((booking, index) => (
+                      <tr key={booking._id || index} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {booking.userId}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            {renderAvatar(booking.userId, booking.program)}
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {booking.userId}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {booking.program}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div 
+                              className="w-3 h-3 rounded-full mr-2"
+                              style={{ backgroundColor: PROGRAM_COLORS[booking.program] }}
+                            ></div>
+                            <span className="text-sm text-gray-900">{booking.program}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                            ${booking.status === 'confirmed' 
+                              ? 'bg-green-100 text-green-800'
+                              : booking.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'}`}>
+                            {booking.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(booking.date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                        No bookings found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* User Booking Lookup Section */}
+          <div className="bg-gray-50 p-4 rounded-lg mt-6">
+            <h2 className="text-lg font-semibold mb-4 text-gray-700">User Booking Lookup</h2>
+            <div className="flex gap-4 items-center">
+              <input
+                type="text"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                placeholder="Enter User ID"
+                className="flex-1 max-w-md border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <button
+                onClick={fetchUserBookings}
+                disabled={userLoading}
+                className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50"
+              >
+                <FaSearch className="inline mr-2" />
+                Search
+              </button>
+            </div>
+            {renderUserBookings()}
           </div>
         </div>
       </div>
@@ -224,17 +473,9 @@ const AdminViewReports = () => {
 
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-gray-50 py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-            <AdminProfile />
-          </div>
-          {renderContent()}
-        </div>
-      </div>
+      {renderContent()}
     </AdminLayout>
   );
 };
 
-export default AdminViewReports; 
+export default AdminViewReports;
