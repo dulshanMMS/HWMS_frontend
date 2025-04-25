@@ -18,12 +18,14 @@ import { FaCalendar, FaSearch, FaUser } from 'react-icons/fa';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { PROGRAM_COLORS } from '../constants/colors';
+import EventCalendar from '../components/EventCalendar';
 
 const AdminViewReports = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState([null, null]);
+  const [appliedDateRange, setAppliedDateRange] = useState([null, null]);
   const [startDate, endDate] = dateRange;
   const [userId, setUserId] = useState('');
   const [userBookings, setUserBookings] = useState(null);
@@ -34,22 +36,30 @@ const AdminViewReports = () => {
   useEffect(() => {
     fetchAnalyticsData();
     fetchBookings();
-  }, [dateRange]);
+  }, [appliedDateRange]);
+
+  const handleApplyDateRange = () => {
+    if (startDate && endDate) {
+      setAppliedDateRange([startDate, endDate]);
+    }
+  };
 
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      const [appliedStart, appliedEnd] = appliedDateRange;
+      
       console.log('Fetching analytics data...', {
         token: !!token,
-        startDate: startDate?.toISOString(),
-        endDate: endDate?.toISOString()
+        startDate: appliedStart?.toISOString(),
+        endDate: appliedEnd?.toISOString()
       });
       
       const response = await api.get('/api/reports/analytics', {
         params: {
-          startDate: startDate?.toISOString(),
-          endDate: endDate?.toISOString()
+          startDate: appliedStart?.toISOString(),
+          endDate: appliedEnd?.toISOString()
         }
       });
       
@@ -152,6 +162,15 @@ const AdminViewReports = () => {
     }));
   };
 
+  const transformDeskUsage = () => {
+    if (!analyticsData?.deskUsage) return [];
+    return analyticsData.deskUsage.map(item => ({
+      floor: item.floor,
+      used: item.used,
+      unused: item.unused
+    }));
+  };
+
   const renderUserBookings = () => {
     if (userLoading) return <div className="text-center">Loading user bookings...</div>;
     if (userError) return <div className="text-red-500">{userError}</div>;
@@ -233,16 +252,45 @@ const AdminViewReports = () => {
           {/* Header with Date Range Picker */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
             <h1 className="text-2xl font-semibold text-gray-800">Analytics & Reports</h1>
-            <div className="flex items-center gap-2">
-              <FaCalendar className="text-gray-500" />
-              <DatePicker
-                selectsRange={true}
-                startDate={startDate}
-                endDate={endDate}
-                onChange={(update) => setDateRange(update)}
-                className="border rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholderText="Select date range"
-              />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <FaCalendar className="text-gray-500" />
+                <DatePicker
+                  selected={startDate}
+                  onChange={(date) => setDateRange([date, endDate])}
+                  selectsStart
+                  startDate={startDate}
+                  endDate={endDate}
+                  className="border rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholderText="Start date"
+                  dateFormat="MMM dd, yyyy"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <FaCalendar className="text-gray-500" />
+                <DatePicker
+                  selected={endDate}
+                  onChange={(date) => setDateRange([startDate, date])}
+                  selectsEnd
+                  startDate={startDate}
+                  endDate={endDate}
+                  minDate={startDate}
+                  className="border rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholderText="End date"
+                  dateFormat="MMM dd, yyyy"
+                />
+              </div>
+              <button
+                onClick={handleApplyDateRange}
+                disabled={!startDate || !endDate}
+                className={`px-4 py-2 rounded-md text-white ${
+                  !startDate || !endDate 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-primary hover:bg-primary-dark'
+                } focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2`}
+              >
+                Apply Date Range
+              </button>
             </div>
           </div>
 
@@ -323,6 +371,28 @@ const AdminViewReports = () => {
               </div>
             </div>
 
+            {/* Desk Usage Statistics */}
+            <div className="bg-gray-50 p-4 rounded-lg col-span-2">
+              <h2 className="text-lg font-semibold mb-4 text-gray-700">Desk Usage by Floor</h2>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={transformDeskUsage()}
+                    layout="vertical"
+                    margin={{ top: 5, right: 30, left: 50, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" unit="%" domain={[0, 100]} />
+                    <YAxis dataKey="floor" type="category" />
+                    <Tooltip formatter={(value) => `${value.toFixed(2)}%`} />
+                    <Legend />
+                    <Bar dataKey="used" fill="#8884d8" name="Used" stackId="a" />
+                    <Bar dataKey="unused" fill="#d3d3d3" name="Unused" stackId="a" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
             {/* Monthly Desk Bookings By Program */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <h2 className="text-xl font-semibold mb-4">Monthly Desk Bookings By Program</h2>
@@ -377,6 +447,9 @@ const AdminViewReports = () => {
                       Program
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Booking Type
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -415,6 +488,14 @@ const AdminViewReports = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                            ${booking.bookingType === 'seat' 
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-purple-100 text-purple-800'}`}>
+                            {booking.bookingType === 'seat' ? 'Seat Booking' : 'Parking Booking'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
                             ${booking.status === 'confirmed' 
                               ? 'bg-green-100 text-green-800'
                               : booking.status === 'pending'
@@ -434,7 +515,7 @@ const AdminViewReports = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
                         No bookings found
                       </td>
                     </tr>
