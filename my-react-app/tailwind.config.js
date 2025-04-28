@@ -6,26 +6,15 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        primary: {
-          DEFAULT: '#052E19',
-          50: '#E6EDE9',
-          100: '#CCDBD3',
-          200: '#99B7A7',
-          300: '#66937B',
-          400: '#336F4F',
-          500: '#052E19',
-          600: '#042514',
-          700: '#031C0F',
-          800: '#02130A',
-          900: '#010A05'
-        },
-        dark: '#331108',
-        light: '#37F568',
+      animation: {
+        'pulse-scale': 'pulse-scale 0.3s ease-in-out',
       },
-      spacing: {
-        '18': '4.5rem',
-        '88': '22rem',
+      keyframes: {
+        'pulse-scale': {
+          '0%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.1)' },
+          '100%': { transform: 'scale(1)' },
+        },
       },
     },
   },

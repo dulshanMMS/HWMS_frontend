@@ -1,28 +1,11 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
-import UserDashboard from './pages/UserDashboard';
-import AdminNotification from './pages/AdminNotification';
-import AdminViewReports from './pages/AdminViewReports';
-import BookingForm from './pages/BookingForm';
+import FloorLayout from './components/FloorLayout';
 
-const App = () => {
+export default function App() {
   return (
-    <div className="min-h-screen bg-green-100 flex items-center justify-center">
-      {/* Routes for different pages */}
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/user" element={<UserDashboard />} />
-        <Route path="/AdminNotification" element={<AdminNotification />} />
-        <Route path="/admin-reports" element={<AdminViewReports />} />
-      </Routes>
-
-      {/* Booking Form Component 
-      <BookingForm />  */}
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 px-4 sm:px-0">
+      <div className="w-full sm:w-1/2">
+        <FloorLayout />
+      </div>
     </div>
   );
-};
-
-export default App;
+}
