@@ -4,20 +4,21 @@ import TableGroup from './TableGroup';
 import { getBookings, bookSeat, unbookSeat } from '../api/bookingAPI';
 
 export default function FloorLayout() {
-  const [username, setUsername] = useState("");
+  const [memberId, setMemberId] = useState("");
   const [role, setRole] = useState("member");
   const [teamName, setTeamName] = useState("");
   const [entered, setEntered] = useState(false);
   const [bookedChairs, setBookedChairs] = useState({});
-  const [userBooking, setUserBooking] = useState(null); // Store { chairId, roomId }
+  const [userBooking, setUserBooking] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [selectedMember, setSelectedMember] = useState("");
-  const [message, setMessage] = useState(null); // Pop-up message state
-  const [isLoading, setIsLoading] = useState(true); // Loading state
-  const [showAddMemberPrompt, setShowAddMemberPrompt] = useState(false); // For "Do you want to book for another member?" pop-up
-  const [showAddMemberNamePopUp, setShowAddMemberNamePopUp] = useState(false); // For "Add member name" pop-up
-  const [newMemberName, setNewMemberName] = useState(""); // For new member name input in pop-up
-  const memberNameInputRef = useRef(null); // Ref for focusing the input field
+  const [message, setMessage] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAddMemberPrompt, setShowAddMemberPrompt] = useState(false);
+  const [showAddMemberNamePopUp, setShowAddMemberNamePopUp] = useState(false);
+  const [newMemberName, setNewMemberName] = useState("");
+  const [memberDetails, setMemberDetails] = useState(null);
+  const memberNameInputRef = useRef(null);
 
   useEffect(() => {
     setIsLoading(true);
@@ -30,6 +31,7 @@ export default function FloorLayout() {
       .catch((err) => {
         console.error("Error fetching bookings:", err.message);
         setMessage("Failed to fetch bookings from backend: " + err.message);
+        setBookedChairs({});
         setIsLoading(false);
       });
   }, []);
@@ -50,10 +52,10 @@ export default function FloorLayout() {
 
   const PopUp = ({ message, onClose }) => (
     <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm">
-      <div className="bg-white p-4 rounded-lg shadow-lg border border-green-200">
-        <p className="text-gray-800 mb-3">{message}</p>
+      <div className="bg-white p-3 rounded-lg shadow-lg border border-green-300">
+        <p className="text-gray-800 mb-2">{message}</p>
         <button
-          className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-all"
+          className="bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-700 transition-all"
           onClick={onClose}
         >
           Close
@@ -64,17 +66,17 @@ export default function FloorLayout() {
 
   const AddMemberPrompt = ({ onYes, onNo }) => (
     <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm">
-      <div className="bg-white p-4 rounded-lg shadow-lg border border-green-200">
-        <p className="text-gray-800 mb-3">Do you want to book for another member?</p>
-        <div className="flex gap-2">
+      <div className="bg-white p-3 rounded-lg shadow-lg border border-green-300">
+        <p className="text-gray-800 mb-2">Do you want to book for another member?</p>
+        <div className="flex gap-1">
           <button
-            className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-all"
+            className="bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-700 transition-all"
             onClick={onYes}
           >
             Yes
           </button>
           <button
-            className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition-all"
+            className="bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 transition-all"
             onClick={onNo}
           >
             No
@@ -86,11 +88,11 @@ export default function FloorLayout() {
 
   const AddMemberNamePopUp = ({ onSubmit, onChange, value }) => (
     <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm">
-      <div className="bg-white p-4 rounded-lg shadow-lg border border-green-200">
-        <p className="text-gray-800 mb-3">Enter the name of the new team member:</p>
+      <div className="bg-white p-3 rounded-lg shadow-lg border border-green-300">
+        <p className="text-gray-800 mb-2">Enter the name of the new team member:</p>
         <input
           ref={memberNameInputRef}
-          className="border border-green-300 rounded-md px-2 py-1 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400 text-gray-800 placeholder-gray-400"
+          className="border border-green-400 rounded-md px-2 py-1 mb-2 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 placeholder-gray-400"
           placeholder="Member name"
           value={value}
           onChange={onChange}
@@ -101,7 +103,7 @@ export default function FloorLayout() {
         />
         <div className="flex justify-end">
           <button
-            className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-all"
+            className="bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-700 transition-all"
             onClick={onSubmit}
           >
             Enter
@@ -111,8 +113,51 @@ export default function FloorLayout() {
     </div>
   );
 
+  const checkMemberExists = async (memberId) => {
+    try {
+      console.log("Sending request to check member with ID:", memberId);
+      const response = await fetch('/api/teams/checkMember', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId })
+      });
+      const data = await response.json();
+      console.log("Response from checkMember:", data);
+      return data;
+    } catch (error) {
+      console.error('Error checking member:', error);
+      showMessage("Failed to verify member. Please try again.");
+      return { exists: false };
+    }
+  };
+
+  const handleJoin = async () => {
+    if (!memberId.trim()) {
+      showMessage("Please enter your member ID");
+      return;
+    }
+
+    const memberData = await checkMemberExists(memberId);
+    if (!memberData.exists) {
+      showMessage("You are not registered in the database. Please contact the administrator.");
+      return;
+    }
+
+    setMemberDetails(memberData);
+    setTeamName(memberData.teamName);
+    setRole(memberData.role);
+    setEntered(true);
+    if (memberData.role === "leader") {
+      setTeamMembers([memberData.memberName]);
+      setSelectedMember(memberData.memberName);
+    }
+  };
+
   const handleChairClick = (chairId, roomId) => {
-    if (!username || !entered) return;
+    if (!entered || !memberDetails) {
+      showMessage("Please join with a valid member ID first.");
+      return;
+    }
 
     if (role === "member") {
       if (userBooking && userBooking.chairId !== chairId) {
@@ -123,7 +168,7 @@ export default function FloorLayout() {
       setBookedChairs((prev) => {
         const updated = { ...prev };
         if (updated[chairId]) {
-          if (updated[chairId] === username) {
+          if (updated[chairId].memberName === memberDetails?.memberName) {
             unbookSeat(roomId, chairId)
               .then(() => {
                 delete updated[chairId];
@@ -139,9 +184,21 @@ export default function FloorLayout() {
             return prev;
           }
         } else {
-          bookSeat(chairId, { roomId, userName: username, teamName, role })
+          const bookingDetails = {
+            roomId,
+            userName: memberDetails.memberName,
+            teamName,
+            role,
+            teamColor: memberDetails.teamColor,
+            memberName: memberDetails.memberName
+          };
+          console.log("Booking seat (member):", bookingDetails);
+          bookSeat(chairId, bookingDetails)
             .then(() => {
-              updated[chairId] = username;
+              updated[chairId] = {
+                memberName: memberDetails.memberName,
+                teamColor: memberDetails.teamColor
+              };
               setUserBooking({ chairId, roomId });
               console.log("After booking (member):", updated);
             })
@@ -159,9 +216,10 @@ export default function FloorLayout() {
         return;
       }
 
-      // Check if the selected member already has a booked seat
-      const memberHasBooking = Object.values(bookedChairs).includes(selectedMember);
-      if (memberHasBooking && bookedChairs[chairId] !== selectedMember) {
+      const memberHasBooking = Object.values(bookedChairs).some(
+        (chair) => chair?.memberName === selectedMember
+      );
+      if (memberHasBooking && bookedChairs[chairId]?.memberName !== selectedMember) {
         showMessage(`${selectedMember} already has a booked seat. Please unbook their current seat first.`);
         return;
       }
@@ -169,11 +227,11 @@ export default function FloorLayout() {
       setBookedChairs((prev) => {
         const updated = { ...prev };
         if (updated[chairId]) {
-          if (updated[chairId] === selectedMember) {
+          if (updated[chairId].memberName === selectedMember) {
             unbookSeat(roomId, chairId)
               .then(() => {
                 delete updated[chairId];
-                if (selectedMember === username) setUserBooking(null);
+                if (selectedMember === memberDetails?.memberName) setUserBooking(null);
                 console.log("After unbooking (leader):", updated);
               })
               .catch((err) => {
@@ -185,10 +243,23 @@ export default function FloorLayout() {
             return prev;
           }
         } else {
-          bookSeat(chairId, { roomId, userName: username, teamName, role, selectedMember })
+          const bookingDetails = {
+            roomId,
+            userName: memberDetails.memberName,
+            teamName,
+            role,
+            selectedMember,
+            teamColor: memberDetails.teamColor,
+            memberName: selectedMember
+          };
+          console.log("Booking seat (leader):", bookingDetails);
+          bookSeat(chairId, bookingDetails)
             .then(() => {
-              updated[chairId] = selectedMember;
-              if (selectedMember === username) setUserBooking({ chairId, roomId });
+              updated[chairId] = {
+                memberName: selectedMember,
+                teamColor: memberDetails.teamColor
+              };
+              if (selectedMember === memberDetails?.memberName) setUserBooking({ chairId, roomId });
               console.log("After booking (leader):", updated);
             })
             .catch((err) => {
@@ -209,7 +280,7 @@ export default function FloorLayout() {
     }
 
     const chairToUnbook = Object.keys(bookedChairs).find(
-      (chairId) => bookedChairs[chairId] === (role === "leader" ? selectedMember : username)
+      (chairId) => bookedChairs[chairId]?.memberName === (role === "leader" ? selectedMember : memberDetails?.memberName)
     );
 
     if (!chairToUnbook) {
@@ -231,7 +302,7 @@ export default function FloorLayout() {
       unbookSeat(roomId, chairToUnbook)
         .then(() => {
           delete updated[chairToUnbook];
-          if (role === "member" || (role === "leader" && selectedMember === username)) {
+          if (role === "member" || (role === "leader" && selectedMember === memberDetails?.memberName)) {
             setUserBooking(null);
           }
           showMessage(`Seat ${chairToUnbook} unbooked successfully!`);
@@ -247,7 +318,7 @@ export default function FloorLayout() {
 
   const handleSubmit = () => {
     const bookedSeat = Object.keys(bookedChairs).find(
-      (chairId) => bookedChairs[chairId] === (role === "leader" ? selectedMember : username)
+      (chairId) => bookedChairs[chairId]?.memberName === (role === "leader" ? selectedMember : memberDetails?.memberName)
     );
 
     if (!bookedSeat) {
@@ -257,58 +328,57 @@ export default function FloorLayout() {
 
     if (role === "member") {
       showMessage("Booking submitted successfully!");
-      // Reset to first view for team member
       setEntered(false);
-      setUsername("");
+      setMemberId("");
       setTeamName("");
       setRole("member");
       setUserBooking(null);
+      setMemberDetails(null);
     } else if (role === "leader") {
       showMessage("Booking submitted successfully!");
-      // Show the "Do you want to book for another member?" pop-up
       setShowAddMemberPrompt(true);
     }
   };
 
   const handleCancel = () => {
-    // Reset to first view for team member
     setEntered(false);
-    setUsername("");
+    setMemberId("");
     setTeamName("");
     setRole("member");
     setUserBooking(null);
     setTeamMembers([]);
     setSelectedMember("");
+    setMemberDetails(null);
   };
 
   const handleAddMemberPromptYes = () => {
     setShowAddMemberPrompt(false);
     setShowAddMemberNamePopUp(true);
-    setNewMemberName(""); // Reset the input field
-    setMessage(null); // Clear the "Booking submitted successfully" message
+    setNewMemberName("");
+    setMessage(null);
   };
 
   const handleAddMemberPromptNo = () => {
     setShowAddMemberPrompt(false);
-    // Reset to first view
     setEntered(false);
-    setUsername("");
+    setMemberId("");
     setTeamName("");
     setRole("member");
     setTeamMembers([]);
     setSelectedMember("");
     setUserBooking(null);
-    setMessage(null); // Clear the "Booking submitted successfully" message
+    setMemberDetails(null);
+    setMessage(null);
   };
 
   const handleAddMemberSubmit = () => {
     if (newMemberName && !teamMembers.includes(newMemberName)) {
       setTeamMembers((prev) => [...prev, newMemberName]);
       setSelectedMember(newMemberName);
-      setNewMemberName(""); // Clear the input
-      setShowAddMemberNamePopUp(false); // Close the pop-up
-      setMessage(null); // Clear any previous message
-      setEntered(true); // Go back to booking view
+      setNewMemberName("");
+      setShowAddMemberNamePopUp(false);
+      setMessage(null);
+      setEntered(true);
     } else if (teamMembers.includes(newMemberName)) {
       setMessage("This member is already in the team.");
       setNewMemberName("");
@@ -318,62 +388,39 @@ export default function FloorLayout() {
     }
   };
 
-  const handleJoin = () => {
-    if (username.trim() && teamName.trim()) {
-      setEntered(true);
-      if (role === "leader") {
-        setTeamMembers([username]);
-        setSelectedMember(username);
-      }
-    } else {
-      showMessage("Please enter your name and team name");
-    }
-  };
-
   const addTeamMember = () => {
     setShowAddMemberPrompt(true);
   };
 
   const hasBookedSeat = () => {
-    return Object.values(bookedChairs).includes(role === "leader" ? selectedMember : username);
+    return Object.values(bookedChairs).some(
+      (chair) => chair?.memberName === (role === "leader" ? selectedMember : memberDetails?.memberName)
+    );
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-green-50">
-        <p className="text-gray-800 text-lg">Loading...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
+        <p className="text-gray-800 text-base font-semibold">Loading...</p>
       </div>
     );
   }
 
+  console.log("Rendering FloorLayout with bookedChairs:", bookedChairs);
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-green-50">
-      <div className="w-[70vw] h-[70vh] flex flex-col items-center">
-        {/* Input Section */}
+    <div className="flex flex-col items-center min-h-screen bg-gradient-to-b from-green-50 to-green-100 pt-4 pb-20">
+      <div className="w-[42vw] flex flex-col items-center">
         {!entered && (
-          <div className="mb-3 flex gap-2 bg-white p-3 rounded-lg shadow-md border border-green-200">
+          <div className="mb-2 flex gap-2 bg-white p-3 rounded-xl shadow-lg border border-green-300">
             <input
-              className="border border-green-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-green-400 text-gray-800 placeholder-gray-400"
-              placeholder="Enter your name"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <select
-              className="border border-green-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-green-400 text-gray-800"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            >
-              <option value="leader">Team Leader</option>
-              <option value="member">Team Member</option>
-            </select>
-            <input
-              className="border border-green-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-green-400 text-gray-800 placeholder-gray-400"
-              placeholder="Enter team name"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
+              className="border border-green-400 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 placeholder-gray-400"
+              placeholder="Enter your member ID (e.g., M001)"
+              value={memberId}
+              onChange={(e) => setMemberId(e.target.value)}
             />
             <button
-              className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-all shadow-sm hover:shadow-md cursor-pointer"
+              className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-all shadow-md hover:shadow-lg"
               onClick={handleJoin}
             >
               Join
@@ -381,15 +428,14 @@ export default function FloorLayout() {
           </div>
         )}
 
-        {/* Team Management for Leader */}
         {entered && role === "leader" && (
-          <div className="mb-3 flex gap-2 bg-white p-3 rounded-lg shadow-md border border-green-200">
+          <div className="mb-2 flex gap-2 bg-white p-3 rounded-xl shadow-lg border border-green-300">
             <div>
-              <label className="block text-xs font-medium text-gray-800 mb-1">
+              <label className="block text-xs font-semibold text-gray-800 mb-1">
                 Book a seat for:
               </label>
               <select
-                className="border border-green-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-green-400 text-gray-800"
+                className="border border-green-400 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800"
                 value={selectedMember}
                 onChange={(e) => setSelectedMember(e.target.value)}
               >
@@ -402,7 +448,7 @@ export default function FloorLayout() {
               </select>
             </div>
             <button
-              className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-all shadow-sm hover:shadow-md cursor-pointer"
+              className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-all shadow-md hover:shadow-lg"
               onClick={addTeamMember}
             >
               Add Team Member
@@ -410,97 +456,126 @@ export default function FloorLayout() {
           </div>
         )}
 
-        {/* Floor Layout Visualization */}
-        <div className="flex w-full h-full gap-2 pt-1 pb-1">
-          {/* Left side tables (T1-T4) */}
-          <div className="w-2/5 flex flex-col gap-1 pt-1 pb-1">
+        <div className="flex w-full h-[50vh] gap-2 pt-2 pb-2">
+          <div className="w-2/5 flex flex-col gap-2">
             {["T1", "T2", "T3", "T4"].map((roomId, index) => (
-              <div key={roomId} className="flex-1 bg-white rounded-lg shadow-sm border border-green-200 flex flex-col items-center gap-1 pt-1 pb-1">
-                <div className="grid grid-cols-4 gap-1 mx-auto">
-                  {Array.from({ length: 4 }, (_, i) => (
-                    <Seat
-                      key={i}
-                      chairId={`${roomId}-chair${i + 1}`}
-                      roomId={roomId}
-                      bookedChairs={bookedChairs}
-                      onClick={entered ? handleChairClick : () => {}}
-                      label={`Seat-${i + 1}`}
-                    />
-                  ))}
+              <div
+                key={roomId}
+                className="flex-1 bg-white rounded-xl shadow-lg border border-green-300 flex flex-col gap-2 p-2"
+              >
+                {/* Top Seats (4 seats) */}
+                <div className="flex justify-center gap-2">
+                  {Array.from({ length: 4 }, (_, i) => {
+                    const chairId = `${roomId}-chair${i + 1}`;
+                    console.log(`Rendering Seat ${chairId}:`, bookedChairs[chairId]);
+                    return (
+                      <Seat
+                        key={i}
+                        chairId={chairId}
+                        roomId={roomId}
+                        bookedChairs={bookedChairs}
+                        onClick={entered ? handleChairClick : () => {}}
+                        label={`Seat-${i + 1}`}
+                      />
+                    );
+                  })}
                 </div>
-                <TableGroup tableNumber={index + 1} />
-                <div className="grid grid-cols-4 gap-1 mx-auto">
-                  {Array.from({ length: 4 }, (_, i) => (
-                    <Seat
-                      key={i + 4}
-                      chairId={`${roomId}-chair${i + 5}`}
-                      roomId={roomId}
-                      bookedChairs={bookedChairs}
-                      onClick={entered ? handleChairClick : () => {}}
-                      label={`Seat-${i + 5}`}
-                    />
-                  ))}
+
+                {/* Table in the Center */}
+                <div className="flex justify-center">
+                  <TableGroup tableNumber={index + 1} />
+                </div>
+
+                {/* Bottom Seats (4 seats) */}
+                <div className="flex justify-center gap-2">
+                  {Array.from({ length: 4 }, (_, i) => {
+                    const chairId = `${roomId}-chair${i + 5}`;
+                    console.log(`Rendering Seat ${chairId}:`, bookedChairs[chairId]);
+                    return (
+                      <Seat
+                        key={i + 4}
+                        chairId={chairId}
+                        roomId={roomId}
+                        bookedChairs={bookedChairs}
+                        onClick={entered ? handleChairClick : () => {}}
+                        label={`Seat-${i + 5}`}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Lobby */}
-          <div className="w-1/5 flex items-center justify-center bg-green-100 rounded-lg shadow-sm border border-green-200">
-            <span className="text-xl font-bold text-green-800">
-              Lobby
-            </span>
+          <div className="w-1/5 h-full flex items-center justify-center bg-green-100 rounded-xl shadow-lg border border-green-300">
+            <span className="text-xl font-bold text-green-800">Lobby</span>
           </div>
 
-          {/* Right side tables (T5-T8) */}
-          <div className="w-2/5 flex flex-col gap-1 pt-1 pb-1">
+          <div className="w-2/5 flex flex-col gap-2">
             {["T5", "T6", "T7", "T8"].map((roomId, index) => (
-              <div key={roomId} className="flex-1 bg-white rounded-lg shadow-sm border border-green-200 flex flex-col items-center gap-1 pt-1 pb-1">
-                <div className="grid grid-cols-4 gap-1 mx-auto">
-                  {Array.from({ length: 4 }, (_, i) => (
-                    <Seat
-                      key={i}
-                      chairId={`${roomId}-chair${i + 1}`}
-                      roomId={roomId}
-                      bookedChairs={bookedChairs}
-                      onClick={entered ? handleChairClick : () => {}}
-                      label={`Seat-${i + 1}`}
-                    />
-                  ))}
+              <div
+                key={roomId}
+                className="flex-1 bg-white rounded-xl shadow-lg border border-green-300 flex flex-col gap-2 p-2"
+              >
+                {/* Top Seats (4 seats) */}
+                <div className="flex justify-center gap-2">
+                  {Array.from({ length: 4 }, (_, i) => {
+                    const chairId = `${roomId}-chair${i + 1}`;
+                    console.log(`Rendering Seat ${chairId}:`, bookedChairs[chairId]);
+                    return (
+                      <Seat
+                        key={i}
+                        chairId={chairId}
+                        roomId={roomId}
+                        bookedChairs={bookedChairs}
+                        onClick={entered ? handleChairClick : () => {}}
+                        label={`Seat-${i + 1}`}
+                      />
+                    );
+                  })}
                 </div>
-                <TableGroup tableNumber={index + 5} />
-                <div className="grid grid-cols-4 gap-1 mx-auto">
-                  {Array.from({ length: 4 }, (_, i) => (
-                    <Seat
-                      key={i + 4}
-                      chairId={`${roomId}-chair${i + 5}`}
-                      roomId={roomId}
-                      bookedChairs={bookedChairs}
-                      onClick={entered ? handleChairClick : () => {}}
-                      label={`Seat-${i + 5}`}
-                    />
-                  ))}
+
+                {/* Table in the Center */}
+                <div className="flex justify-center">
+                  <TableGroup tableNumber={index + 5} />
+                </div>
+
+                {/* Bottom Seats (4 seats) */}
+                <div className="flex justify-center gap-2">
+                  {Array.from({ length: 4 }, (_, i) => {
+                    const chairId = `${roomId}-chair${i + 5}`;
+                    console.log(`Rendering Seat ${chairId}:`, bookedChairs[chairId]);
+                    return (
+                      <Seat
+                        key={i + 4}
+                        chairId={chairId}
+                        roomId={roomId}
+                        bookedChairs={bookedChairs}
+                        onClick={entered ? handleChairClick : () => {}}
+                        label={`Seat-${i + 5}`}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Unbook, Cancel, and Submit Buttons */}
         {entered && (
-          <div className="mt-3 flex gap-2 bg-white p-3 rounded-lg shadow-md border border-green-200">
+          <div className="mt-2 flex gap-2 bg-white p-3 rounded-xl shadow-lg border border-green-300">
             {role === "member" && (
               <button
-                className="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600 transition-all shadow-sm hover:shadow-md cursor-pointer"
+                className="bg-gray-600 text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-all shadow-md hover:shadow-lg"
                 onClick={handleCancel}
               >
                 Cancel
               </button>
             )}
             <button
-              className={`px-3 py-1 rounded-md transition-all shadow-sm hover:shadow-md cursor-pointer ${
+              className={`px-3 py-1 rounded-md transition-all shadow-md hover:shadow-lg ${
                 hasBookedSeat()
-                  ? "bg-red-500 text-white hover:bg-red-600"
+                  ? "bg-red-600 text-white hover:bg-red-700"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
               onClick={handleUnbook}
@@ -509,30 +584,31 @@ export default function FloorLayout() {
               Unbook
             </button>
             <button
-              className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-all shadow-sm hover:shadow-md cursor-pointer"
+              className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-all shadow-md hover:shadow-lg"
               onClick={handleSubmit}
             >
               Submit
             </button>
           </div>
         )}
-
-        {/* Pop-Up Messages */}
-        {message && <PopUp message={message} onClose={closeMessage} />}
-        {showAddMemberPrompt && (
-          <AddMemberPrompt
-            onYes={handleAddMemberPromptYes}
-            onNo={handleAddMemberPromptNo}
-          />
-        )}
-        {showAddMemberNamePopUp && (
-          <AddMemberNamePopUp
-            value={newMemberName}
-            onChange={(e) => setNewMemberName(e.target.value)}
-            onSubmit={handleAddMemberSubmit}
-          />
-        )}
       </div>
+
+
+      
+      {message && <PopUp message={message} onClose={closeMessage} />}
+      {showAddMemberPrompt && (
+        <AddMemberPrompt
+          onYes={handleAddMemberPromptYes}
+          onNo={handleAddMemberPromptNo}
+        />
+      )}
+      {showAddMemberNamePopUp && (
+        <AddMemberNamePopUp
+          value={newMemberName}
+          onChange={(e) => setNewMemberName(e.target.value)}
+          onSubmit={handleAddMemberSubmit}
+        />
+      )}
     </div>
   );
 }

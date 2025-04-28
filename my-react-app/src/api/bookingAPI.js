@@ -5,24 +5,39 @@ export const getBookings = async () => {
       console.error("Get bookings failed with status:", response.status, "Response:", errorText);
       throw new Error('Failed to fetch bookings');
     }
-    return response.json();
+    const data = await response.json();
+    if (data.chairs) {
+      Object.keys(data.chairs).forEach((chairId) => {
+        const chair = data.chairs[chairId];
+        if (!chair.memberName || !chair.teamColor) {
+          console.warn(`Missing memberName or teamColor for chair ${chairId}. Got:`, chair);
+        }
+      });
+    } else {
+      console.warn("No chairs found in bookings response:", data);
+    }
+    return data;
   };
   
   export const bookSeat = async (chairId, bookingDetails) => {
-    const { roomId, userName, teamName } = bookingDetails;
+    const { roomId, userName, teamName, role, selectedMember, teamColor, memberName } = bookingDetails;
     let url = '';
-    if (bookingDetails.role === 'leader' && bookingDetails.selectedMember) {
-      url = `http://localhost:5004/api/bookings/leader/${userName}/member/${bookingDetails.selectedMember}/seat/${chairId}`;
+  
+    if (role === 'leader' && selectedMember) {
+      url = `http://localhost:5004/api/bookings/leader/${userName}/member/${selectedMember}/seat/${chairId}`;
     } else {
       url = `http://localhost:5004/api/bookings/member/${userName}/seat/${chairId}`;
     }
+  
+    const body = { roomId, teamName, teamColor, memberName };
+    console.log("Sending book seat request:", { url, body }); // Debug log
   
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ roomId, teamName }),
+      body: JSON.stringify(body),
     });
   
     if (!response.ok) {
