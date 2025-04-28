@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Seat from './seat';
 import TableGroup from './TableGroup';
 import { getBookings, bookSeat, unbookSeat } from '../api/bookingAPI';
@@ -9,27 +9,114 @@ export default function FloorLayout() {
   const [teamName, setTeamName] = useState("");
   const [entered, setEntered] = useState(false);
   const [bookedChairs, setBookedChairs] = useState({});
-  const [userBookedChair, setUserBookedChair] = useState(null);
+  const [userBooking, setUserBooking] = useState(null); // Store { chairId, roomId }
   const [teamMembers, setTeamMembers] = useState([]);
   const [selectedMember, setSelectedMember] = useState("");
+  const [message, setMessage] = useState(null); // Pop-up message state
+  const [isLoading, setIsLoading] = useState(true); // Loading state
+  const [showAddMemberPrompt, setShowAddMemberPrompt] = useState(false); // For "Do you want to book for another member?" pop-up
+  const [showAddMemberNamePopUp, setShowAddMemberNamePopUp] = useState(false); // For "Add member name" pop-up
+  const [newMemberName, setNewMemberName] = useState(""); // For new member name input in pop-up
+  const memberNameInputRef = useRef(null); // Ref for focusing the input field
 
   useEffect(() => {
+    setIsLoading(true);
     getBookings()
       .then((data) => {
         setBookedChairs(data.chairs || {});
+        console.log("Initial booked chairs:", data.chairs || {});
+        setIsLoading(false);
       })
       .catch((err) => {
         console.error("Error fetching bookings:", err.message);
-        alert("Failed to fetch bookings from backend: " + err.message);
+        setMessage("Failed to fetch bookings from backend: " + err.message);
+        setIsLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (showAddMemberNamePopUp && memberNameInputRef.current) {
+      memberNameInputRef.current.focus();
+    }
+  }, [showAddMemberNamePopUp]);
+
+  const showMessage = (msg) => {
+    setMessage(msg);
+  };
+
+  const closeMessage = () => {
+    setMessage(null);
+  };
+
+  const PopUp = ({ message, onClose }) => (
+    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm">
+      <div className="bg-white p-4 rounded-lg shadow-lg border border-green-200">
+        <p className="text-gray-800 mb-3">{message}</p>
+        <button
+          className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-all"
+          onClick={onClose}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+
+  const AddMemberPrompt = ({ onYes, onNo }) => (
+    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm">
+      <div className="bg-white p-4 rounded-lg shadow-lg border border-green-200">
+        <p className="text-gray-800 mb-3">Do you want to book for another member?</p>
+        <div className="flex gap-2">
+          <button
+            className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-all"
+            onClick={onYes}
+          >
+            Yes
+          </button>
+          <button
+            className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition-all"
+            onClick={onNo}
+          >
+            No
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const AddMemberNamePopUp = ({ onSubmit, onChange, value }) => (
+    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm">
+      <div className="bg-white p-4 rounded-lg shadow-lg border border-green-200">
+        <p className="text-gray-800 mb-3">Enter the name of the new team member:</p>
+        <input
+          ref={memberNameInputRef}
+          className="border border-green-300 rounded-md px-2 py-1 mb-3 focus:outline-none focus:ring-2 focus:ring-green-400 text-gray-800 placeholder-gray-400"
+          placeholder="Member name"
+          value={value}
+          onChange={onChange}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') onSubmit();
+          }}
+          autoFocus
+        />
+        <div className="flex justify-end">
+          <button
+            className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-all"
+            onClick={onSubmit}
+          >
+            Enter
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   const handleChairClick = (chairId, roomId) => {
     if (!username || !entered) return;
 
     if (role === "member") {
-      if (userBookedChair && userBookedChair !== chairId) {
-        alert("You can only book one seat.");
+      if (userBooking && userBooking.chairId !== chairId) {
+        showMessage("You can only book one seat.");
         return;
       }
 
@@ -37,39 +124,45 @@ export default function FloorLayout() {
         const updated = { ...prev };
         if (updated[chairId]) {
           if (updated[chairId] === username) {
-            unbookSeat(chairId)
+            unbookSeat(roomId, chairId)
               .then(() => {
                 delete updated[chairId];
-                setUserBookedChair(null);
+                setUserBooking(null);
+                console.log("After unbooking (member):", updated);
               })
               .catch((err) => {
                 console.error("Failed to unbook seat:", err.message);
-                alert("Failed to unbook seat: " + err.message + ". Please try again.");
+                showMessage("Failed to unbook seat: " + err.message + ". Please try again.");
               });
           } else {
-            alert("This chair is already booked.");
+            showMessage("This chair is already booked.");
             return prev;
           }
         } else {
           bookSeat(chairId, { roomId, userName: username, teamName, role })
-            .then((response) => {
-              if (response.success) {
-                updated[chairId] = username;
-                setUserBookedChair(chairId);
-              } else {
-                alert(response.error || 'Failed to book seat');
-              }
+            .then(() => {
+              updated[chairId] = username;
+              setUserBooking({ chairId, roomId });
+              console.log("After booking (member):", updated);
             })
             .catch((err) => {
               console.error("Failed to book seat:", err.message);
-              alert("Failed to book seat: " + err.message + ". Please try again.");
+              showMessage("Failed to book seat: " + err.message + ". Please try again.");
+              return prev;
             });
         }
         return updated;
       });
     } else if (role === "leader") {
       if (!selectedMember) {
-        alert("Please select a team member to book for.");
+        showMessage("Please select a team member to book for.");
+        return;
+      }
+
+      // Check if the selected member already has a booked seat
+      const memberHasBooking = Object.values(bookedChairs).includes(selectedMember);
+      if (memberHasBooking && bookedChairs[chairId] !== selectedMember) {
+        showMessage(`${selectedMember} already has a booked seat. Please unbook their current seat first.`);
         return;
       }
 
@@ -77,36 +170,151 @@ export default function FloorLayout() {
         const updated = { ...prev };
         if (updated[chairId]) {
           if (updated[chairId] === selectedMember) {
-            unbookSeat(chairId)
+            unbookSeat(roomId, chairId)
               .then(() => {
                 delete updated[chairId];
-                if (selectedMember === username) setUserBookedChair(null);
+                if (selectedMember === username) setUserBooking(null);
+                console.log("After unbooking (leader):", updated);
               })
               .catch((err) => {
                 console.error("Failed to unbook seat:", err.message);
-                alert("Failed to unbook seat: " + err.message + ". Please try again.");
+                showMessage("Failed to unbook seat: " + err.message + ". Please try again.");
               });
           } else {
-            alert("This chair is already booked.");
+            showMessage("This chair is already booked.");
             return prev;
           }
         } else {
           bookSeat(chairId, { roomId, userName: username, teamName, role, selectedMember })
-            .then((response) => {
-              if (response.success) {
-                updated[chairId] = selectedMember;
-                if (selectedMember === username) setUserBookedChair(chairId);
-              } else {
-                alert(response.error || 'Failed to book seat');
-              }
+            .then(() => {
+              updated[chairId] = selectedMember;
+              if (selectedMember === username) setUserBooking({ chairId, roomId });
+              console.log("After booking (leader):", updated);
             })
             .catch((err) => {
-              console.error("Failed to book seat:", err.message);
-              alert("Failed to book seat: " + err.message + ". Please try again.");
+              console.error("Failed to book seat for", selectedMember, ":", err.message);
+              showMessage(`Failed to book seat for ${selectedMember}: ${err.message}. Please try again.`);
+              return prev;
             });
         }
         return updated;
       });
+    }
+  };
+
+  const handleUnbook = () => {
+    if (Object.keys(bookedChairs).length === 0) {
+      showMessage("No bookings available to unbook.");
+      return;
+    }
+
+    const chairToUnbook = Object.keys(bookedChairs).find(
+      (chairId) => bookedChairs[chairId] === (role === "leader" ? selectedMember : username)
+    );
+
+    if (!chairToUnbook) {
+      showMessage("No seat booked to unbook.");
+      return;
+    }
+
+    console.log("Unbooking chair:", chairToUnbook);
+    const roomIdParts = chairToUnbook.split('-');
+    if (roomIdParts.length < 2) {
+      showMessage("Invalid chair ID format. Unable to unbook.");
+      return;
+    }
+    const roomId = roomIdParts[0];
+    console.log("Extracted roomId:", roomId);
+
+    setBookedChairs((prev) => {
+      const updated = { ...prev };
+      unbookSeat(roomId, chairToUnbook)
+        .then(() => {
+          delete updated[chairToUnbook];
+          if (role === "member" || (role === "leader" && selectedMember === username)) {
+            setUserBooking(null);
+          }
+          showMessage(`Seat ${chairToUnbook} unbooked successfully!`);
+          console.log("After unbooking:", updated);
+        })
+        .catch((err) => {
+          console.error("Failed to unbook seat:", err.message);
+          showMessage(`Failed to unbook seat (${chairToUnbook}): ${err.message}. Please try again.`);
+        });
+      return updated;
+    });
+  };
+
+  const handleSubmit = () => {
+    const bookedSeat = Object.keys(bookedChairs).find(
+      (chairId) => bookedChairs[chairId] === (role === "leader" ? selectedMember : username)
+    );
+
+    if (!bookedSeat) {
+      showMessage("Please book a seat before submitting.");
+      return;
+    }
+
+    if (role === "member") {
+      showMessage("Booking submitted successfully!");
+      // Reset to first view for team member
+      setEntered(false);
+      setUsername("");
+      setTeamName("");
+      setRole("member");
+      setUserBooking(null);
+    } else if (role === "leader") {
+      showMessage("Booking submitted successfully!");
+      // Show the "Do you want to book for another member?" pop-up
+      setShowAddMemberPrompt(true);
+    }
+  };
+
+  const handleCancel = () => {
+    // Reset to first view for team member
+    setEntered(false);
+    setUsername("");
+    setTeamName("");
+    setRole("member");
+    setUserBooking(null);
+    setTeamMembers([]);
+    setSelectedMember("");
+  };
+
+  const handleAddMemberPromptYes = () => {
+    setShowAddMemberPrompt(false);
+    setShowAddMemberNamePopUp(true);
+    setNewMemberName(""); // Reset the input field
+    setMessage(null); // Clear the "Booking submitted successfully" message
+  };
+
+  const handleAddMemberPromptNo = () => {
+    setShowAddMemberPrompt(false);
+    // Reset to first view
+    setEntered(false);
+    setUsername("");
+    setTeamName("");
+    setRole("member");
+    setTeamMembers([]);
+    setSelectedMember("");
+    setUserBooking(null);
+    setMessage(null); // Clear the "Booking submitted successfully" message
+  };
+
+  const handleAddMemberSubmit = () => {
+    if (newMemberName && !teamMembers.includes(newMemberName)) {
+      setTeamMembers((prev) => [...prev, newMemberName]);
+      setSelectedMember(newMemberName);
+      setNewMemberName(""); // Clear the input
+      setShowAddMemberNamePopUp(false); // Close the pop-up
+      setMessage(null); // Clear any previous message
+      setEntered(true); // Go back to booking view
+    } else if (teamMembers.includes(newMemberName)) {
+      setMessage("This member is already in the team.");
+      setNewMemberName("");
+      setShowAddMemberNamePopUp(false);
+    } else {
+      setMessage("Please enter a valid member name.");
     }
   };
 
@@ -118,16 +326,25 @@ export default function FloorLayout() {
         setSelectedMember(username);
       }
     } else {
-      alert("Please enter your name and team name");
+      showMessage("Please enter your name and team name");
     }
   };
 
   const addTeamMember = () => {
-    const memberName = prompt("Enter team member's name:");
-    if (memberName && !teamMembers.includes(memberName)) {
-      setTeamMembers((prev) => [...prev, memberName]);
-    }
+    setShowAddMemberPrompt(true);
   };
+
+  const hasBookedSeat = () => {
+    return Object.values(bookedChairs).includes(role === "leader" ? selectedMember : username);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-green-50">
+        <p className="text-gray-800 text-lg">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-green-50">
@@ -206,7 +423,7 @@ export default function FloorLayout() {
                       chairId={`${roomId}-chair${i + 1}`}
                       roomId={roomId}
                       bookedChairs={bookedChairs}
-                      onClick={handleChairClick}
+                      onClick={entered ? handleChairClick : () => {}}
                       label={`Seat-${i + 1}`}
                     />
                   ))}
@@ -219,7 +436,7 @@ export default function FloorLayout() {
                       chairId={`${roomId}-chair${i + 5}`}
                       roomId={roomId}
                       bookedChairs={bookedChairs}
-                      onClick={handleChairClick}
+                      onClick={entered ? handleChairClick : () => {}}
                       label={`Seat-${i + 5}`}
                     />
                   ))}
@@ -246,7 +463,7 @@ export default function FloorLayout() {
                       chairId={`${roomId}-chair${i + 1}`}
                       roomId={roomId}
                       bookedChairs={bookedChairs}
-                      onClick={handleChairClick}
+                      onClick={entered ? handleChairClick : () => {}}
                       label={`Seat-${i + 1}`}
                     />
                   ))}
@@ -259,7 +476,7 @@ export default function FloorLayout() {
                       chairId={`${roomId}-chair${i + 5}`}
                       roomId={roomId}
                       bookedChairs={bookedChairs}
-                      onClick={handleChairClick}
+                      onClick={entered ? handleChairClick : () => {}}
                       label={`Seat-${i + 5}`}
                     />
                   ))}
@@ -268,6 +485,53 @@ export default function FloorLayout() {
             ))}
           </div>
         </div>
+
+        {/* Unbook, Cancel, and Submit Buttons */}
+        {entered && (
+          <div className="mt-3 flex gap-2 bg-white p-3 rounded-lg shadow-md border border-green-200">
+            {role === "member" && (
+              <button
+                className="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600 transition-all shadow-sm hover:shadow-md cursor-pointer"
+                onClick={handleCancel}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              className={`px-3 py-1 rounded-md transition-all shadow-sm hover:shadow-md cursor-pointer ${
+                hasBookedSeat()
+                  ? "bg-red-500 text-white hover:bg-red-600"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+              onClick={handleUnbook}
+              disabled={!hasBookedSeat()}
+            >
+              Unbook
+            </button>
+            <button
+              className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-all shadow-sm hover:shadow-md cursor-pointer"
+              onClick={handleSubmit}
+            >
+              Submit
+            </button>
+          </div>
+        )}
+
+        {/* Pop-Up Messages */}
+        {message && <PopUp message={message} onClose={closeMessage} />}
+        {showAddMemberPrompt && (
+          <AddMemberPrompt
+            onYes={handleAddMemberPromptYes}
+            onNo={handleAddMemberPromptNo}
+          />
+        )}
+        {showAddMemberNamePopUp && (
+          <AddMemberNamePopUp
+            value={newMemberName}
+            onChange={(e) => setNewMemberName(e.target.value)}
+            onSubmit={handleAddMemberSubmit}
+          />
+        )}
       </div>
     </div>
   );
