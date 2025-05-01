@@ -1,27 +1,24 @@
 import React, { useState, useEffect } from 'react';
-{/*import { Calendar, momentLocalizer } from 'react-big-calendar';*/}
-import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { FaPlus, FaEdit, FaTrash } from 'react-icons/fa';
-import '../styles/EventCalendar.css';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-
-const localizer = momentLocalizer(moment);
+import { FaPlus, FaTimes, FaCalendar, FaFilter } from 'react-icons/fa';
+import moment from 'moment';
 
 const EventCalendar = () => {
+  const [date, setDate] = useState(new Date());
   const [events, setEvents] = useState([]);
   const [showEventModal, setShowEventModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventForm, setEventForm] = useState({
     title: '',
-    start: new Date(),
-    end: new Date(),
+    date: new Date(),
     description: '',
-    type: 'meeting' // meeting, reminder, deadline
+    type: 'meeting'
   });
-  const [date, setDate] = useState(new Date());
+  const [notifications, setNotifications] = useState([
+    { id: 1, type: 'booking', title: 'Booking Reminder', message: 'Lorem ipsum dolor sit amet, consetetur' },
+    { id: 2, type: 'message', title: 'New Message', message: 'Lorem ipsum dolor sit amet, consetetur' },
+    { id: 3, type: 'booking', title: 'Upcoming Booking', message: 'Lorem ipsum dolor sit amet, consetetur' }
+  ]);
 
   useEffect(() => {
     fetchEvents();
@@ -38,35 +35,17 @@ const EventCalendar = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setEvents(data.map(event => ({
-          ...event,
-          start: new Date(event.start),
-          end: new Date(event.end)
-        })));
+        setEvents(data);
       }
     } catch (error) {
       console.error('Error fetching events:', error);
     }
   };
 
-  const handleEventSelect = (event) => {
-    setSelectedEvent(event);
-    setEventForm({
-      title: event.title,
-      start: event.start,
-      end: event.end,
-      description: event.description,
-      type: event.type
-    });
-    setShowEventModal(true);
-  };
-
   const handleCreateEvent = () => {
-    setSelectedEvent(null);
     setEventForm({
       title: '',
-      start: new Date(),
-      end: new Date(),
+      date: date,
       description: '',
       type: 'meeting'
     });
@@ -77,12 +56,8 @@ const EventCalendar = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const url = selectedEvent 
-        ? `http://localhost:5000/api/events/${selectedEvent._id}`
-        : 'http://localhost:5000/api/events';
-      
-      const response = await fetch(url, {
-        method: selectedEvent ? 'PUT' : 'POST',
+      const response = await fetch('http://localhost:5000/api/events', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -99,61 +74,182 @@ const EventCalendar = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedEvent) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/events/${selectedEvent._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        fetchEvents();
-        setShowEventModal(false);
-      }
-    } catch (error) {
-      console.error('Error deleting event:', error);
-    }
+  const hasEvents = (date) => {
+    return events.some(event => 
+      moment(event.date).format('YYYY-MM-DD') === moment(date).format('YYYY-MM-DD')
+    );
   };
 
   return (
-    <div className="w-full">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Calendar</h2>
-      <div className="calendar-wrapper">
-        <Calendar
-          onChange={setDate}
-          value={date}
-          className="w-full bg-white rounded-lg shadow-sm"
-          tileClassName={({ date, view }) => 
-            view === 'month' ? 'text-sm p-2 hover:bg-primary hover:text-white transition-colors duration-200' : ''
-          }
-          navigationLabel={({ date, label, locale, view }) => (
-            <span className="text-gray-700 font-medium">{label}</span>
-          )}
-          prevLabel={<span className="text-primary">←</span>}
-          nextLabel={<span className="text-primary">→</span>}
-          minDetail="month"
-        />
+    <div className="w-full max-w-md">
+      {/* Event Calendar Section */}
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+        <div className="p-4 flex justify-between items-center border-b">
+          <div className="flex items-center gap-2">
+            <FaCalendar className="text-gray-500" />
+            <input
+              type="text"
+              placeholder="Select date range"
+              className="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="p-2 text-gray-500 hover:text-gray-700">
+              <FaFilter />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4">
+          <Calendar
+            onChange={setDate}
+            value={date}
+            className="w-full"
+            tileClassName={({ date }) => 
+              hasEvents(date) 
+                ? 'has-events'
+                : ''
+            }
+          />
+        </div>
       </div>
-      
+
+      {/* Event List Section */}
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-lg font-semibold text-gray-800">Notifications</h2>
+          <button
+            onClick={() => {}}
+            className="text-sm text-primary hover:text-primary-dark flex items-center gap-1"
+          >
+            View All Notifications
+            <span className="text-lg">→</span>
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {notifications.map((notification) => (
+            <div key={notification.id} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg">
+              <div className={`p-2 rounded-full ${
+                notification.type === 'booking' 
+                  ? 'bg-red-100' 
+                  : 'bg-yellow-100'
+              }`}>
+                {notification.type === 'booking' ? '!' : '✉'}
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900">{notification.title}</h3>
+                <p className="text-sm text-gray-500">{notification.message}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Add Event Button - Fixed Position */}
+      <button
+        onClick={handleCreateEvent}
+        className="fixed bottom-6 right-6 bg-primary text-white p-4 rounded-full shadow-lg hover:bg-primary-dark transition-colors"
+      >
+        <FaPlus className="w-5 h-5" />
+      </button>
+
+      {/* Event Modal */}
+      {showEventModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md mx-4">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-800">Add Event</h3>
+              <button
+                onClick={() => setShowEventModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={eventForm.title}
+                  onChange={(e) => setEventForm({...eventForm, title: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={moment(eventForm.date).format('YYYY-MM-DD')}
+                  onChange={(e) => setEventForm({...eventForm, date: new Date(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={eventForm.description}
+                  onChange={(e) => setEventForm({...eventForm, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  rows="3"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowEventModal(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+                >
+                  Save Event
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
-        /* Custom styles for react-calendar that can't be handled by Tailwind */
+        /* Custom styles for react-calendar */
         :global(.react-calendar) {
           border: none;
           font-family: inherit;
+          width: 100%;
         }
         
-        :global(.react-calendar__navigation) {
-          margin-bottom: 1rem;
+        :global(.react-calendar__tile.has-events) {
+          position: relative;
+          font-weight: bold;
         }
         
-        :global(.react-calendar__navigation button:enabled:hover,
-                .react-calendar__navigation button:enabled:focus) {
-          background-color: #f3f4f6;
+        :global(.react-calendar__tile.has-events::after) {
+          content: '';
+          position: absolute;
+          bottom: 4px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 6px;
+          height: 6px;
+          background-color: #052E19;
+          border-radius: 50%;
         }
         
         :global(.react-calendar__tile--now) {
@@ -174,102 +270,23 @@ const EventCalendar = () => {
                 .react-calendar__tile:enabled:focus) {
           background-color: #f3f4f6;
         }
+
+        :global(.react-calendar__navigation button) {
+          font-size: 1.2em;
+          color: #374151;
+        }
+
+        :global(.react-calendar__month-view__weekdays) {
+          text-transform: uppercase;
+          font-weight: bold;
+          font-size: 0.75em;
+          color: #6B7280;
+        }
+
+        :global(.react-calendar__month-view__days__day--weekend) {
+          color: #EF4444;
+        }
       `}</style>
-
-      <div className="event-calendar">
-        <div className="calendar-header">
-          <h2>Event Calendar</h2>
-          <button className="add-event-btn" onClick={handleCreateEvent}>
-            <FaPlus /> Add Event
-          </button>
-        </div>
-
-        <Calendar
-          localizer={localizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: 500 }}
-          onSelectEvent={handleEventSelect}
-          eventPropGetter={(event) => ({
-            className: `event-${event.type}`
-          })}
-        />
-
-        {showEventModal && (
-          <div className="event-modal-overlay">
-            <div className="event-modal">
-              <h3>{selectedEvent ? 'Edit Event' : 'Create Event'}</h3>
-              <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <label>Title</label>
-                  <input
-                    type="text"
-                    value={eventForm.title}
-                    onChange={(e) => setEventForm({...eventForm, title: e.target.value})}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Start Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    value={moment(eventForm.start).format('YYYY-MM-DDTHH:mm')}
-                    onChange={(e) => setEventForm({...eventForm, start: new Date(e.target.value)})}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>End Date & Time</label>
-                  <input
-                    type="datetime-local"
-                    value={moment(eventForm.end).format('YYYY-MM-DDTHH:mm')}
-                    onChange={(e) => setEventForm({...eventForm, end: new Date(e.target.value)})}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Type</label>
-                  <select
-                    value={eventForm.type}
-                    onChange={(e) => setEventForm({...eventForm, type: e.target.value})}
-                  >
-                    <option value="meeting">Meeting</option>
-                    <option value="reminder">Reminder</option>
-                    <option value="deadline">Deadline</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Description</label>
-                  <textarea
-                    value={eventForm.description}
-                    onChange={(e) => setEventForm({...eventForm, description: e.target.value})}
-                    rows="3"
-                  />
-                </div>
-
-                <div className="modal-actions">
-                  {selectedEvent && (
-                    <button type="button" className="delete-btn" onClick={handleDelete}>
-                      <FaTrash /> Delete
-                    </button>
-                  )}
-                  <button type="button" className="cancel-btn" onClick={() => setShowEventModal(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="save-btn">
-                    <FaEdit /> {selectedEvent ? 'Update' : 'Create'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 };
