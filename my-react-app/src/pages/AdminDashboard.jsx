@@ -16,6 +16,11 @@ const AdminDashboard = () => {
   const [announcement, setAnnouncement] = useState("");
   const [teamBookings, setTeamBookings] = useState([]);
   const [floorStats, setFloorStats] = useState([]);
+  const [allEvents, setAllEvents] = useState([]); 
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [newEvent, setNewEvent] = useState({ title: "", description: "", time: "" });
+  const [todayEvents, setTodayEvents] = useState([]);
+  const [eventDates, setEventDates] = useState([]);
 
   const teamColors = {
     "Team A": "bg-blue-400",
@@ -55,15 +60,13 @@ const AdminDashboard = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          message: announcement,
-        }),
+        body: JSON.stringify({ message: announcement }),
       });
   
       const data = await res.json();
       if (res.ok) {
         alert("Announcement sent to all users!");
-        setAnnouncement(""); // Clear the input
+        setAnnouncement(""); 
       } else {
         alert(data?.message || "Failed to send announcement.");
       }
@@ -75,13 +78,13 @@ const AdminDashboard = () => {
 
   const handleDateChange = (newDate) => {
     setDate(newDate);
-    fetchEventsForDate(newDate); // Fetch events on date change
+    fetchEventsForDate(newDate); 
   };
 
   const fetchEventsForDate = async (selectedDate) => {
     try {
-      const formattedDate = selectedDate.toISOString().split("T")[0]; // format to YYYY-MM-DD
-      const res = await axios.get(`/api/bookings/events/${formattedDate}`); 
+      const formattedDate = selectedDate.toISOString().split("T")[0];
+      const res = await axios.get(`/api/events/${formattedDate}`); 
       if (res.data.success) {
         setEvents(res.data.events);
       }
@@ -89,7 +92,6 @@ const AdminDashboard = () => {
       console.error("Error fetching events:", err);
     }
   };
-
 
   const fetchBookingCount = async () => {
     try {
@@ -113,33 +115,82 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchAllEvents = async () => {
+    try {
+      const res = await axios.get(`/api/events`);
+      if (res.data.success) {
+        setAllEvents(res.data.events);
+
+        const dates = res.data.events.map(event => event.date);
+        setEventDates(dates);
+      }
+    } catch (err) {
+      console.error("Error fetching all events:", err);
+    }
+  };
+
+  const fetchTodayEvents = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    const res = await axios.get(`/api/events/${today}`);
+    if (res.data.success) {
+      setTodayEvents(res.data.events);
+    }
+  };
+
+  const handleDayClick = (value) => {
+    setDate(value);
+    fetchEventsForDate(value);
+    setShowEventModal(true);
+  };
+
+  const addEvent = async () => {
+    if (!newEvent.title.trim()) return alert("Please enter a title");
+  
+    try {
+      const formattedDate = date.toISOString().split("T")[0];
+      const res = await axios.post("/api/events", {
+        ...newEvent,
+        date: formattedDate
+      });
+  
+      if (res.data.success) {
+        alert("Event added!");
+        setShowEventModal(false);
+        setNewEvent({ title: "", description: "", time: "" });
+        fetchAllEvents();
+        fetchEventsForDate(date);
+      }
+    } catch (err) {
+      console.error("Error adding event:", err);
+      alert("Something went wrong");
+    }
+  };
+
   useEffect(() => {
     const fetchAllData = async () => {
       await fetchTeamBookings();
       await fetchBookingCount();
       await fetchEventsForDate(date);
       await fetchFloorBookingStats();
+      await fetchAllEvents(); 
+      await fetchTodayEvents(); 
     };
   
-    fetchAllData(); // Fetch initially
+    fetchAllData(); 
   
     const interval = setInterval(() => {
-      fetchAllData(); // Refresh every 10s
+      fetchAllData(); 
     }, 10000);
   
-    return () => clearInterval(interval); // Cleanup
+    return () => clearInterval(interval); 
   }, [date]);
 
-console.log("todayBookingCount", todayBookingCount);
-console.log("events", events);
-console.log("date", date);
+  const topTeams = [...teamBookings]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
 
-const topTeams = [...teamBookings]
-  .sort((a, b) => b.count - a.count)
-  .slice(0, 3);
+  const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !== '');
 
-const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !== '');
-  
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       <div className="w-64 flex-none">
@@ -147,16 +198,13 @@ const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !
       </div>
       <div className="flex-1 bg-gray-100 overflow-y-auto p-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Left Column */}
           <div className="space-y-4">
             <div>
               <h1 className="text-2xl font-bold">Dashboard</h1>
               <p className="text-xl text-gray-600">Admin</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Special Announcement
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Special Announcement</label>
               <textarea
                 value={announcement}
                 onChange={(e) => setAnnouncement(e.target.value)}
@@ -169,7 +217,7 @@ const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !
                 </button>
               </div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow">
+            <div className="bg-white p-6 rounded-lg shadow">
               <h2 className="font-semibold text-lg mb-2">Today</h2>
               <ul className="space-y-2">
                 {topTeams.map((team, index) => (
@@ -188,61 +236,55 @@ const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !
             </div>
           </div>
 
-          {/* Middle Column */}
           <div className="space-y-4">
-            <div className="bg-white p-4 rounded-lg shadow">
+            <div className="bg-white p-6 rounded-lg shadow">
               <h2 className="font-semibold mb-2">Event Calendar</h2>
-              <Calendar onChange={handleDateChange} value={date} />
-              {events.length > 0 ? (
-                <div className="mt-4">
-                  <h3 className="font-semibold text-lg">Events for {date.toDateString()}</h3>
-                  <ul className="space-y-2">
-                    {events.map((event, idx) => (
-                      <li key={idx} className="p-4 bg-white rounded-lg shadow">
-                        <h4 className="font-semibold text-md">{event.title}</h4>
-                        <p>{event.description}</p>
-                        <p><strong>Time:</strong> {event.time}</p>
-                        <p><strong>Status:</strong> {event.status}</p>
-                      </li>
+              <Calendar
+                onChange={setDate}
+                value={date}
+                tileClassName={({ date: tileDate }) => {
+                  const today = new Date();
+                  const isToday =
+                    tileDate.getDate() === today.getDate() &&
+                    tileDate.getMonth() === today.getMonth() &&
+                    tileDate.getFullYear() === today.getFullYear();
+
+                  const isEventDay = eventDates.includes(tileDate.toISOString().split("T")[0]);
+
+                  if (isToday) return "bg-green-300 text-white rounded-full";
+                  if (isEventDay) return "bg-yellow-200 font-semibold rounded-lg";
+                  return null;
+                }}
+              />
+              <div className="mt-4">
+                <h3 className="font-semibold">Today's Events:</h3>
+                {todayEvents.length > 0 ? (
+                  <ul className="list-disc ml-4 text-sm mt-1">
+                    {todayEvents.map((event, idx) => (
+                      <li key={idx}>{event.title}</li>
                     ))}
                   </ul>
-                </div>
-              ) : (
-                <p className="mt-4 text-gray-600">No events for this day.</p>
-              )}
+                ) : (
+                  <p className="text-sm text-gray-500">No special events today.</p>
+                )}
+              </div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow">
+
+            <div className="bg-white p-6 rounded-lg shadow">
               <h2 className="font-semibold mb-2">Color Palette for teams</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {[
-                  { name: "Team A", color: "bg-blue-400" },
-                  { name: "Team B", color: "bg-purple-400" },
-                  { name: "Team C", color: "bg-orange-400" },
-                  { name: "Team D", color: "bg-yellow-200" },
-                  { name: "Team E", color: "bg-green-400" },
-                  { name: "Team F", color: "bg-pink-400" },
-                  { name: "Team G", color: "bg-indigo-300" },
-                  { name: "Team H", color: "bg-red-400" },
-                  { name: "Team I", color: "bg-teal-400" },
-                  { name: "Team J", color: "bg-lime-400" },
-                  { name: "Team K", color: "bg-yellow-700" },
-                  { name: "Team L", color: "bg-stone-400" },
-                  { name: "Team M", color: "bg-red-600" },
-                  { name: "Team N", color: "bg-amber-400" },
-                  { name: "Team O", color: "bg-violet-600" },
-                ].map((team, idx) => (
+                {[...Object.keys(teamColors)].map((team, idx) => (
                   <div key={idx} className="flex items-center space-x-2">
-                    <span className={`w-4 h-4 rounded-full ${team.color}`}></span>
-                    <span>{team.name}</span>
+                    <span className={`w-4 h-4 rounded-full ${teamColors[team]}`}></span>
+                    <span>{team}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Right Column */}
           <div className="space-y-4">
-            <div className="bg-white p-4 rounded-lg shadow flex items-center space-x-4">
+            <div className="bg-white p-6 rounded-lg shadow flex items-center space-x-4">
               <img
                 src={avatar}
                 alt="avatar"
@@ -253,23 +295,23 @@ const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !
                 <button className="text-green-600 font-medium text-sm">Profile →</button>
               </div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow">
+            <div className="bg-white p-6 rounded-lg shadow">
               <h2 className="font-semibold mb-2">Quick Stats</h2>
               <p className="text-3xl font-bold text-black-600">
                 {todayBookingCount !== null ? todayBookingCount : "Loading..."}
               </p>
               <button className="text-green-600 font-medium mt-2">View Reports →</button>
             </div>
-            <div className="bg-white rounded-2xl p-4 shadow-md h-[300px]">
+            <div className="bg-white rounded-2xl p-6 shadow-md h-[300px]">
               <h2 className="text-lg font-semibold mb-4">Bookings Count</h2>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={filteredData}>
+                <BarChart data={filteredData} margin={{ top: 10, right: 10, left: 10, bottom: 45 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="floor">
                     <Label value="Floors" offset={-5} position="insideBottom" />
                   </XAxis>
                   <YAxis allowDecimals={false}>
-                    <Label value="Booking Count" angle={-90} position="insideLeft" />
+                    <Label value="Booking Count" angle={-90} position="insideLeft" dy={30} />
                   </YAxis>
                   <Tooltip />
                   <Bar dataKey="count" fill="#166534" radius={[4, 4, 0, 0]} />
@@ -279,10 +321,54 @@ const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !
           </div>
         </div>
       </div>
+      {showEventModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96 space-y-4">
+          <h2 className="text-lg font-bold mb-2">Events on {date.toDateString()}</h2>
+
+          {events.length > 0 ? (
+            <ul className="text-sm list-disc ml-4 mb-4">
+              {events.map((ev, idx) => (
+                <li key={idx}>
+                  <strong>{ev.title}</strong> {ev.time && `at ${ev.time}`}
+                  {ev.description && ` - ${ev.description}`}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-gray-500 mb-4">No events yet. Add one below!</p>
+          )}
+
+          <hr className="my-2" />
+          <h3 className="font-semibold mb-1">Add New Event</h3>
+            <input
+              className="w-full p-2 border rounded"
+              type="text"
+              placeholder="Event Title"
+              value={newEvent.title}
+              onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+            />
+            <textarea
+              className="w-full p-2 border rounded resize-none"
+              placeholder="Event Description"
+              value={newEvent.description}
+              onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+            ></textarea>
+            <input
+              className="w-full p-2 border rounded"
+              type="time"
+              value={newEvent.time}
+              onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
+            />
+            <div className="flex justify-between mt-4">
+              <button onClick={() => setShowEventModal(false)} className="bg-gray-500 text-white px-4 py-2 rounded">Cancel</button>
+              <button onClick={addEvent} className="bg-blue-500 text-white px-4 py-2 rounded">Add Event</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default AdminDashboard;
-
-
