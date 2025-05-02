@@ -1,12 +1,13 @@
-import React from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
-import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
-import UserDashboard from './pages/UserDashboard';
-import AdminNotification from './pages/AdminNotification';
-import AdminViewReports from './pages/AdminViewReports';
-import BookingHistory from './pages/BookingHistory';
-import ParkingBooking from './pages/ParkingBooking';
+import React from "react";
+import { Routes, Route, useLocation } from "react-router-dom";
+import Login from "./pages/Login";
+import AdminDashboard from "./pages/AdminDashboard";
+import UserDashboard from "./pages/UserDashboard";
+import AdminNotification from "./pages/AdminNotification";
+import AdminViewReports from "./pages/AdminViewReports";
+import BookingHistory from "./pages/BookingHistory";
+import ParkingBooking from "./pages/ParkingBooking";
+import Profile from "./pages/Profile";
 
 const App = () => {
   const location = useLocation();
@@ -31,6 +32,7 @@ const App = () => {
         <Route path="/admin-reports" element={<AdminViewReports />} />
         <Route path="/history" element={<BookingHistory />} />
         <Route path="/user/parking-booking" element={<ParkingBooking />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </div>
   );
