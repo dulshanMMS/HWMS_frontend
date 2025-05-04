@@ -35,6 +35,7 @@ const AdminViewReports = () => {
   const [showClearButton, setShowClearButton] = useState(false);
   const [searchType, setSearchType] = useState('userId');
   const [searchQuery, setSearchQuery] = useState('');
+  const [teamResults, setTeamResults] = useState(null);
 
   useEffect(() => {
     fetchAnalyticsData();
@@ -99,17 +100,27 @@ const AdminViewReports = () => {
     try {
       setUserLoading(true);
       setUserError(null);
-      const response = await api.get(`/api/reports/bookings`, {
-        params: {
-          searchType,
-          searchQuery: searchQuery.trim()
-        }
-      });
-      setUserBookings(response.data);
-    } catch (err) {
-      console.error('Error fetching bookings:', err);
-      setUserError(`Failed to fetch bookings: ${err.response?.data?.message || err.message}`);
+      setTeamResults(null);
       setUserBookings(null);
+
+      if (searchType === 'team') {
+        const response = await api.get(`/api/reports/team-lookup`, {
+          params: { team: searchQuery.trim() }
+        });
+        setTeamResults(response.data);
+      } else {
+        // userId or username
+        const response = await api.get(`/api/reports/user-lookup`, {
+          params: searchType === 'userId'
+            ? { userId: searchQuery.trim() }
+            : { username: searchQuery.trim() }
+        });
+        setUserBookings(response.data);
+      }
+    } catch (err) {
+      setUserError(`Failed to fetch bookings: ${err.response?.data?.error || err.message}`);
+      setUserBookings(null);
+      setTeamResults(null);
     } finally {
       setUserLoading(false);
     }
@@ -283,6 +294,48 @@ const AdminViewReports = () => {
           style={{ backgroundColor }}
         >
           <FaUser className="h-5 w-5" />
+        </div>
+      </div>
+    );
+  };
+
+  const renderTeamTable = () => {
+    if (userLoading) return <div className="text-center">Loading team bookings...</div>;
+    if (userError) return <div className="text-red-500">{userError}</div>;
+    if (!teamResults) return null;
+
+    return (
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold mb-3">Team Booking Summary</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border rounded-lg">
+            <thead className="bg-gray-50">
+              <tr>
+                <th>User ID</th>
+                <th>User Name</th>
+                <th>Team</th>
+                <th>Parking Bookings</th>
+                <th>Seat Bookings</th>
+                <th>Booking Dates</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamResults.map(user => (
+                <tr key={user.id}>
+                  <td>{user.id}</td>
+                  <td>{user.name}</td>
+                  <td>{user.team}</td>
+                  <td>{user.parkingCount}</td>
+                  <td>{user.seatCount}</td>
+                  <td>
+                    {user.bookings.map((b, i) => (
+                      <div key={i}>{b.type}: {new Date(b.date).toLocaleDateString()}</div>
+                    ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     );
