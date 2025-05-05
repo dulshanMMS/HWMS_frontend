@@ -40,7 +40,7 @@ const AdminProfile = () => {
         className="flex items-center gap-3 cursor-pointer p-2 rounded-lg transition-colors duration-200 bg-gray-100 hover:bg-gray-200"
         onClick={() => setShowDropdown(!showDropdown)}
       >
-        <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center overflow-hidden border-2 border-white">
+        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center overflow-hidden border-2 border-white">
           {adminData?.profileImage ? (
             <img 
               src={adminData.profileImage} 
