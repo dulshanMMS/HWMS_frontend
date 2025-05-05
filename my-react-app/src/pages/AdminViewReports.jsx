@@ -20,6 +20,24 @@ import "react-datepicker/dist/react-datepicker.css";
 import { PROGRAM_COLORS } from '../constants/colors';
 import EventCalendar from '../components/EventCalendar';
 
+const PROGRAM_TO_TEAM = {
+  SENG: 'Team A',
+  BM: 'Team B',
+  IT: 'Team C',
+  TEAM4: 'Team D',
+  TEAM5: 'Team E',
+  TEAM6: 'Team F',
+  TEAM7: 'Team G',
+  TEAM8: 'Team H',
+  TEAM9: 'Team I',
+  TEAM10: 'Team J',
+  TEAM11: 'Team K',
+  TEAM12: 'Team L',
+  TEAM13: 'Team M',
+  TEAM14: 'Team N',
+  TEAM15: 'Team O',
+};
+
 const AdminViewReports = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -311,7 +329,6 @@ const AdminViewReports = () => {
           <table className="min-w-full bg-white border rounded-lg">
             <thead className="bg-gray-50">
               <tr>
-                <th>User ID</th>
                 <th>User Name</th>
                 <th>Team</th>
                 <th>Parking Bookings</th>
@@ -322,9 +339,8 @@ const AdminViewReports = () => {
             <tbody>
               {teamResults.map(user => (
                 <tr key={user.id}>
-                  <td>{user.id}</td>
-                  <td>{user.name}</td>
-                  <td>{user.team}</td>
+                  <td>{user.name || user.id}</td>
+                  <td>{PROGRAM_TO_TEAM[user.team] || user.team || user.team}</td>
                   <td>{user.parkingCount}</td>
                   <td>{user.seatCount}</td>
                   <td>
@@ -713,13 +729,10 @@ const AdminViewReports = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User ID
+                    User Name
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Program
+                    Team
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Booking Type
@@ -737,28 +750,16 @@ const AdminViewReports = () => {
                   userBookings.map((booking, index) => (
                     <tr key={booking._id || index} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {booking.userId}
+                        {booking.userName || booking.userId}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {renderAvatar(booking.userId, booking.program)}
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
-                              {booking.userId}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {booking.program}
+                              {PROGRAM_TO_TEAM[booking.program] || booking.team || booking.program}
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div 
-                            className="w-3 h-3 rounded-full mr-2"
-                            style={{ backgroundColor: PROGRAM_COLORS[booking.program] }}
-                          ></div>
-                          <span className="text-sm text-gray-900">{booking.program}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -793,28 +794,16 @@ const AdminViewReports = () => {
                     bookings.map((booking, index) => (
                       <tr key={booking._id || index} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {booking.userId}
+                          {booking.userName || booking.userId}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             {renderAvatar(booking.userId, booking.program)}
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">
-                                {booking.userId}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {booking.program}
+                                {PROGRAM_TO_TEAM[booking.program] || booking.team || booking.program}
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div 
-                              className="w-3 h-3 rounded-full mr-2"
-                              style={{ backgroundColor: PROGRAM_COLORS[booking.program] }}
-                            ></div>
-                            <span className="text-sm text-gray-900">{booking.program}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

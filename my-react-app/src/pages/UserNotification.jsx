@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { FaBell, FaCheck, FaTrash, FaClock } from 'react-icons/fa';
 
 const UserNotification = () => {
@@ -7,15 +8,24 @@ const UserNotification = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // all, unread, read
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchNotifications();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+    fetchNotifications(token);
+    // eslint-disable-next-line
   }, []);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (token) => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/notifications/user');
+      const response = await axios.get('/api/notifications/user', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setNotifications(response.data);
       setError(null);
     } catch (err) {
@@ -28,7 +38,10 @@ const UserNotification = () => {
 
   const markAsRead = async (id) => {
     try {
-      await axios.put(`/api/notifications/${id}/mark-read`);
+      const token = localStorage.getItem('token');
+      await axios.put(`/api/notifications/${id}/mark-read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setNotifications(notifications.map(notif =>
         notif._id === id ? { ...notif, read: true } : notif
       ));
@@ -39,7 +52,10 @@ const UserNotification = () => {
 
   const deleteNotification = async (id) => {
     try {
-      await axios.delete(`/api/notifications/${id}`);
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/notifications/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setNotifications(notifications.filter(notif => notif._id !== id));
     } catch (err) {
       console.error('Error deleting notification:', err);
@@ -76,7 +92,7 @@ const UserNotification = () => {
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative max-w-xl mx-auto mt-8" role="alert">
         <strong className="font-bold">Error!</strong>
         <span className="block sm:inline"> {error}</span>
       </div>
@@ -86,7 +102,7 @@ const UserNotification = () => {
   return (
     <div className="max-w-4xl mx-auto p-4">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
           <h1 className="text-2xl font-semibold text-gray-800 flex items-center">
             <FaBell className="mr-2 text-green-600" />
             Notifications
@@ -94,7 +110,7 @@ const UserNotification = () => {
           <div className="flex gap-2">
             <button
               onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-md ${
+              className={`px-4 py-2 rounded-md transition-colors ${
                 filter === 'all'
                   ? 'bg-green-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -104,7 +120,7 @@ const UserNotification = () => {
             </button>
             <button
               onClick={() => setFilter('unread')}
-              className={`px-4 py-2 rounded-md ${
+              className={`px-4 py-2 rounded-md transition-colors ${
                 filter === 'unread'
                   ? 'bg-green-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -114,7 +130,7 @@ const UserNotification = () => {
             </button>
             <button
               onClick={() => setFilter('read')}
-              className={`px-4 py-2 rounded-md ${
+              className={`px-4 py-2 rounded-md transition-colors ${
                 filter === 'read'
                   ? 'bg-green-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
