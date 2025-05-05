@@ -7,6 +7,8 @@ import AdminNotification from './pages/AdminNotification';
 import AdminViewReports from './pages/AdminViewReports';
 import BookingHistory from './pages/BookingHistory';
 import ParkingBooking from './pages/ParkingBooking';
+import AdminParking from './pages/AdminParking';
+
 
 const App = () => {
   const location = useLocation();
@@ -31,6 +33,7 @@ const App = () => {
         <Route path="/admin-reports" element={<AdminViewReports />} />
         <Route path="/history" element={<BookingHistory />} />
         <Route path="/user/parking-booking" element={<ParkingBooking />} />
+        <Route path="admin/adminparking" element={<AdminParking/>} />
       </Routes>
     </div>
   );
