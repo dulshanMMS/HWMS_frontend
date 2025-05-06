@@ -92,7 +92,7 @@ const AdminDashboard = () => {
       console.error("Error fetching events:", err);
     }
   };
-
+  //quick stat
   const fetchBookingCount = async () => {
     try {
       const res = await axios.get("/api/bookings/count/today");
@@ -218,6 +218,7 @@ const AdminDashboard = () => {
       <div className="w-64 flex-none">
         <AdminSidebar />
       </div>
+      {/*Left Column*/}
       <div className="flex-1 bg-gray-100 overflow-y-auto p-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="space-y-4">
@@ -257,7 +258,7 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
-
+          {/*Middle Column*/}
           <div className="space-y-4">
             <div className="bg-white p-6 rounded-lg shadow">
               <h2 className="font-semibold mb-2">Event Calendar</h2>
@@ -304,7 +305,7 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
-
+          {/*Right column*/}
           <div className="space-y-4">
             <div className="bg-white p-6 rounded-lg shadow flex items-center space-x-4">
               <img
@@ -343,6 +344,8 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/*Adding event box*/}
       {showEventModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-96 space-y-4">
@@ -351,19 +354,19 @@ const AdminDashboard = () => {
           {events.length > 0 ? (
             <ul className="text-sm list-disc ml-4 mb-4">
               {events.map((ev, idx) => (
-  <li key={idx} className="flex justify-between items-start">
-    <div>
-      <strong>{ev.title}</strong> {ev.time && `at ${ev.time}`}
-      {ev.description && ` - ${ev.description}`}
-    </div>
-    <button
-      onClick={() => deleteEvent(ev._id)}
-      className="text-red-600 hover:underline ml-2 text-sm"
-    >
-      Delete
-    </button>
-  </li>
-))}
+                <li key={idx} className="flex justify-between items-start">
+                  <div>
+                    <strong>{ev.title}</strong> {ev.time && `at ${ev.time}`}
+                    {ev.description && ` - ${ev.description}`}
+                  </div>
+                  <button
+                    onClick={() => deleteEvent(ev._id)}
+                    className="text-red-600 hover:underline ml-2 text-sm"
+                  >
+                    Delete
+                  </button>
+                </li>
+              ))}
             </ul>
           ) : (
             <p className="text-sm text-gray-500 mb-4">No events yet. Add one below!</p>
