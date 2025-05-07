@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import AdminProfile from '../components/AdminProfile';
+import useAuthGuard from '../components/AuthGuard';
 import api from '../config/api';
 import {
   BarChart,
@@ -17,7 +18,6 @@ import {
 import { FaCalendar, FaSearch, FaUser } from 'react-icons/fa';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import { PROGRAM_COLORS } from '../constants/colors';
 import EventCalendar from '../components/EventCalendar';
 
 const PROGRAM_TO_TEAM = {
@@ -38,7 +38,27 @@ const PROGRAM_TO_TEAM = {
   TEAM15: 'Team O',
 };
 
+const teamColors = {
+  "Team A": "#60a5fa",      // blue-400
+  "Team B": "#a78bfa",      // purple-400
+  "Team C": "#fb923c",      // orange-400
+  "Team D": "#fde68a",      // yellow-200
+  "Team E": "#4ade80",      // green-400
+  "Team F": "#f472b6",      // pink-400
+  "Team G": "#818cf8",      // indigo-300
+  "Team H": "#f87171",      // red-400
+  "Team I": "#2dd4bf",      // teal-400
+  "Team J": "#bef264",      // lime-400
+  "Team K": "#a16207",      // yellow-700
+  "Team L": "#a8a29e",      // stone-400
+  "Team M": "#dc2626",      // red-600
+  "Team N": "#fbbf24",      // amber-400
+  "Team O": "#7c3aed",      // violet-600
+};
+
 const AdminViewReports = () => {
+  useAuthGuard('admin');
+
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -303,13 +323,12 @@ const AdminViewReports = () => {
   };
 
   const renderAvatar = (userId, program) => {
-    const backgroundColor = PROGRAM_COLORS[program] || '#9E9E9E';
-    
+    const color = teamColors[program] || '#9E9E9E';
     return (
       <div className="h-10 w-10 flex-shrink-0">
-        <div 
+        <div
           className="h-10 w-10 rounded-full flex items-center justify-center text-white"
-          style={{ backgroundColor }}
+          style={{ backgroundColor: color }}
         >
           <FaUser className="h-5 w-5" />
         </div>
@@ -376,7 +395,7 @@ const AdminViewReports = () => {
     }
 
     return (
-      <div className="max-w-7xl mx-auto p-4">
+      <div className="max-w-7xl mx-auto">
         {/* Header with Date Range Picker */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <h1 className="text-2xl font-semibold text-gray-800">Analytics & Reports</h1>
@@ -482,9 +501,9 @@ const AdminViewReports = () => {
                         borderRadius: '0.375rem'
                       }}
                     />
-                    <Legend />
-                    <Bar dataKey="seats" fill={PROGRAM_COLORS['Team A']} name="Seats" />
-                    <Bar dataKey="parking" fill={PROGRAM_COLORS['Team B']} name="Parking" />
+                    <Bar dataKey="seats" fill="#00BCD4" name="Seats" />
+                    <Bar dataKey="parking" fill="#9C27B0" name="Parking" />
+                    <Bar dataKey="total" fill="#4CAF50" name="Total" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -493,7 +512,7 @@ const AdminViewReports = () => {
 
           {/* Monthly Stats */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Monthly Statistics</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">Monthly Booking Stats</h2>
             <div className="h-[300px] overflow-x-auto">
               <div className="min-w-full" style={{ minWidth: `${Math.max(600, transformMonthlyStats().length * 40)}px` }}>
                 <ResponsiveContainer width="100%" height={300}>
@@ -502,18 +521,13 @@ const AdminViewReports = () => {
                     <XAxis 
                       dataKey="date" 
                       tick={{ fill: '#6B7280', fontSize: 10 }}
-                      tickLine={{ stroke: '#6B7280' }}
                       interval={0}
                       angle={-45}
                       textAnchor="end"
                       height={60}
                       tickMargin={15}
                     />
-                    <YAxis 
-                      tick={{ fill: '#6B7280' }}
-                      tickLine={{ stroke: '#6B7280' }}
-                      axisLine={{ stroke: '#6B7280' }}
-                    />
+                    <YAxis tick={{ fill: '#6B7280' }} />
                     <Tooltip 
                       contentStyle={{ 
                         backgroundColor: 'white',
@@ -521,329 +535,100 @@ const AdminViewReports = () => {
                         borderRadius: '0.375rem'
                       }}
                     />
-                    <Legend 
-                      verticalAlign="top" 
-                      height={36}
-                      iconType="line"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="seats" 
-                      stroke="#00BCD4" 
-                      name="Seats"
-                      strokeWidth={2}
-                      dot={{ fill: '#00BCD4', r: 4 }}
-                      activeDot={{ r: 6, fill: '#00BCD4' }}
-                      connectNulls
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="parking" 
-                      stroke="#9C27B0" 
-                      name="Parking"
-                      strokeWidth={2}
-                      dot={{ fill: '#9C27B0', r: 4 }}
-                      activeDot={{ r: 6, fill: '#9C27B0' }}
-                      connectNulls
-                    />
+                    <Line type="monotone" dataKey="seats" stroke="#00BCD4" name="Seats" />
+                    <Line type="monotone" dataKey="parking" stroke="#9C27B0" name="Parking" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </div>
           </div>
-
-          {/* Desk Usage Statistics */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 col-span-2">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Desk Usage by Floor</h2>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={transformDeskUsage()}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 50, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fill: '#6B7280' }} />
-                  <YAxis dataKey="floor" type="category" tick={{ fill: '#6B7280' }} />
-                  <Tooltip 
-                    formatter={(value) => `${value.toFixed(2)}%`}
-                    contentStyle={{ 
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '0.375rem'
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="used" fill="#8884d8" name="Used" stackId="a" />
-                  <Bar dataKey="unused" fill="#d3d3d3" name="Unused" stackId="a" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Monthly Desk Bookings By Program */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 col-span-2">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Bookings Count</h2>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={transformProgramBookings(analyticsData)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" tick={{ fill: '#6B7280' }} />
-                  <YAxis tick={{ fill: '#6B7280' }} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '0.375rem'
-                    }}
-                  />
-                  <Legend />
-                  <Bar 
-                    dataKey="Team A" 
-                    stackId="a" 
-                    fill={PROGRAM_COLORS['Team A']} 
-                    name="Team A" 
-                  />
-                  <Bar 
-                    dataKey="Team B" 
-                    stackId="a" 
-                    fill={PROGRAM_COLORS['Team B']} 
-                    name="Team B" 
-                  />
-                  <Bar 
-                    dataKey="Team C" 
-                    stackId="a" 
-                    fill={PROGRAM_COLORS['Team C']} 
-                    name="Team C" 
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
         </div>
-        
-        {/* Recent Bookings Table */}
+
+        {/* Program Bookings */}
         <div className="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex flex-col gap-4">
-              {/* User Booking Lookup Section */}
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <FaSearch className="text-primary text-xl" />
-                    <h3 className="text-lg font-semibold text-gray-800">Booking Lookup</h3>
-                  </div>
-                  <div className="flex gap-4 items-center w-full sm:w-auto">
-                    <select
-                      value={searchType}
-                      onChange={(e) => {
-                        setSearchType(e.target.value);
-                        setSearchQuery('');
-                        setUserBookings(null);
-                        setUserError(null);
-                      }}
-                      className="border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary bg-white text-gray-700"
-                    >
-                      <option value="userId">Search by User ID</option>
-                      <option value="team">Search by Team</option>
-                    </select>
-                    <div className="relative flex-1 sm:w-64">
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={searchType === 'userId' ? "Enter User ID" : "Enter Team Name"}
-                        className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary pr-10"
-                      />
-                      {searchQuery && (
-                        <button
-                          onClick={() => {
-                            setSearchQuery('');
-                            setUserBookings(null);
-                            setUserError(null);
-                          }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          <span className="text-xl">×</span>
-                        </button>
-                      )}
-                    </div>
-                    <button
-                      onClick={fetchUserBookings}
-                      disabled={userLoading}
-                      className="bg-primary text-white px-6 py-2 rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 whitespace-nowrap font-medium"
-                    >
-                      {userLoading ? (
-                        <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Searching...
-                        </span>
-                      ) : (
-                        <>
-                          <FaSearch className="inline mr-2" />
-                          Search
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-                {userError && (
-                  <div className="mt-3 text-red-500 text-sm bg-red-50 p-2 rounded border border-red-200">
-                    <span className="font-medium">Error:</span> {userError}
-                  </div>
-                )}
-              </div>
-              
-              {/* Table Title */}
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  {userBookings ? (
-                    searchType === 'userId' 
-                      ? `Bookings for User: ${searchQuery}`
-                      : `Bookings for Team: ${searchQuery}`
-                  ) : (
-                    'Recent Bookings'
-                  )}
-                </h2>
-                {userBookings && (
-                  <button
-                    onClick={() => {
-                      setUserBookings(null);
-                      setSearchQuery('');
-                      setUserError(null);
-                    }}
-                    className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
-                  >
-                    <span>Clear Search</span>
-                    <span className="text-xs">×</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+          <h2 className="text-xl font-semibold text-gray-800 p-6 border-b">Program Bookings</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User Name
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Team
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Booking Type
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Month</th>
+                  {Object.keys(teamColors).map(team => (
+                    <th key={team} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{team}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {userBookings ? (
-                  userBookings.map((booking, index) => (
-                    <tr key={booking._id || index} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {booking.userName || booking.userId}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {renderAvatar(booking.userId, booking.program)}
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {PROGRAM_TO_TEAM[booking.program] || booking.team || booking.program}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                          ${booking.type === 'seat' 
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-purple-100 text-purple-800'}`}>
-                          {booking.type === 'seat' ? 'Seat Booking' : 'Parking Booking'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                          ${booking.status === 'confirmed' 
-                            ? 'bg-green-100 text-green-800'
-                            : booking.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'}`}>
-                          {booking.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(booking.date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  bookings && bookings.length > 0 ? (
-                    bookings.map((booking, index) => (
-                      <tr key={booking._id || index} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {booking.userName || booking.userId}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {renderAvatar(booking.userId, booking.program)}
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {PROGRAM_TO_TEAM[booking.program] || booking.team || booking.program}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                            ${booking.bookingType === 'seat' 
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'}`}>
-                            {booking.bookingType === 'seat' ? 'Seat Booking' : 'Parking Booking'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                            ${booking.status === 'confirmed' 
-                              ? 'bg-green-100 text-green-800'
-                              : booking.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'}`}>
-                            {booking.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(booking.date).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                        No bookings found
-                      </td>
-                    </tr>
-                  )
-                )}
+                {transformProgramBookings(analyticsData).map((row, index) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{row.month}</td>
+                    {Object.keys(teamColors).map(team => (
+                      <td key={team} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row[team] || 0}</td>
+                    ))}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Desk Usage */}
+        <div className="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden">
+          <h2 className="text-xl font-semibold text-gray-800 p-6 border-b">Desk Usage</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Floor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Used</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unused</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {transformDeskUsage().map((row, index) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{row.floor}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.used}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.unused}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* User Search */}
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">User Search</h2>
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Enter user ID or username"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={searchType}
+                onChange={(e) => setSearchType(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="userId">User ID</option>
+                <option value="username">Username</option>
+                <option value="team">Team</option>
+              </select>
+              <button
+                onClick={fetchUserBookings}
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              >
+                Search
+              </button>
+            </div>
+          </div>
+          {renderUserBookings()}
+          {renderTeamTable()}
         </div>
       </div>
     );
