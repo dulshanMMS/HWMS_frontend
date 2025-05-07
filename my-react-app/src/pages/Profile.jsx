@@ -21,6 +21,9 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem("token");
 
+  const [displayName, setDisplayName] = useState(""); //to stop dynamically updating name
+  const [successMsg, setSuccessMsg] = useState(""); //insite popup
+
   useEffect(() => {
     if (token) {
       getProfile(token)
@@ -38,6 +41,7 @@ const Profile = () => {
             email: data.email || "",
             profilePhoto: data.profilePhoto || "",
           });
+          setDisplayName(`${data.firstName} ${data.lastName}`); // to stop dynamically updating name
           setLoading(false);
         })
         .catch((err) => {
@@ -55,10 +59,13 @@ const Profile = () => {
     if (editMode) {
       try {
         await updateProfile(token, formData);
-        alert("Profile updated successfully!");
+        setDisplayName(`${formData.firstName} ${formData.lastName}`); // update display name
+        setSuccessMsg("Profile updated successfully!");
+        setTimeout(() => setSuccessMsg(""), 3000); //fade after 3s
       } catch (err) {
-        alert("Failed to update profile.");
         console.error(err);
+        setSuccessMsg("Failed to update profile.");
+        setTimeout(() => setSuccessMsg(""), 3000);
       }
     }
     setEditMode(!editMode);
@@ -69,20 +76,30 @@ const Profile = () => {
     if (!file) return;
 
     try {
-      const userId = "user_" + formData.email; // or actual user ID if available
+      const userId = "user_" + formData.email; // or actual user ID
       const url = await uploadProfileImage(file, userId);
       setFormData({ ...formData, profilePhoto: url });
-      alert("Profile image uploaded!");
+
+      setSuccessMsg("Profile image uploaded!"); //repalced alert
+      setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err) {
       console.error("Image upload failed:", err);
-      alert("Image upload failed.");
+
+      setSuccessMsg("Image upload failed."); //replaced alert
+      setTimeout(() => setSuccessMsg(""), 3000);
     }
   };
 
   if (loading) return <p className="text-center mt-10">Loading...</p>;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8 font-sans">
+    <div className="relative min-h-screen bg-gray-100 p-8 font-sans">
+      {successMsg && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-700 px-4 py-2 rounded shadow-md z-50 w-fit max-w-md text-center">
+          {successMsg}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-6 mb-8">
         <img
@@ -92,10 +109,8 @@ const Profile = () => {
         />
         <div>
           <h2 className="text-2xl font-bold text-gray-800">
-            Hello,{" "}
-            <span>
-              {formData.firstName} {formData.lastName}
-            </span>
+            Hello, <span>{displayName}</span>{" "}
+            {/* dynamic name update but after saving */}
           </h2>
           <p className="text-gray-600">{formData.email}</p>
         </div>

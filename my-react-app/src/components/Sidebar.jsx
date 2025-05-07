@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getProfile } from "../api/userApi";
 import { FiChevronRight } from "react-icons/fi";
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen }) => {
   const [userProfile, setUserProfile] = useState(null);
   const navigate = useNavigate(); // navigation issue
 
@@ -18,17 +18,20 @@ const Sidebar = () => {
     }
   }, []);
 
+  if (!isOpen) return null; // Hide sidebar on mobile if closed
+
   return (
-    <aside className="h-full flex flex-col p-6 bg-white justify-between">
-      {/* === TOP SECTION: Profile === */}
-      <div className="text-center">
+    <aside className="h-full flex flex-col p-6 bg-white gap-y-6 overflow-y-auto">
+      {/*remove space between top and bottom of right sidebar*/}
+      {/*TOP SECTION Profile*/}
+      <div className="text-center mb-4">
+        {" "}
+        {/*remove space between top and bottom of right sidebar*/}
         {/* Greeting */}
         <p className="text-sm text-gray-600">Hello,</p>
-
         <h2 className="text-xl font-bold text-gray-800 mb-4">
           {userProfile ? `${userProfile.firstName}!` : "Loading..."}
         </h2>
-
         <img
           src={
             userProfile?.profilePhoto
@@ -38,7 +41,6 @@ const Sidebar = () => {
           alt="Profile"
           className="w-20 h-20 rounded-full mx-auto mb-4"
         />
-
         {/* Profile Button */}
         <button
           className="w-full bg-gray-100 text-sm font-semibold text-gray-800 py-3 rounded-xl shadow flex items-center justify-between px-4 hover:bg-gray-200"
@@ -47,9 +49,10 @@ const Sidebar = () => {
           Profile <FiChevronRight className="text-xl" />
         </button>
       </div>
-
       {/* === BOTTOM SECTION: Notifications === */}
-      <div className="mt-8">
+      <div className="mt-2">
+        {" "}
+        {/*remove space between top and bottom of right sidebar*/} \
         {/* Notifications Header */}
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-semibold">Notifications</h3>
@@ -57,7 +60,6 @@ const Sidebar = () => {
             View All <FiChevronRight />
           </button>
         </div>
-
         {/* Notifications List */}
         <ul className="space-y-3">
           {[

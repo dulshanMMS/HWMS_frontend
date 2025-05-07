@@ -4,13 +4,34 @@ import LeftSidebar from "../components/LeftSidebar";
 import { getProfile } from "../api/userApi";
 
 const UserDashboard = () => {
+  const [userProfile, setUserProfile] = useState(null);
+
+  // idebar toggle state
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+
+  // andle screen resize
+  useEffect(() => {
+    const handleResize = () => {
+      setSidebarOpen(window.innerWidth >= 1024);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Load user profile
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      getProfile(token)
+        .then((data) => setUserProfile(data))
+        .catch((err) => console.error("Failed to load profile", err));
+    }
+  }, []);
   // Get current date information
   const today = new Date();
   const currentDay = today.getDate();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
-
-  const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -39,8 +60,38 @@ const UserDashboard = () => {
       <LeftSidebar />
       {/*MAIN CONTENT*/}
       <div className="flex flex-col flex-1 p-6 lg:p-10 gap-6">
+        {/* ✅ Mobile Toggle Button */}
+
         {/* Dashboard Heading */}
-        <h1 className="text-4xl font-bold">Dashboard</h1>
+
+        <div className="flex items-center justify-between">
+          <h1 className="text-4xl font-bold flex items-center gap-4">
+            Dashboard
+            <button
+              onClick={() => setSidebarOpen((prev) => !prev)}
+              className="lg:hidden p-2 focus:outline-none group"
+              aria-label="Toggle Sidebar"
+            >
+              <div className="space-y-1.5">
+                <span
+                  className={`block h-0.5 w-6 bg-gray-800 transform transition duration-300 ${
+                    sidebarOpen ? "rotate-45 translate-y-1.5" : ""
+                  }`}
+                />
+                <span
+                  className={`block h-0.5 w-6 bg-gray-800 transition duration-300 ${
+                    sidebarOpen ? "opacity-0" : ""
+                  }`}
+                />
+                <span
+                  className={`block h-0.5 w-6 bg-gray-800 transform transition duration-300 ${
+                    sidebarOpen ? "-rotate-45 -translate-y-1.5" : ""
+                  }`}
+                />
+              </div>
+            </button>
+          </h1>
+        </div>
 
         {userProfile ? (
           <div className="text-lg font-medium text-gray-600">
@@ -162,9 +213,11 @@ const UserDashboard = () => {
       </div>
 
       {/* SIDEBAR */}
-      <div className="w-[320px] min-h-screen bg-white border-l border-gray-200 shadow-md">
-        <Sidebar />
-      </div>
+      {sidebarOpen && (
+        <div className="w-[320px] min-h-screen bg-white border-l border-gray-200 shadow-md">
+          <Sidebar isOpen={sidebarOpen} />
+        </div>
+      )}
     </div>
   );
 };
