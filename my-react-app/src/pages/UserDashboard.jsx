@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import LeftSidebar from "../components/LeftSidebar";
+import { getProfile } from "../api/userApi";
 
 const UserDashboard = () => {
   // Get current date information
@@ -8,6 +9,29 @@ const UserDashboard = () => {
   const currentDay = today.getDate();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
+
+  const [userProfile, setUserProfile] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    console.log("UserDashboard token:", token);
+
+    if (token) {
+      getProfile(token)
+        .then((data) => {
+          console.log("Fetched user profile:", data);
+          setUserProfile(data);
+        })
+        .catch((err) => {
+          console.error(
+            "Failed to load profile",
+            err.response?.data || err.message
+          );
+        });
+    } else {
+      console.warn("No token found in localStorage.");
+    }
+  }, []);
 
   return (
     <div className="w-full min-h-screen flex flex-row">
@@ -17,6 +41,25 @@ const UserDashboard = () => {
       <div className="flex flex-col flex-1 p-6 lg:p-10 gap-6">
         {/* Dashboard Heading */}
         <h1 className="text-4xl font-bold">Dashboard</h1>
+
+        {userProfile ? (
+          <div className="text-lg font-medium text-gray-600">
+            Welcome, {userProfile.firstName} {userProfile.lastName}!
+            <div className="text-sm text-gray-500">
+              Program: {userProfile.program} | Vehicle No:{" "}
+              {userProfile.vehicleNumber}
+            </div>
+            {userProfile.profilePhoto && (
+              <img
+                src={userProfile.profilePhoto}
+                alt="Profile"
+                className="w-16 h-16 rounded-full border mt-2"
+              />
+            )}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">Loading your profile...</p>
+        )}
 
         {/* Top Summary Section */}
         <div className="flex flex-col lg:flex-row gap-6">
