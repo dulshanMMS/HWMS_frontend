@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios'; // Import axios for API calls
-import AdminLayout from "../components/AdminLayout";
-// You can uncomment these when the components are available
-// import LeftSidebar from '../components/LeftSidebar';
-// import RightSidebar from '../components/RightSidebar';
+import axios from 'axios'; 
+import Sidebar from '../components/Sidebar';
+import AdminSidebar from '../components/AdminSidebar';
 
-// API base URL - adjust if needed
+// API 
 const API_BASE_URL = 'http://localhost:5000/api';
 
 export default function BookingHistory() {
   // State management
-  const [activeTab, setActiveTab] = useState('Parking Bookings'); // Default to Parking Bookings
+  const [activeTab, setActiveTab] = useState('Parking Bookings'); 
   const [bookingDates, setBookingDates] = useState([]);
   const [totalBookings, setTotalBookings] = useState(0);
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -31,7 +29,7 @@ export default function BookingHistory() {
     return localStorage.getItem('token');
   };
 
-  // Fetch booking history data when component mounts or tab changes
+  // Fetch  history data when component mounts or tab changes
   useEffect(() => {
     fetchBookingHistory();
   }, [activeTab]); // Refetch when tab changes
@@ -43,7 +41,7 @@ export default function BookingHistory() {
     
     try {
       // Determine booking type based on active tab
-      let bookingType = "parking"; // Default to parking
+      let bookingType = "parking"; // Default to parking 
       
       if (activeTab === 'Seat Bookings') {
         bookingType = "seat";
@@ -72,7 +70,7 @@ export default function BookingHistory() {
       const formattedDates = bookedDates.map((date, index) => ({
         id: index + 1,
         date: date,
-        bookings: [] // We'll fetch detailed bookings when a date is clicked
+        bookings: [] // alredy detailed bookings data comes to  when a date is clicked
       }));
       
       setTotalBookings(totalBookings);
@@ -191,7 +189,7 @@ export default function BookingHistory() {
     setShowDetailsPopup(false);
     setShowDeletePopup(true);
     
-    // Pre-fill delete form with selected booking details
+    // delete form with selected booking details(it is already pre filled !!!)
     setDeleteForm({
       slotNumber: booking.slotNumber.toString(),
       date: booking.date,
@@ -213,89 +211,89 @@ export default function BookingHistory() {
   };
 
   return (
-    <div className="min-h-screen bg-green-50 flex items-center justify-center">
-      {/* STEP 1: Left sidebar placeholder */}
-      <div className="w-56 bg-green-800">
-        <AdminLayout/>
-        {/* Will be replaced with <LeftSidebar /> when available */}
+    <div className="flex h-screen w-screen overflow-hidden">
+      {/* Left Side Navigation - AdminSidebar */}
+      <div className="w-64 h-full bg-green-800 text-white">
+        <AdminSidebar />
       </div>
       
-      {/* STEP 2: Main content area */}
-      <div className="flex-1 flex justify-center">
-        <div className="w-full max-w-3xl bg-white shadow">
-          <div className="p-6">
-            <h1 className="text-2xl font-bold mb-1">Your Booking History</h1>
-            <p className="text-gray-600 mb-6">Welcome back!</p>
-            
-            {/* Tab Navigation */}
-            <div className="flex border-b mb-6">
-              <button
-                className={`py-2 px-4 ${activeTab === 'Bookings' ? 'border-b-2 border-green-700 font-medium' : ''}`}
-                onClick={() => handleTabChange('Bookings')}
-              >
-                Bookings
-              </button>
-              <button
-                className={`py-2 px-4 ${activeTab === 'Seat Bookings' ? 'border-b-2 border-green-700 font-medium' : ''}`}
-                onClick={() => handleTabChange('Seat Bookings')}
-              >
-                Seat Bookings
-              </button>
-              <button
-                className={`py-2 px-4 ${activeTab === 'Parking Bookings' ? 'border-b-2 border-green-700 font-medium' : ''}`}
-                onClick={() => handleTabChange('Parking Bookings')}
-              >
-                Parking Bookings
-              </button>
-            </div>
-            
-            {/* Error message */}
-            {error && (
-              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-                {error}
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto bg-green-50">
+        <div className="flex justify-center py-6 px-4">
+          <div className="w-full max-w-3xl bg-white shadow rounded-lg">
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-1">Your Booking History</h1>
+              <p className="text-gray-600 mb-6">Welcome back!</p>
+              
+              {/* Tab Navigation */}
+              <div className="flex border-b mb-6">
+                <button
+                  className={`py-2 px-4 ${activeTab === 'Bookings' ? 'border-b-2 border-green-700 font-medium' : ''}`}
+                  onClick={() => handleTabChange('Bookings')}
+                >
+                  Bookings
+                </button>
+                <button
+                  className={`py-2 px-4 ${activeTab === 'Seat Bookings' ? 'border-b-2 border-green-700 font-medium' : ''}`}
+                  onClick={() => handleTabChange('Seat Bookings')}
+                >
+                  Seat Bookings
+                </button>
+                <button
+                  className={`py-2 px-4 ${activeTab === 'Parking Bookings' ? 'border-b-2 border-green-700 font-medium' : ''}`}
+                  onClick={() => handleTabChange('Parking Bookings')}
+                >
+                  Parking Bookings
+                </button>
               </div>
-            )}
-            
-            {/* Stats Section */}
-            <div className="mb-8">
-              <h2 className="text-sm font-medium text-gray-600 mb-2">Quick Stats</h2>
-              <div className="bg-white p-4 border rounded-lg shadow-sm inline-block">
-                <p className="text-sm text-gray-600">Your Total Bookings:</p>
-                <p className="text-3xl font-bold">
-                  {loading ? 'Loading...' : totalBookings}
-                </p>
-              </div>
-            </div>
-            
-            {/* Booking Dates Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              {loading ? (
-                <div className="col-span-2 text-center py-4">Loading booking dates...</div>
-              ) : bookingDates.length > 0 ? (
-                bookingDates.map((date) => (
-                  <button
-                    key={date.id}
-                    className="bg-white p-4 border rounded-lg shadow-sm text-left hover:bg-gray-50 transition flex items-center"
-                    onClick={() => handleDateClick(date)}
-                  >
-                    <span className="text-green-800">❯</span>
-                    <span className="ml-2">{date.date}</span>
-                  </button>
-                ))
-              ) : (
-                <div className="col-span-2 text-center py-4 text-gray-500">
-                  No booking dates found
+              
+              {/* Error message */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+                  {error}
                 </div>
               )}
+              
+              {/* Stats Section */}
+              <div className="mb-8">
+                <h2 className="text-sm font-medium text-gray-600 mb-2">Quick Stats</h2>
+                <div className="bg-white p-4 border rounded-lg shadow-sm inline-block">
+                  <p className="text-sm text-gray-600">Your Total Bookings:</p>
+                  <p className="text-3xl font-bold">
+                    {loading ? 'Loading...' : totalBookings}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Booking Dates Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                {loading ? (
+                  <div className="col-span-2 text-center py-4">Loading booking dates...</div>
+                ) : bookingDates.length > 0 ? (
+                  bookingDates.map((date) => (
+                    <button
+                      key={date.id}
+                      className="bg-white p-4 border rounded-lg shadow-sm text-left hover:bg-gray-50 transition flex items-center"
+                      onClick={() => handleDateClick(date)}
+                    >
+                      <span className="text-green-800">❯</span>
+                      <span className="ml-2">{date.date}</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="col-span-2 text-center py-4 text-gray-500">
+                    No booking dates found
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
       
-      {/* STEP 3: Right sidebar placeholder */}
-      <div className="w-64 bg-white">
-        <AdminLayout/>
-        {/* Will be replaced with <RightSidebar /> when available */}
+      {/* Right Side Navigation - Sidebar */}
+      <div className="w-64 h-full bg-white shadow-md">
+        <Sidebar />
       </div>
       
       {/* Booking Details Popup */}
