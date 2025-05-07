@@ -12,4 +12,4 @@ const AdminLayout = ({ children }) => (
   </div>
 );
 
-export default AdminLayout; 
+export default AdminLayout;
