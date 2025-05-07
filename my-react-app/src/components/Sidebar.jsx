@@ -1,13 +1,22 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getProfile } from "../api/userApi";
 import { FiChevronRight } from "react-icons/fi";
 
-/**
- * Sidebar Component
- * Displays user profile summary and a notifications panel.
- */
 const Sidebar = () => {
-  const navigate = useNavigate(); // Hook for navigation on profile button click
+  const [userProfile, setUserProfile] = useState(null);
+  const navigate = useNavigate(); // navigation issue
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    console.log("Token from localStorage:", token);
+
+    if (token) {
+      getProfile(token)
+        .then((data) => setUserProfile(data))
+        .catch((err) => console.error("Failed to load sidebar user", err));
+    }
+  }, []);
 
   return (
     <aside className="h-full flex flex-col p-6 bg-white justify-between">
@@ -15,11 +24,17 @@ const Sidebar = () => {
       <div className="text-center">
         {/* Greeting */}
         <p className="text-sm text-gray-600">Hello,</p>
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Sumanya!</h2>
 
-        {/* Profile Picture */}
+        <h2 className="text-xl font-bold text-gray-800 mb-4">
+          {userProfile ? `${userProfile.firstName}!` : "Loading..."}
+        </h2>
+
         <img
-          src="https://i.pravatar.cc/150?img=32"
+          src={
+            userProfile?.profilePhoto
+              ? userProfile.profilePhoto
+              : "https://i.pravatar.cc/150?img=32"
+          }
           alt="Profile"
           className="w-20 h-20 rounded-full mx-auto mb-4"
         />
