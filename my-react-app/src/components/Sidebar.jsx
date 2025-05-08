@@ -51,8 +51,7 @@ const Sidebar = ({ isOpen }) => {
       </div>
       {/* === BOTTOM SECTION: Notifications === */}
       <div className="mt-2">
-        {" "}
-        {/*remove space between top and bottom of right sidebar*/} \
+        {/*remove space between top and bottom of right sidebar*/}/
         {/* Notifications Header */}
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-semibold">Notifications</h3>

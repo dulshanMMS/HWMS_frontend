@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import LeftSidebar from "../components/LeftSidebar";
 import { getProfile } from "../api/userApi";
+import CalendarCard from "../components/CalendarCard";
 
 const UserDashboard = () => {
   const [userProfile, setUserProfile] = useState(null);
@@ -27,11 +28,6 @@ const UserDashboard = () => {
         .catch((err) => console.error("Failed to load profile", err));
     }
   }, []);
-  // Get current date information
-  const today = new Date();
-  const currentDay = today.getDate();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -119,47 +115,7 @@ const UserDashboard = () => {
             <p className="text-lg font-semibold mb-2">Your Total Bookings</p>
             <p className="text-4xl font-bold">285</p>
           </div>
-
-          {/* Card: Calendar */}
-          <div className="bg-white rounded-xl shadow-md p-6 w-full lg:w-[300px]">
-            <p className="text-sm font-medium mb-1 text-right">
-              Event Calendar
-            </p>
-            <p className="text-lg font-semibold text-right mb-4">
-              {today.toLocaleString("default", { month: "long" })} {currentYear}
-            </p>
-
-            {/* Calendar */}
-            <div className="grid grid-cols-7 text-center font-medium text-sm mb-2">
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                <div key={day}>{day}</div>
-              ))}
-            </div>
-
-            {/* Calendar: Dates */}
-            <div className="grid grid-cols-7 gap-2 text-sm">
-              {Array.from({ length: 31 }, (_, i) => {
-                const date = new Date(currentYear, currentMonth, i + 1);
-                const isToday =
-                  date.getDate() === currentDay &&
-                  date.getMonth() === currentMonth &&
-                  date.getFullYear() === currentYear;
-
-                return (
-                  <div
-                    key={i}
-                    className={`h-10 flex items-center justify-center rounded-lg font-medium cursor-pointer transition-colors duration-200 ${
-                      isToday
-                        ? "bg-black text-white"
-                        : "bg-gray-100 hover:bg-gray-200"
-                    }`}
-                  >
-                    {i + 1}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <CalendarCard />
         </div>
 
         {/* Navigation Tabs */}
@@ -213,10 +169,21 @@ const UserDashboard = () => {
       </div>
 
       {/* SIDEBAR */}
+      {/* Always mount the sidebar container to allow transition */}
+      <div
+        className={`fixed right-0 top-0 h-full w-[320px] bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 z-50 ${
+          sidebarOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <Sidebar isOpen={sidebarOpen} />
+      </div>
+
+      {/* Optional: Overlay for mobile when sidebar is open */}
       {sidebarOpen && (
-        <div className="w-[320px] min-h-screen bg-white border-l border-gray-200 shadow-md">
-          <Sidebar isOpen={sidebarOpen} />
-        </div>
+        <div
+          className="fixed inset-0 bg-black bg-opacity-30 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
     </div>
   );
