@@ -3,12 +3,16 @@ import Sidebar from "../components/Sidebar";
 import LeftSidebar from "../components/LeftSidebar";
 import { getProfile } from "../api/userApi";
 import CalendarCard from "../components/CalendarCard";
+import FloatingChatBot from "../components/FloatingChatBot";
 
 const UserDashboard = () => {
   const [userProfile, setUserProfile] = useState(null);
 
   // idebar toggle state
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+
+  const [todayBookings, setTodayBookings] = useState([]);
+  const [yesterdayBookings, setYesterdayBookings] = useState([]);
 
   // andle screen resize
   useEffect(() => {
@@ -50,13 +54,70 @@ const UserDashboard = () => {
     }
   }, []);
 
+  //   useEffect(() => {
+  //   const token = localStorage.getItem("token");
+  //   if (!token) return;
+
+  //   axios
+  //     .get("http://localhost:5000/api/calendar/user-view", {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     })
+  //     .then((res) => {
+  //       const all = res.data || [];
+  //       const todayStr = new Date().toISOString().split("T")[0];
+
+  //       const yesterday = new Date();
+  //       yesterday.setDate(yesterday.getDate() - 1);
+  //       const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  //       setTodayBookings(all.filter((b) => b.date === todayStr));
+  //       setYesterdayBookings(all.filter((b) => b.date === yesterdayStr));
+  //     })
+  //     .catch((err) => console.error("Failed to load schedule bookings:", err));
+  // }, []);
+
+  const [totalBookingCount, setTotalBookingCount] = useState(0);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      //  Load user profile
+      getProfile(token)
+        .then((data) => {
+          console.log("Fetched user profile:", data);
+          setUserProfile(data);
+        })
+        .catch((err) => {
+          console.error(
+            "Failed to load profile",
+            err.response?.data || err.message
+          );
+        });
+
+      //  Load total booking count for this user
+      axios
+        .get("http://localhost:5000/api/calendar/user-view", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => {
+          const all = res.data || [];
+          setTotalBookingCount(all.length);
+        })
+        .catch((err) => console.error("Failed to load total bookings:", err));
+    } catch (e) {
+      console.error("Unexpected error in dashboard useEffect:", e);
+    }
+  }, []);
+
   return (
     <div className="w-full min-h-screen flex flex-row">
       {/* LEFT SIDEBAR */}
       <LeftSidebar />
       {/*MAIN CONTENT*/}
       <div className="flex flex-col flex-1 p-6 lg:p-10 gap-6">
-        {/* ✅ Mobile Toggle Button */}
+        {/* Mobile Toggle Button */}
 
         {/* Dashboard Heading */}
 
@@ -113,7 +174,7 @@ const UserDashboard = () => {
           {/* Card: Total Bookings */}
           <div className="bg-white rounded-xl shadow-md p-6 w-full lg:w-[300px]">
             <p className="text-lg font-semibold mb-2">Your Total Bookings</p>
-            <p className="text-4xl font-bold">285</p>
+            <p className="text-4xl font-bold">{totalBookingCount}</p>
           </div>
           <CalendarCard />
         </div>
@@ -140,22 +201,37 @@ const UserDashboard = () => {
 
         {/* Booking Cards Section */}
         <div className="flex flex-wrap gap-6">
-          {/* Example Booking Cards */}
-          {["Today’s Schedule", "Yesterday’s Schedule"].map((title, idx) => (
+          {[
+            { title: "Today’s Schedule", data: todayBookings },
+            { title: "Yesterday’s Schedule", data: yesterdayBookings },
+          ].map((block, idx) => (
             <div
               key={idx}
               className="bg-white rounded-xl shadow-md p-6 w-[260px]"
             >
-              <p className="font-semibold mb-2">{title}</p>
-              <p className="text-green-700 text-sm font-medium mb-1">
-                Desk 5A-9
-              </p>
-              <p className="text-sm text-gray-500 mb-2">
-                4th floor, Conference Room, NetOffice
-              </p>
-              <p className="text-xs text-gray-600 whitespace-pre-line">
-                Feb 07, 2022 9 AM to 6 PM
-              </p>
+              <p className="font-semibold mb-2">{block.title}</p>
+              {block.data.length === 0 ? (
+                <p className="text-sm text-gray-500">No bookings</p>
+              ) : (
+                block.data.map((booking, i) => (
+                  <div key={i} className="mb-3 text-sm text-gray-700">
+                    <p className="font-medium text-green-700">
+                      {booking.type === "seat" ? "Seat" : "Parking"}:{" "}
+                      {booking.details}
+                    </p>
+                    {booking.floor && (
+                      <p className="text-xs text-gray-500">
+                        Floor: {booking.floor}
+                      </p>
+                    )}
+                    {booking.entryTime && booking.exitTime && (
+                      <p className="text-xs text-gray-500">
+                        {booking.entryTime} - {booking.exitTime}
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           ))}
 
@@ -185,6 +261,7 @@ const UserDashboard = () => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+      <FloatingChatBot />
     </div>
   );
 };

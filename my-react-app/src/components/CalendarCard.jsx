@@ -36,9 +36,7 @@ const CalendarCard = () => {
       .get("http://localhost:5000/api/calendar/user-view", {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => {
-        setBookings(res.data || []);
-      })
+      .then((res) => setBookings(res.data || []))
       .catch((err) => console.error("Failed to load bookings:", err));
   }, [viewDate]);
 
@@ -51,15 +49,17 @@ const CalendarCard = () => {
   };
 
   const getMatchesForDate = (date) => {
-    const dateStr = date.toISOString().split("T")[0];
+    const dateStr =
+      date.getFullYear() +
+      "-" +
+      String(date.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(date.getDate()).padStart(2, "0");
     const matches = [];
 
     bookings.forEach((b) => {
       if (b.date.startsWith(dateStr)) {
-        matches.push({
-          type: b.type,
-          details: b.details,
-        });
+        matches.push(b); // ✅ use full object
       }
     });
 
@@ -162,7 +162,7 @@ const CalendarCard = () => {
         })}
       </div>
 
-      {/* 📌 Popup for clicked date */}
+      {/*Popup for clicked date */}
       {selectedInfo && (
         <div
           className="fixed bg-white border shadow-md rounded-md p-4 text-sm z-50 w-[260px]"
@@ -194,6 +194,22 @@ const CalendarCard = () => {
                       :
                     </strong>{" "}
                     {item.details}
+                    {item.floor && (
+                      <>
+                        <br />
+                        <span className="text-xs text-gray-600">
+                          Floor: {item.floor}
+                        </span>
+                      </>
+                    )}
+                    {item.entryTime && item.exitTime && (
+                      <>
+                        <br />
+                        <span className="text-xs text-gray-600">
+                          {item.entryTime} - {item.exitTime}
+                        </span>
+                      </>
+                    )}
                   </>
                 )}
               </li>
