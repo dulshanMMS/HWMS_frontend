@@ -75,7 +75,7 @@ const AdminNotification = () => {
       const data = await response.json();
       console.log('Fetched notifications:', data);
       if (Array.isArray(data)) {
-        setNotifications(data);
+      setNotifications(data);
       } else {
         setNotifications([]);
       }
@@ -189,8 +189,8 @@ const AdminNotification = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       </AdminLayout>
     );
@@ -199,136 +199,136 @@ const AdminNotification = () => {
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-          <AdminProfile />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md">
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1 relative">
-                    <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search notifications..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    />
-                  </div>
-                  <button 
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors duration-200"
-                    onClick={() => setShowFilters(!showFilters)}
-                  >
-                    <FaFilter />
-                    <span>Filters</span>
-                  </button>
-                </div>
-
-                {showFilters && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                    <div className="flex flex-wrap gap-4 mb-4">
-                      <button 
-                        className={`px-4 py-2 rounded-md transition-colors duration-200 ${
-                          filter === 'all' 
-                            ? 'bg-primary text-white' 
-                            : 'bg-white hover:bg-gray-100'
-                        }`}
-                        onClick={() => setFilter('all')}
-                      >
-                        All
-                      </button>
-                      <button 
-                        className={`px-4 py-2 rounded-md transition-colors duration-200 ${
-                          filter === 'unread' 
-                            ? 'bg-primary text-white' 
-                            : 'bg-white hover:bg-gray-100'
-                        }`}
-                        onClick={() => setFilter('unread')}
-                      >
-                        Unread
-                      </button>
-                      <button 
-                        className={`px-4 py-2 rounded-md transition-colors duration-200 ${
-                          filter === 'read' 
-                            ? 'bg-primary text-white' 
-                            : 'bg-white hover:bg-gray-100'
-                        }`}
-                        onClick={() => setFilter('read')}
-                      >
-                        Read
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FaCalendar className="text-gray-500" />
-                      <DatePicker
-                        selectsRange={true}
-                        startDate={startDate}
-                        endDate={endDate}
-                        onChange={(update) => setDateRange(update)}
-                        className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                        placeholderText="Select date range..."
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="divide-y divide-gray-200">
-                {error && (
-                  <div className="p-4 bg-red-100 border-l-4 border-red-500 text-red-700">
-                    {error}
-                  </div>
-                )}
-                
-                {filteredNotifications.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">
-                    No notifications found
-                  </div>
-                ) : (
-                  filteredNotifications.map(notification => (
-                    <div
-                      key={notification._id}
-                      className={`p-4 hover:bg-gray-50 transition-colors duration-200 ${
-                        notification.read ? 'bg-white' : 'bg-blue-50'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start gap-4">
-                        <div>
-                          <h3 className="font-medium text-gray-900">{notification.title}</h3>
-                          <p className="mt-1 text-gray-600">{notification.message}</p>
-                          <span className="mt-2 text-sm text-gray-500">
-                            {new Date(notification.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex gap-2">
-                          {!notification.read && (
-                            <button
-                              onClick={() => markAsRead(notification._id)}
-                              className="px-3 py-1 text-sm text-primary hover:bg-primary hover:text-white border border-primary rounded-md transition-colors duration-200"
-                            >
-                              Mark as Read
-                            </button>
-                          )}
-                          <button
-                            onClick={() => deleteNotification(notification._id)}
-                            className="px-3 py-1 text-sm text-red-600 hover:bg-red-600 hover:text-white border border-red-600 rounded-md transition-colors duration-200"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+            <AdminProfile />
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg shadow-md">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1 relative">
+                      <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search notifications..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      />
+                    </div>
+                    <button 
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors duration-200"
+                      onClick={() => setShowFilters(!showFilters)}
+                    >
+                      <FaFilter />
+                      <span>Filters</span>
+                    </button>
+                  </div>
+
+                  {showFilters && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                      <div className="flex flex-wrap gap-4 mb-4">
+                        <button 
+                          className={`px-4 py-2 rounded-md transition-colors duration-200 ${
+                            filter === 'all' 
+                              ? 'bg-primary text-white' 
+                              : 'bg-white hover:bg-gray-100'
+                          }`}
+                          onClick={() => setFilter('all')}
+                        >
+                          All
+                        </button>
+                        <button 
+                          className={`px-4 py-2 rounded-md transition-colors duration-200 ${
+                            filter === 'unread' 
+                              ? 'bg-primary text-white' 
+                              : 'bg-white hover:bg-gray-100'
+                          }`}
+                          onClick={() => setFilter('unread')}
+                        >
+                          Unread
+                        </button>
+                        <button 
+                          className={`px-4 py-2 rounded-md transition-colors duration-200 ${
+                            filter === 'read' 
+                              ? 'bg-primary text-white' 
+                              : 'bg-white hover:bg-gray-100'
+                          }`}
+                          onClick={() => setFilter('read')}
+                        >
+                          Read
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <FaCalendar className="text-gray-500" />
+                        <DatePicker
+                          selectsRange={true}
+                          startDate={startDate}
+                          endDate={endDate}
+                          onChange={(update) => setDateRange(update)}
+                          className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                          placeholderText="Select date range..."
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="divide-y divide-gray-200">
+                  {error && (
+                    <div className="p-4 bg-red-100 border-l-4 border-red-500 text-red-700">
+                      {error}
+                    </div>
+                  )}
+                  
+                  {filteredNotifications.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">
+                      No notifications found
+                    </div>
+                  ) : (
+                    filteredNotifications.map(notification => (
+                      <div
+                        key={notification._id}
+                        className={`p-4 hover:bg-gray-50 transition-colors duration-200 ${
+                          notification.read ? 'bg-white' : 'bg-blue-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <h3 className="font-medium text-gray-900">{notification.title}</h3>
+                            <p className="mt-1 text-gray-600">{notification.message}</p>
+                            <span className="mt-2 text-sm text-gray-500">
+                              {new Date(notification.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            {!notification.read && (
+                              <button
+                                onClick={() => markAsRead(notification._id)}
+                                className="px-3 py-1 text-sm text-primary hover:bg-primary hover:text-white border border-primary rounded-md transition-colors duration-200"
+                              >
+                                Mark as Read
+                              </button>
+                            )}
+                            <button
+                              onClick={() => deleteNotification(notification._id)}
+                              className="px-3 py-1 text-sm text-red-600 hover:bg-red-600 hover:text-white border border-red-600 rounded-md transition-colors duration-200"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-4">
             <h2 className="font-semibold mb-2">Event Calendar</h2>
             <Calendar
               onClickDay={handleDayClick}
@@ -367,7 +367,7 @@ const AdminNotification = () => {
                     <button onClick={() => setShowEventModal(false)} className="bg-gray-500 text-white px-4 py-2 rounded">Close</button>
                   </div>
                 </div>
-              </div>
+            </div>
             )}
           </div>
         </div>
