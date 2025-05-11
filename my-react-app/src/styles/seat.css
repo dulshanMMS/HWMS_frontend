@@ -1,0 +1,36 @@
+.seat {
+  width: 60px;
+  height: 60px;
+  background-color: #e6ffe9; /* Default background for unbooked seats */
+  border: 2px solid #68d391;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #2d3748;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.seat:hover {
+  background-color: #c6f6d5;
+  border-color: #48bb78;
+}
+
+.seat.booked {
+  border-color: #48bb78; /* Adjust border color for booked seats */
+}
+
+.seat.booked:hover {
+  border-color: #2f855a;
+}
+
+.seat span {
+  font-size: 1.4rem; /* Increased from 1.2rem to 1.4rem for larger text inside seats */
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}

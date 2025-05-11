@@ -1,0 +1,39 @@
+.header {
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .header input {
+    padding: 0.5rem 1rem;
+    border: 1px solid #68d391;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    outline: none;
+    transition: box-shadow 0.3s;
+    width: 200px;
+  }
+  
+  .header input:focus {
+    box-shadow: 0 0 0 2px #48bb78;
+  }
+  
+  .header input::placeholder {
+    color: #cbd5e0;
+  }
+  
+  .header button {
+    padding: 0.5rem 1.5rem;
+    background-color: #38a169;
+    color: #ffffff;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .header button:hover {
+    background-color: #2f855a;
+  }
