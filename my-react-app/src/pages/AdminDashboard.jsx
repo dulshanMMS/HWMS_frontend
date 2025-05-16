@@ -45,17 +45,6 @@ const AdminDashboard = () => {
     "Team O": "bg-violet-600",
   };
 
-  const fetchFloorBookingStats = async () => {
-    try {
-      const res = await axios.get("/api/bookings/count-by-floor");
-      if (res.data.success) {
-        setFloorStats(res.data.data);
-      }
-    } catch (err) {
-      console.error("Error fetching floor booking stats:", err);
-    }
-  };
-
   const handleSendAnnouncement = async () => {
     if (!announcement.trim()) return alert("Please enter an announcement.");
   
@@ -103,7 +92,7 @@ const AdminDashboard = () => {
       console.error("Error fetching today's booking count:", err);
     }
   };
-
+  //Today part
   const fetchTeamBookings = async () => {
     try {
       const res = await axios.get("/api/bookings/count-by-team/today");
@@ -115,6 +104,11 @@ const AdminDashboard = () => {
     }
   };
 
+  const topTeams = [...teamBookings]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+
+  //Event calendar
   const fetchAllEvents = async () => {
     try {
       const res = await axios.get(`/api/events`);
@@ -160,7 +154,7 @@ const AdminDashboard = () => {
       if (res.data.success) {
         alert("Event added!");
         setShowEventModal(false);
-        setNewEvent({ title: "", description: "", time: "" });
+        setNewEvent({ title: "", description: "" });
         fetchAllEvents();
         fetchEventsForDate(date);
       }
@@ -188,6 +182,21 @@ const AdminDashboard = () => {
     }
   };
 
+  // Booking chart
+  const fetchFloorBookingStats = async () => {
+    try {
+      const res = await axios.get("/api/bookings/count-by-floor");
+      if (res.data.success) {
+        setFloorStats(res.data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching floor booking stats:", err);
+    }
+  };
+
+  //Removes entries with empty floor values for the chart
+  const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !== '');
+
   useEffect(() => {
     const fetchAllData = async () => {
       await fetchTeamBookings();
@@ -207,12 +216,7 @@ const AdminDashboard = () => {
     return () => clearInterval(interval); 
   }, [date]);
 
-  const topTeams = [...teamBookings]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 3);
-
-  const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !== '');
-
+  
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       <div className="w-64 flex-none">
