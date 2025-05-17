@@ -8,7 +8,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import avatar from '../assets/profile_photo.jpg';
+
 
 const API_BASE_URL = 'http://localhost:5000/api/notifications';
 
@@ -29,6 +29,7 @@ const AdminNotification = () => {
   const [eventDates, setEventDates] = useState([]);
   const [showEventModal, setShowEventModal] = useState(false);
   const [events, setEvents] = useState([]);
+  const [showClearButton, setShowClearButton] = useState(false);
 
   const fetchNotifications = async () => {
     console.log('Attempting to fetch notifications');
@@ -49,6 +50,9 @@ const AdminNotification = () => {
       }
       if (startDate && endDate) {
         endpoint += `&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`;
+      } else {
+        const today = new Date();
+        endpoint += `&endDate=${today.toISOString()}`;
       }
       
       console.log('Fetching from endpoint:', endpoint);
@@ -75,7 +79,7 @@ const AdminNotification = () => {
       const data = await response.json();
       console.log('Fetched notifications:', data);
       if (Array.isArray(data)) {
-      setNotifications(data);
+        setNotifications(data);
       } else {
         setNotifications([]);
       }
@@ -182,6 +186,16 @@ const AdminNotification = () => {
     setShowEventModal(true);
   };
 
+  const handleApplyDateRange = () => {
+    fetchNotifications();
+    setShowClearButton(true);
+  };
+
+  const handleClearDateRange = () => {
+    setDateRange([null, null]);
+    setShowClearButton(false);
+  };
+
   useEffect(() => {
     fetchAllEvents();
   }, []);
@@ -219,62 +233,72 @@ const AdminNotification = () => {
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       />
                     </div>
-                    <button 
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors duration-200"
-                      onClick={() => setShowFilters(!showFilters)}
-                    >
-                      <FaFilter />
-                      <span>Filters</span>
-                    </button>
                   </div>
 
-                  {showFilters && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                      <div className="flex flex-wrap gap-4 mb-4">
-                        <button 
-                          className={`px-4 py-2 rounded-md transition-colors duration-200 ${
-                            filter === 'all' 
-                              ? 'bg-primary text-white' 
-                              : 'bg-white hover:bg-gray-100'
-                          }`}
-                          onClick={() => setFilter('all')}
-                        >
-                          All
-                        </button>
-                        <button 
-                          className={`px-4 py-2 rounded-md transition-colors duration-200 ${
-                            filter === 'unread' 
-                              ? 'bg-primary text-white' 
-                              : 'bg-white hover:bg-gray-100'
-                          }`}
-                          onClick={() => setFilter('unread')}
-                        >
-                          Unread
-                        </button>
-                        <button 
-                          className={`px-4 py-2 rounded-md transition-colors duration-200 ${
-                            filter === 'read' 
-                              ? 'bg-primary text-white' 
-                              : 'bg-white hover:bg-gray-100'
-                          }`}
-                          onClick={() => setFilter('read')}
-                        >
-                          Read
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <FaCalendar className="text-gray-500" />
-                        <DatePicker
-                          selectsRange={true}
-                          startDate={startDate}
-                          endDate={endDate}
-                          onChange={(update) => setDateRange(update)}
-                          className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                          placeholderText="Select date range..."
-                        />
-                      </div>
+                  <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                    <div className="flex flex-wrap gap-4 mb-4">
+                      <button 
+                        className={`px-4 py-2 transition-colors duration-200 ${
+                          filter === 'all' 
+                            ? 'font-bold text-black border-b-2 border-green-600' 
+                            : 'text-gray-600'
+                        }`}
+                        onClick={() => setFilter('all')}
+                      >
+                        Bookings
+                      </button>
+                      <button 
+                        className={`px-4 py-2 transition-colors duration-200 ${
+                          filter === 'unread' 
+                            ? 'font-bold text-black border-b-2 border-green-600' 
+                            : 'text-gray-600'
+                        }`}
+                        onClick={() => setFilter('unread')}
+                      >
+                        Seat Bookings
+                      </button>
+                      <button 
+                        className={`px-4 py-2 transition-colors duration-200 ${
+                          filter === 'read' 
+                            ? 'font-bold text-black border-b-2 border-green-600' 
+                            : 'text-gray-600'
+                        }`}
+                        onClick={() => setFilter('read')}
+                      >
+                        Parking Bookings
+                      </button>
                     </div>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <FaCalendar className="text-gray-500" />
+                      <DatePicker
+                        selectsRange={true}
+                        startDate={startDate}
+                        endDate={endDate}
+                        onChange={(update) => setDateRange(update)}
+                        className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholderText="Select date range..."
+                      />
+                      <button
+                        onClick={handleApplyDateRange}
+                        disabled={!startDate || !endDate}
+                        className={`px-4 py-2 rounded-md text-white ${
+                          !startDate || !endDate 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : 'bg-primary hover:bg-primary-dark'
+                        } focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2`}
+                      >
+                        Apply Date Range
+                      </button>
+                      {showClearButton && (
+                        <button
+                          onClick={handleClearDateRange}
+                          className="px-4 py-2 rounded-md text-white bg-red-500 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                        >
+                          Clear Date Range
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="divide-y divide-gray-200">

@@ -9,6 +9,7 @@ import BookingHistory from './pages/BookingHistory';
 import ParkingBooking from './pages/ParkingBooking';
 import AdminParking from './pages/AdminParking';
 import ResetPassword from './pages/ResetPassword';
+import UserNotification from './pages/UserNotification';
 
 
 const App = () => {
@@ -36,6 +37,7 @@ const App = () => {
         <Route path="/user/parking-booking" element={<ParkingBooking />} />
         <Route path="admin/adminparking" element={<AdminParking/>} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/user/notifications" element={<UserNotification />} />
       </Routes>
     </div>
   );
