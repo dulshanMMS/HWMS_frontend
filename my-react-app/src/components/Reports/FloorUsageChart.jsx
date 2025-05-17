@@ -1,6 +1,6 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
-import teamColors from '../constants/teamColors';
+import teamColors from '../../constants/teamColors';
 
 const FLOOR_LABELS = {
   14: 'Floor 14',

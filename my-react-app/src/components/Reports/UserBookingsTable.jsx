@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaUser } from 'react-icons/fa';
-import teamColors from '../constants/teamColors';
+import teamColors from '../../constants/teamColors';
 
 const PROGRAM_TO_TEAM = {
   SENG: 'Team A',
