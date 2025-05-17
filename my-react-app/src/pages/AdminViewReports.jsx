@@ -5,13 +5,13 @@ import api from '../config/api';
 import { FaCalendar } from 'react-icons/fa';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import DailyTrendsChart from '../components/DailyTrendsChart';
-import MonthlyStatsChart from '../components/MonthlyStatsChart';
-import DeskUsageTable from '../components/DeskUsageTable';
-import BookingLookup from '../components/BookingLookup';
+import DailyTrendsChart from '../components/Reports/DailyTrendsChart';
+import MonthlyStatsChart from '../components/Reports/MonthlyStatsChart';
+import DeskUsageTable from '../components/Reports/DeskUsageTable';
+import BookingLookup from '../components/Reports/BookingLookup';
 import teamColors from '../constants/teamColors';
-import UserBookingsTable from '../components/UserBookingsTable';
-import FloorUsageChart from '../components/FloorUsageChart';
+import UserBookingsTable from '../components/Reports/UserBookingsTable';
+import FloorUsageChart from '../components/Reports/FloorUsageChart';
 import TeamColorPalette from '../components/TeamColorPalette';
 
 const AdminViewReports = () => {
@@ -221,8 +221,8 @@ const AdminViewReports = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <DailyTrendsChart data={analyticsData} />
           <MonthlyStatsChart data={analyticsData} dateRange={appliedDateRange} />
-        </div>
-        
+          </div>
+
         {/* Tables Section */}
         <div className="flex flex-col md:flex-row items-start">
           <div className="flex-1 h-[340px] mr-6">

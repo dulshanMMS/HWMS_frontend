@@ -28,7 +28,7 @@ const BookingLookup = ({
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder={
-              searchType === 'user name' ? 'user name' :
+              searchType === 'username' ? 'user name' :
               searchType === 'team' ? 'team name' : ''
             }
             className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-900 ml-2"
