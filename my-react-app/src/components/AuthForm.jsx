@@ -47,13 +47,15 @@ const AuthForm = ({
             />
           </>
         )}
-
-        <GeneralFormInput
-          type="email"
-          value={email}
-          onChange={(e) => handleChange('email', e.target.value)}
-          placeholder="Working Email"
-        />
+        {currentState === 'Sign Up' && (
+          <GeneralFormInput
+            type="email"
+            value={email}
+            onChange={(e) => handleChange('email', e.target.value)}
+            placeholder="Working Email"
+          />
+        )}
+        
         <GeneralFormInput
           type="text"
           value={username}
