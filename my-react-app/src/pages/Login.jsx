@@ -38,7 +38,7 @@ const Login = () => {
     const requestData = currentState === 'Sign In'
       ? {
           username: formData.username,
-          email: formData.email,
+          //email: formData.email,
           password: formData.password
         }
       : { ...formData };
