@@ -6,6 +6,7 @@ import 'react-calendar/dist/Calendar.css';
 import axios from "axios";
 import avatar from '../assets/profile_photo.jpg';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Label } from 'recharts';
+import TeamColorPalette from "../components/TeamColorPalette";
 
 const formatDateToYMD = (date) => {
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -26,24 +27,7 @@ const AdminDashboard = () => {
   const [newEvent, setNewEvent] = useState({ title: "", description: "", time: "" });
   const [todayEvents, setTodayEvents] = useState([]);
   const [eventDates, setEventDates] = useState([]);
-
-  const teamColors = {
-    "Team A": "bg-blue-400",
-    "Team B": "bg-purple-400",
-    "Team C": "bg-orange-400",
-    "Team D": "bg-yellow-200",
-    "Team E": "bg-green-400",
-    "Team F": "bg-pink-400",
-    "Team G": "bg-indigo-300",
-    "Team H": "bg-red-400",
-    "Team I": "bg-teal-400",
-    "Team J": "bg-lime-400",
-    "Team K": "bg-yellow-700",
-    "Team L": "bg-stone-400",
-    "Team M": "bg-red-600",
-    "Team N": "bg-amber-400",
-    "Team O": "bg-violet-600",
-  };
+  const [teamColors, setTeamColors] = useState({});
 
   const handleSendAnnouncement = async () => {
     if (!announcement.trim()) return alert("Please enter an announcement.");
@@ -197,6 +181,19 @@ const AdminDashboard = () => {
   //Removes entries with empty floor values for the chart
   const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !== '');
 
+  const fetchTeamColors = async () => {
+      try {
+        const res = await axios.get('/api/teams');
+        const colorMap = {};
+        res.data.forEach(team => {
+          colorMap[team.teamName] = team.teamColor;
+        });
+        setTeamColors(colorMap);
+      } catch (err) {
+        console.error("Failed to load team colors", err);
+      }
+  };
+
   useEffect(() => {
     const fetchAllData = async () => {
       await fetchTeamBookings();
@@ -205,6 +202,7 @@ const AdminDashboard = () => {
       await fetchFloorBookingStats();
       await fetchAllEvents(); 
       await fetchTodayEvents(); 
+      await fetchTeamColors();
     };
   
     fetchAllData(); 
@@ -297,17 +295,8 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h2 className="font-semibold mb-2">Color Palette for teams</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {[...Object.keys(teamColors)].map((team, idx) => (
-                  <div key={idx} className="flex items-center space-x-2">
-                    <span className={`w-4 h-4 rounded-full ${teamColors[team]}`}></span>
-                    <span>{team}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Color Palette for Teams */}
+            <TeamColorPalette teamColors={teamColors} />
           </div>
           {/*Right column*/}
           <div className="space-y-4">
