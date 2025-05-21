@@ -3,8 +3,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import Seat from './seat';
 import '../styles/floorlayout.css';
 import '../styles/seatlable.css';
+import { useSearchParams } from "react-router-dom";
 
 export default function FloorLayout() {
+  const [searchParams] = useSearchParams();
+
+  const [bookingInfo, setBookingInfo] = useState({
+    date: null,
+    entryTime: null,
+    exitTime: null,
+    floor: null,
+  });
+
   const [memberId, setMemberId] = useState('');
   const [role, setRole] = useState('member');
   const [teamName, setTeamName] = useState('');
@@ -21,6 +31,15 @@ export default function FloorLayout() {
   const [memberDetails, setMemberDetails] = useState(null);
   const memberIdInputRef = useRef(null);
   const memberIdPopUpRef = useRef(null);
+
+  useEffect(() => {
+    setBookingInfo({
+      date: searchParams.get("date"),
+      entryTime: searchParams.get("entryTime"),
+      exitTime: searchParams.get("exitTime"),
+      floor: Number(searchParams.get("floor")),
+    });
+  }, [searchParams]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -195,6 +214,10 @@ export default function FloorLayout() {
             teamName,
             teamColor: memberDetails.teamColor,
             memberName: memberDetails.memberName,
+            floor: bookingInfo.floor,
+            date: bookingInfo.date,
+            entryTime: bookingInfo.entryTime,
+            exitTime: bookingInfo.exitTime,
           };
           fetch(`http://localhost:5004/api/bookings/member/${memberDetails.memberName}/seat/${chairId}`, {
             method: 'POST',
@@ -215,6 +238,7 @@ export default function FloorLayout() {
               setUserBooking({ chairId, tableId });
             })
             .catch((err) => {
+              showMessage(`Booking error: ${err.message}`);
               console.error('Booking error:', err);
             });
         }
@@ -262,6 +286,10 @@ export default function FloorLayout() {
             teamName,
             teamColor: memberDetails.teamColor,
             memberName: selectedMember,
+            floor: bookingInfo.floor,
+            date: bookingInfo.date,
+            entryTime: bookingInfo.entryTime,
+            exitTime: bookingInfo.exitTime,
           };
           fetch(`http://localhost:5004/api/bookings/leader/${memberDetails.memberName}/member/${selectedMember}/seat/${chairId}`, {
             method: 'POST',
