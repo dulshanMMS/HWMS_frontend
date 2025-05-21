@@ -12,7 +12,7 @@ import BookingLookup from '../components/Reports/BookingLookup';
 import teamColors from '../constants/teamColors';
 import UserBookingsTable from '../components/Reports/UserBookingsTable';
 import FloorUsageChart from '../components/Reports/FloorUsageChart';
-import TeamColorPalette from '../components/TeamColorPalette';
+import TeamColorPalette from '../components/shared/TeamColorPalette';
 
 const AdminViewReports = () => {
   useAuthGuard('admin');
