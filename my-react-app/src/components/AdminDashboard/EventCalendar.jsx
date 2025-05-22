@@ -10,11 +10,11 @@ const formatDateToYMD = (date) => {
 /**
  * Calendar with event highlights and today's event list.
  *
- * @param {Date} date - Selected date on calendar.
- * @param {function} setDate - Setter for selected date.
- * @param {Array} eventDates - Dates that have events (YYYY-MM-DD).
- * @param {Array} todayEvents - Events for currently selected day.
- * @param {function} onDayClick - Callback when a date is clicked.
+ * Selected date on calendar.
+ * Setter for selected date.
+ * Dates that have events (YYYY-MM-DD).
+ * Events for currently selected day.
+ * Callback when a date is clicked.
  */
 
 const EventCalendar = ({ date, setDate, eventDates, todayEvents, onDayClick }) => {

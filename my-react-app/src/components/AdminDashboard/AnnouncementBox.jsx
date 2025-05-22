@@ -3,9 +3,9 @@ import React from "react";
 /**
  * Textarea input and send button for special announcements.
  *
- * @param {string} announcement - Current announcement text.
- * @param {function} setAnnouncement - Setter for announcement text.
- * @param {function} onSend - Handler to send the announcement.
+ * Current announcement text.
+ * setAnnouncement - Setter for announcement text.
+ * onSend - Handler to send the announcement.
  */
 
 const AnnouncementBox = ({ announcement, setAnnouncement, onSend }) => (

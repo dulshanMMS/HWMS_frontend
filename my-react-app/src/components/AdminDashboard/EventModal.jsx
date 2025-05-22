@@ -3,15 +3,15 @@ import React from "react";
 /**
  * Modal component for viewing, adding and deleting events.
  *
- * @param {Date} date - Selected date for events.
- * @param {Array} events - Events on the selected date.
- * @param {Object} newEvent - Current new event being created.
- * @param {function} setNewEvent - Setter for newEvent.
- * @param {function} onClose - Handler to close the modal.
- * @param {function} onAdd - Handler to add new event.
- * @param {function} onDelete - Handler to delete an event.
+ * Selected date for events.
+ * Events on the selected date.
+ * Current new event being created.
+ * Setter for newEvent.
+ * Handler to close the modal.
+ * Handler to add new event.
+ * Handler to delete an event.
  */
-
+//the pop up model
 const EventModal = ({ date, events, newEvent, setNewEvent, onClose, onAdd, onDelete }) => (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
     <div className="bg-white p-6 rounded-lg shadow-lg w-96 space-y-4">

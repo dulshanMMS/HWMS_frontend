@@ -12,7 +12,7 @@ import {
 
 /**
  * Bar chart showing bookings count by floor.
- * @param {Array} data - Array of floor stats with {floor, count}.
+ * Array of floor stats with {floor, count}.
  */
 
 const BookingChart = ({ data }) => {

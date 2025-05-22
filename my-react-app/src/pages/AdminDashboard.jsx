@@ -13,13 +13,13 @@ import QuickStats from "../components/AdminDashboard/QuickStats";
 import BookingChart from "../components/AdminDashboard/BookingChart";
 import EventModal from "../components/AdminDashboard/EventModal";
 
-const formatDateToYMD = (date) => {
+const formatDateToYMD = (date) => {                     //utility function to convert a date to YYYY-MM-DD format
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return localDate.toISOString().split("T")[0];
 };
 
 const AdminDashboard = () => {
-  useAuthGuard("admin");
+  useAuthGuard("admin");        //Route protection (Blocks non-admins right at component mount)
 
   const [date, setDate] = useState(new Date());
   const [todayBookingCount, setTodayBookingCount] = useState(null);
@@ -124,11 +124,11 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDayClick = (value) => {
-    setDate(value);
-    fetchEventsForDate(value);
-    setShowEventModal(true);
-  };
+  // const handleDayClick = (value) => {
+  //   setDate(value);
+  //   fetchEventsForDate(value);
+  //   setShowEventModal(true);
+  // };
 
   const addEvent = async () => {
     if (!newEvent.title.trim()) return alert("Please enter a title");
@@ -186,6 +186,7 @@ const AdminDashboard = () => {
   //Removes entries with empty floor values for the chart
   const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !== '');
 
+  //Maps teamName to teamColor
   const fetchTeamColors = async () => {
       try {
         const res = await axios.get('/api/teams');
@@ -212,7 +213,8 @@ const AdminDashboard = () => {
 
     fetchAllData();
 
-    const interval = setInterval(fetchAllData, 10000);
+    const interval = setInterval(fetchAllData, 10000);     //Initial and auto-refreshing data every 10 seconds when the date changes
+    
     return () => clearInterval(interval);
   }, [date]);
 
