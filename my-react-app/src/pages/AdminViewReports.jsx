@@ -13,7 +13,7 @@ import FloorUsageChart from '../components/Reports/FloorUsageChart';
 import MonthlyStatsChart from '../components/Reports/MonthlyStatsChart';
 import RecentBookingsTable from '../components/Reports/RecentBookingsTable';
 import UserBookingTable from '../components/Reports/UserBookingTable';
-import TeamColorPalette from '../components/TeamColorPalette';
+import TeamColorPalette from '../components/shared/TeamColorPalette';
 import api from '../config/api';
 
 const AdminViewReports = () => {

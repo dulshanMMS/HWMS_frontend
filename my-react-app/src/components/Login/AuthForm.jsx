@@ -1,5 +1,5 @@
 import React from 'react';
-import GeneralFormInput from './shared/GeneralFormInput';
+import GeneralFormInput from '../shared/GeneralFormInput';
 
 const AuthForm = ({
   currentState,
@@ -45,15 +45,15 @@ const AuthForm = ({
               onChange={(e) => handleChange('lastName', e.target.value)}
               placeholder="Last Name"
             />
+            <GeneralFormInput
+              type="email"
+              value={email}
+              onChange={(e) => handleChange('email', e.target.value)}
+              placeholder="Working Email"
+            />
           </>
         )}
-
-        <GeneralFormInput
-          type="email"
-          value={email}
-          onChange={(e) => handleChange('email', e.target.value)}
-          placeholder="Working Email"
-        />
+        
         <GeneralFormInput
           type="text"
           value={username}

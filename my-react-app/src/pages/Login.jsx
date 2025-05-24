@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import signInImg from '../assets/signIn.jpeg';
-import AuthForm from '../components/AuthForm';
-import Navbar from '../components/Navbar';
-import ForgotPassword from '../components/ForgotPassword';
+import AuthForm from '../components/Login/AuthForm';
+import Navbar from '../components/Login/Navbar';
+import ForgotPassword from '../components/Login/ForgotPassword';
 
 const Login = () => {
   const [currentState, setCurrentState] = useState('Sign In');
@@ -32,13 +32,13 @@ const Login = () => {
     e.preventDefault();
 
     const endpoint = currentState === 'Sign In'
-      ? 'http://localhost:5000/api/auth/signin'
+      ? 'http://localhost:5173/api/auth/signin'
       : 'http://localhost:5000/api/auth/signup';
 
     const requestData = currentState === 'Sign In'
       ? {
           username: formData.username,
-          email: formData.email,
+          //email: formData.email,
           password: formData.password
         }
       : { ...formData };
