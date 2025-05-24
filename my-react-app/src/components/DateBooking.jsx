@@ -2,26 +2,28 @@ import React, { useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "../styles/DateBooking.css";
+import LeftSidebar from './LeftSidebar';
 import Popup from "./Popup";
 import { FaChevronUp, FaChevronDown } from "react-icons/fa";
-import { useNavigate } from "react-router-dom"; // Replace with 'next/navigation' useRouter if using Next.js
+import { useNavigate } from "react-router-dom"; 
 
 export default function DateBooking() {
   const navigate = useNavigate();
 
   // States used for date/time/floor selection and popup messages
-  const [date, setDate] = useState(new Date());
-  const [entryHour, setEntryHour] = useState(9);
-  const [entryMinute, setEntryMinute] = useState(0);
-  const [exitHour, setExitHour] = useState(10);
-  const [exitMinute, setExitMinute] = useState(0);
-  const [floor, setFloor] = useState("");
-  const [showPopup, setShowPopup] = useState(false);
-  const [message, setMessage] = useState("");
-  const [popupType, setPopupType] = useState("error"); // or "success"
+  const [date, setDate] = useState(new Date());// Selected booking date
+  const [entryHour, setEntryHour] = useState(9);// Entry time hour (0-23)
+  const [entryMinute, setEntryMinute] = useState(0);// Entry time minute (0-59)
+  const [exitHour, setExitHour] = useState(10);// Exit time hour (0-23)
+  const [exitMinute, setExitMinute] = useState(0);// Exit time minute (0-59)
+  const [floor, setFloor] = useState("");// Selected floor number
+  const [showPopup, setShowPopup] = useState(false);// Popup visibility for messages
+  const [message, setMessage] = useState("");// Popup message content
+  const [popupType, setPopupType] = useState("error"); // Popup type: "error" or "success"
 
+  // Helper to pad numbers <10 with a leading zero for display
   const pad = (num) => (num < 10 ? "0" + num : num);
-
+ // Validate inputs and navigate to FloorLayout page with booking params
   const handleSubmit = () => {
     if (!date || floor === "") {
       setMessage("Please select a date and floor.");
@@ -39,17 +41,17 @@ export default function DateBooking() {
       return;
     }
 
-    // Navigate to FloorLayout page with booking details as query params
+    // Construct query parameters for booking details
     const bookingParams = new URLSearchParams({
       date: date.toISOString(),
       entryTime: `${pad(entryHour)}:${pad(entryMinute)}`,
       exitTime: `${pad(exitHour)}:${pad(exitMinute)}`,
       floor,
     }).toString();
-
+    // Navigate to floor layout page for seat selection
     navigate(`/floorlayout?${bookingParams}`);
   };
-
+  // Close popup handler
   const handleClosePopup = () => {
     setShowPopup(false);
   };
@@ -89,9 +91,10 @@ export default function DateBooking() {
       </div>
     );
   };
-
+  // Main component JSX rendering
   return (
-    <div className="booking-page-layout">
+    <LeftSidebar>
+        <div className="booking-page-layout">
       <div className="booking-middle-section">
         <h2 className="booking-title">Book your Seat</h2>
         <p className="sub-title">Choose Date and Time</p>
@@ -152,5 +155,7 @@ export default function DateBooking() {
         )}
       </div>
     </div>
+    </LeftSidebar>
+    
   );
 }

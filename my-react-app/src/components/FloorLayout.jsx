@@ -3,18 +3,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import Seat from './seat';
 import '../styles/floorlayout.css';
 import '../styles/seatlable.css';
+import LeftSidebar from './LeftSidebar';
 import { useSearchParams } from "react-router-dom";
 
 export default function FloorLayout() {
   const [searchParams] = useSearchParams();
 
+  // Booking info from query params (date, entry/exit time, floor)
   const [bookingInfo, setBookingInfo] = useState({
     date: null,
     entryTime: null,
     exitTime: null,
     floor: null,
   });
-
+  // User details and state
   const [memberId, setMemberId] = useState('');
   const [role, setRole] = useState('member');
   const [teamName, setTeamName] = useState('');
@@ -29,9 +31,12 @@ export default function FloorLayout() {
   const [showAddMemberIdPopUp, setShowAddMemberIdPopUp] = useState(false);
   const [newMemberId, setNewMemberId] = useState('');
   const [memberDetails, setMemberDetails] = useState(null);
+
+  // Refs for input focus management
   const memberIdInputRef = useRef(null);
   const memberIdPopUpRef = useRef(null);
 
+  // Parse query params and set booking info on mount or change
   useEffect(() => {
     setBookingInfo({
       date: searchParams.get("date"),
@@ -41,6 +46,7 @@ export default function FloorLayout() {
     });
   }, [searchParams]);
 
+  // Fetch all current bookings from backend on mount
   useEffect(() => {
     setIsLoading(true);
     fetch('http://localhost:5004/api/bookings')
@@ -67,6 +73,7 @@ export default function FloorLayout() {
       });
   }, []);
 
+  // Manage focus on inputs depending on user state
   useEffect(() => {
     if (entered && role === 'leader' && memberIdInputRef.current) {
       memberIdInputRef.current.focus();
@@ -79,9 +86,11 @@ export default function FloorLayout() {
     }
   }, [entered, role, showAddMemberIdPopUp]);
 
+  // Show and close message handlers
   const showMessage = (msg) => setMessage(msg);
   const closeMessage = () => setMessage(null);
 
+  // Popup generic component for messages and prompts
   const PopUp = ({ message, onClose, children }) => (
     <div className="popup-overlay">
       <div className="popup-content">
@@ -94,7 +103,7 @@ export default function FloorLayout() {
       </div>
     </div>
   );
-
+  // Popup component for entering member ID (used by team leaders)
   const AddMemberIdPopUp = ({ onSubmit, onCancel, onChange, value }) => (
     <div className="popup-overlay">
       <div className="popup-content">
@@ -121,7 +130,7 @@ export default function FloorLayout() {
       </div>
     </div>
   );
-
+  // Verify if a member exists on backend
   const checkMemberExists = async (memberId) => {
     try {
       const response = await fetch('http://localhost:5004/api/teams/checkMember', {
@@ -137,6 +146,7 @@ export default function FloorLayout() {
     }
   };
 
+  // Get member name by ID if exists in team
   const getMemberById = async (memberId) => {
     const memberData = await checkMemberExists(memberId);
     if (memberData.exists && memberData.teamName === teamName) {
@@ -144,7 +154,7 @@ export default function FloorLayout() {
     }
     return null;
   };
-
+  // Handler for user "join" with member ID
   const handleJoin = async () => {
     if (!memberId.trim()) {
       showMessage('Please enter your member ID');
@@ -161,35 +171,40 @@ export default function FloorLayout() {
     setTeamName(memberData.teamName);
     setRole(memberData.role);
     setEntered(true);
+    // If leader, initialize team members list with self
     if (memberData.role === 'leader') {
       setTeamMembers([memberData.memberName]);
       setSelectedMember(memberData.memberName);
     }
   };
-
+  // Handler for clicking a seat: book/unbook logic depending on role
   const handleChairClick = (chairId, tableId) => {
     if (!entered || !memberDetails) {
       showMessage('Please join with a valid member ID first.');
       return;
     }
-
+    // Booking logic differs for 'member' and 'leader'
     if (role === 'member') {
+      // Check if user already has a booking
       const memberHasBooking = Object.values(bookedChairs).some(
         (chair) => chair?.memberName === memberDetails?.memberName
       );
       if (memberHasBooking) {
-        return; // Silently fail if already booked
+        return; // Ignore if already booked
       }
 
-      if (userBooking && userBooking.chairId !== chairId) {
-        return; // Silently fail if already booked elsewhere
+      if (userBooking && userBooking?.chairId !== chairId) {
+        return; // Ignore if booking exists for different chair
       }
 
+      // Update booked chairs state and call backend for booking/unbooking
       setBookedChairs((prev) => {
         const updated = { ...prev };
         if (updated[chairId]) {
+          // Unbooking if user clicks their own seat again
           if (updated[chairId].memberName === memberDetails?.memberName) {
-            fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}`, {
+            console.log("Unbooking:", tableId, chairId, bookingInfo.floor, bookingInfo.date);
+      fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${bookingInfo.date}`, {
               method: 'DELETE',
             })
               .then((response) => {
@@ -203,11 +218,12 @@ export default function FloorLayout() {
                 console.error('Unbooking error:', err);
               });
           } else {
-            return prev; // Silently fail if already booked by someone else
+            return prev; // Ignore if seat booked by another user
           }
         } else {
+          // Booking a new seat
           if (!memberDetails.memberName) {
-            return prev; // Silently fail if member details are missing
+            return prev; 
           }
           const bookingDetails = {
             roomId: tableId,
@@ -245,6 +261,7 @@ export default function FloorLayout() {
         return updated;
       });
     } else if (role === 'leader') {
+      // For leaders, booking for selected team member
       if (!selectedMember) {
         showMessage('Please select a team member to book for.');
         return;
@@ -254,14 +271,15 @@ export default function FloorLayout() {
         (chair) => chair?.memberName === selectedMember
       );
       if (memberHasBooking) {
-        return; // Silently fail if already booked
+        return; // Ignore if selected member already booked
       }
 
       setBookedChairs((prev) => {
         const updated = { ...prev };
         if (updated[chairId]) {
           if (updated[chairId].memberName === selectedMember) {
-            fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}`, {
+            console.log("Unbooking:", tableId, chairId, bookingInfo.floor, bookingInfo.date);
+      fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${bookingInfo.date}`, {
               method: 'DELETE',
             })
               .then((response) => {
@@ -275,7 +293,7 @@ export default function FloorLayout() {
                 console.error('Unbooking error:', err);
               });
           } else {
-            return prev; // Silently fail if already booked by someone else
+            return prev; // Ignore if seat booked by other member
           }
         } else {
           if (!memberDetails.memberName) {
@@ -317,46 +335,49 @@ export default function FloorLayout() {
       });
     }
   };
-
+  // Handler to unbook currently booked seat
   const handleUnbook = () => {
     if (Object.keys(bookedChairs).length === 0) {
       showMessage('No bookings available to unbook.');
       return;
     }
-
-    const chairToUnbook = Object.keys(bookedChairs).find(
-      (chairId) =>
-        bookedChairs[chairId]?.memberName === (role === 'leader' ? selectedMember : memberDetails?.memberName)
+  
+    const chairId = Object.keys(bookedChairs).find(
+      (id) =>
+        bookedChairs[id]?.memberName === (role === 'leader' ? selectedMember : memberDetails?.memberName)
     );
-
-    if (!chairToUnbook) {
+  
+    if (!chairId) {
       showMessage('No seat booked to unbook.');
       return;
     }
-
-    const tableId = chairToUnbook.split('-')[0];
+  
+    const tableId = chairId.split('-')[0];
+  
     setBookedChairs((prev) => {
       const updated = { ...prev };
-      fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairToUnbook}`, {
+      console.log("Unbooking:", tableId, chairId, bookingInfo.floor, bookingInfo.date);
+      fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${bookingInfo.date}`, {
         method: 'DELETE',
       })
         .then((response) => {
           if (!response.ok) {
             throw new Error('Unbooking failed');
           }
-          delete updated[chairToUnbook];
+          delete updated[chairId];
           if (role === 'member' || (role === 'leader' && selectedMember === memberDetails?.memberName)) {
             setUserBooking(null);
           }
-          showMessage(`Seat ${chairToUnbook} unbooked successfully!`);
+          showMessage(`Seat ${chairId} unbooked successfully!`);
         })
         .catch((err) => {
-          showMessage(`Failed to unbook seat (${chairToUnbook}): ${err.message}`);
+          showMessage(`Failed to unbook seat (${chairId}): ${err.message}`);
         });
       return updated;
     });
   };
-
+  
+  // Submit the booking (finalize)
   const handleSubmit = () => {
     const targetMember = role === 'leader' ? selectedMember : memberDetails?.memberName;
     if (!targetMember) {
@@ -373,7 +394,7 @@ export default function FloorLayout() {
       showMessage('Please book a seat before submitting.');
       return;
     }
-
+    // Reset state or show prompt depending on role
     if (role === 'member') {
       showMessage('Booking submitted successfully!');
       setEntered(false);
@@ -387,7 +408,7 @@ export default function FloorLayout() {
       setShowAddMemberPrompt(true);
     }
   };
-
+  // Cancel the booking session and clear state
   const handleCancel = () => {
     setEntered(false);
     setMemberId('');
@@ -399,7 +420,7 @@ export default function FloorLayout() {
     setMemberDetails(null);
     showMessage('Session canceled successfully!');
   };
-
+  // Check if a seat is booked for current user/selected member
   const hasBookedSeat = () => {
     const targetMember = role === 'leader' ? selectedMember : memberDetails?.memberName;
     return Object.keys(bookedChairs).some(
@@ -407,7 +428,7 @@ export default function FloorLayout() {
         bookedChairs[chairId]?.memberName?.trim().toLowerCase() === targetMember?.trim().toLowerCase()
     );
   };
-
+  // Handlers for prompts to add team members (leaders only)
   const handleAddMemberPromptYes = () => {
     setShowAddMemberPrompt(false);
     setShowAddMemberIdPopUp(true);
@@ -427,7 +448,7 @@ export default function FloorLayout() {
     setMemberDetails(null);
     setMessage(null);
   };
-
+  // Submit new member ID for adding to team
   const handleAddMemberIdSubmit = async () => {
     if (newMemberId.trim()) {
       const memberName = await getMemberById(newMemberId);
@@ -452,17 +473,17 @@ export default function FloorLayout() {
       setShowAddMemberIdPopUp(false);
     }
   };
-
+  // Cancel adding member ID popup
   const handleAddMemberIdCancel = () => {
     setNewMemberId('');
     setShowAddMemberIdPopUp(false);
     setMessage(null);
   };
-
+  // Trigger adding a new team member prompt
   const addTeamMember = () => {
     setShowAddMemberPrompt(true);
   };
-
+  // Loading screen while fetching bookings
   if (isLoading) {
     return (
       <div className="floor-layout">
@@ -470,10 +491,12 @@ export default function FloorLayout() {
       </div>
     );
   }
-
+  // Main UI rendering
   return (
-    <div className="floor-layout">
+    <LeftSidebar>
+      <div className="floor-layout">
       <div className="layout-container">
+        {/* Member ID input before joining */}
         {!entered && (
           <div className="header-container">
             <input
@@ -489,6 +512,7 @@ export default function FloorLayout() {
           </div>
         )}
 
+        {/* Leader member selection and add member button */}
         {entered && role === 'leader' && (
           <div className="header-container">
             <div>
@@ -511,7 +535,7 @@ export default function FloorLayout() {
             </button>
           </div>
         )}
-
+        {/* Seat layout rendering: left side tables T1-T4, lobby center, right side tables T5-T8 */}
         <div className="seat-layout">
           <div className="left-containers">
             {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
@@ -593,7 +617,7 @@ export default function FloorLayout() {
             ))}
           </div>
         </div>
-
+        {/* Control panel with unbook, submit, and cancel buttons */}
         {entered && (
           <div className="control-panel">
             <button className="red-button" onClick={handleUnbook}>
@@ -613,7 +637,7 @@ export default function FloorLayout() {
           </div>
         )}
       </div>
-
+      {/* Popup messages and prompts */}
       {message && <PopUp message={message} onClose={closeMessage} />}
       {showAddMemberPrompt && (
         <PopUp message="Do you want to book for another member?">
@@ -636,5 +660,7 @@ export default function FloorLayout() {
         />
       )}
     </div>
+    </LeftSidebar>
+    
   );
 }
