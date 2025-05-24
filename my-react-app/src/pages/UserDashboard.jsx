@@ -1,241 +1,123 @@
 import React, { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
 import LeftSidebar from "../components/LeftSidebar";
-import { getProfile } from "../api/userApi";
 import CalendarCard from "../components/CalendarCard";
 import FloatingChatBot from "../components/FloatingChatBot";
 
+import DashboardHeader from "../components/dashboard/DashboardHeader";
+import UserProfileSummary from "../components/dashboard/UserProfileSummary";
+import BookingSummaryCard from "../components/dashboard/BookingSummaryCard";
+
+import BookingDashboard from "../components/dashboard/BookingDashboard";
+import SidebarWrapper from "../components/profilesidebar/SidebarWrapper";
+
+import { getProfile } from "../api/userApi";
+import axios from "axios";
+
 const UserDashboard = () => {
+  // State to hold the current user's profile data
   const [userProfile, setUserProfile] = useState(null);
 
-  // idebar toggle state
+  // Controls sidebar visibility
+  // Sidebar is open by default on screens wider than 1024px (desktop)
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
 
-  const [todayBookings, setTodayBookings] = useState([]);
-  const [yesterdayBookings, setYesterdayBookings] = useState([]);
+  // States to hold booking information
+  const [todayBookings, setTodayBookings] = useState([]); // Bookings for today
+  const [closestLastBookings, setClosestLastBookings] = useState([]); // Latest past bookings
 
-  // andle screen resize
+  // Booking counts for display and notifications
+  const [todaysBookingCount, setTodaysBookingCount] = useState(0); // Number of bookings today
+  const [totalBookingCount, setTotalBookingCount] = useState(0); // Total bookings count
+
+  // Controls active tab in dashboard (default "Bookings")
+  const [activeTab, setActiveTab] = useState("Bookings");
+
+  // Effect to update sidebar visibility on window resize
   useEffect(() => {
-    const handleResize = () => {
-      setSidebarOpen(window.innerWidth >= 1024);
-    };
+    const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
+
     window.addEventListener("resize", handleResize);
+    // Cleanup event listener on component unmount
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Load user profile
+  // Effect to fetch user profile and booking data on component mount
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      getProfile(token)
-        .then((data) => setUserProfile(data))
-        .catch((err) => console.error("Failed to load profile", err));
-    }
-  }, []);
+    if (!token) return; // If no token found, do not fetch data
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    console.log("UserDashboard token:", token);
+    // Fetch user profile using token-based authentication
+    getProfile(token)
+      .then((data) => setUserProfile(data))
+      .catch((err) => console.error("Failed to load profile", err));
 
-    if (token) {
-      getProfile(token)
-        .then((data) => {
-          console.log("Fetched user profile:", data);
-          setUserProfile(data);
-        })
-        .catch((err) => {
-          console.error(
-            "Failed to load profile",
-            err.response?.data || err.message
+    // Fetch booking data for the user from backend API
+    axios
+      .get("http://localhost:5000/api/calendar/user-view", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        const allBookings = res.data || [];
+
+        // Set total booking count
+        setTotalBookingCount(allBookings.length);
+
+        // Get today's date string in ISO format yyyy-mm-dd
+        const todayStr = new Date().toISOString().split("T")[0];
+
+        // Filter bookings whose date starts with today's date string
+        const todayFiltered = allBookings.filter((b) =>
+          b.date.startsWith(todayStr)
+        );
+        setTodayBookings(todayFiltered);
+        setTodaysBookingCount(todayFiltered.length);
+
+        // Filter bookings that happened before today (past bookings)
+        const pastBookings = allBookings.filter((b) => b.date < todayStr);
+
+        if (pastBookings.length > 0) {
+          // Find the most recent date among past bookings
+          const maxDate = pastBookings.reduce(
+            (max, b) => (b.date > max ? b.date : max),
+            pastBookings[0].date
           );
-        });
-    } else {
-      console.warn("No token found in localStorage.");
-    }
-  }, []);
-
-  //   useEffect(() => {
-  //   const token = localStorage.getItem("token");
-  //   if (!token) return;
-
-  //   axios
-  //     .get("http://localhost:5000/api/calendar/user-view", {
-  //       headers: { Authorization: `Bearer ${token}` },
-  //     })
-  //     .then((res) => {
-  //       const all = res.data || [];
-  //       const todayStr = new Date().toISOString().split("T")[0];
-
-  //       const yesterday = new Date();
-  //       yesterday.setDate(yesterday.getDate() - 1);
-  //       const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-  //       setTodayBookings(all.filter((b) => b.date === todayStr));
-  //       setYesterdayBookings(all.filter((b) => b.date === yesterdayStr));
-  //     })
-  //     .catch((err) => console.error("Failed to load schedule bookings:", err));
-  // }, []);
-
-  const [totalBookingCount, setTotalBookingCount] = useState(0);
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    try {
-      //  Load user profile
-      getProfile(token)
-        .then((data) => {
-          console.log("Fetched user profile:", data);
-          setUserProfile(data);
-        })
-        .catch((err) => {
-          console.error(
-            "Failed to load profile",
-            err.response?.data || err.message
-          );
-        });
-
-      //  Load total booking count for this user
-      axios
-        .get("http://localhost:5000/api/calendar/user-view", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((res) => {
-          const all = res.data || [];
-          setTotalBookingCount(all.length);
-        })
-        .catch((err) => console.error("Failed to load total bookings:", err));
-    } catch (e) {
-      console.error("Unexpected error in dashboard useEffect:", e);
-    }
+          // Get all bookings that happened on the most recent past date
+          const closestLast = pastBookings.filter((b) => b.date === maxDate);
+          setClosestLastBookings(closestLast);
+        } else {
+          // If no past bookings, clear the closest last bookings state
+          setClosestLastBookings([]);
+        }
+      })
+      .catch((err) => console.error("Failed to load bookings:", err));
   }, []);
 
   return (
     <div className="w-full min-h-screen flex flex-row">
-      {/* LEFT SIDEBAR */}
+      {/* Left Sidebar Navigation */}
       <LeftSidebar />
-      {/*MAIN CONTENT*/}
+
+      {/* Main content area */}
       <div className="flex flex-col flex-1 p-6 lg:p-10 gap-6">
-        {/* Mobile Toggle Button */}
+        {/* Header with sidebar toggle */}
+        <DashboardHeader
+          sidebarOpen={sidebarOpen}
+          toggleSidebar={() => setSidebarOpen((prev) => !prev)}
+        />
 
-        {/* Dashboard Heading */}
+        {/* User profile summary display */}
+        <UserProfileSummary userProfile={userProfile} />
 
-        <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold flex items-center gap-4">
-            Dashboard
-            <button
-              onClick={() => setSidebarOpen((prev) => !prev)}
-              className="lg:hidden p-2 focus:outline-none group"
-              aria-label="Toggle Sidebar"
-            >
-              <div className="space-y-1.5">
-                <span
-                  className={`block h-0.5 w-6 bg-gray-800 transform transition duration-300 ${
-                    sidebarOpen ? "rotate-45 translate-y-1.5" : ""
-                  }`}
-                />
-                <span
-                  className={`block h-0.5 w-6 bg-gray-800 transition duration-300 ${
-                    sidebarOpen ? "opacity-0" : ""
-                  }`}
-                />
-                <span
-                  className={`block h-0.5 w-6 bg-gray-800 transform transition duration-300 ${
-                    sidebarOpen ? "-rotate-45 -translate-y-1.5" : ""
-                  }`}
-                />
-              </div>
-            </button>
-          </h1>
-        </div>
-
-        {userProfile ? (
-          <div className="text-lg font-medium text-gray-600">
-            Welcome, {userProfile.firstName} {userProfile.lastName}!
-            <div className="text-sm text-gray-500">
-              Program: {userProfile.program} | Vehicle No:{" "}
-              {userProfile.vehicleNumber}
-            </div>
-            {userProfile.profilePhoto && (
-              <img
-                src={userProfile.profilePhoto}
-                alt="Profile"
-                className="w-16 h-16 rounded-full border mt-2"
-              />
-            )}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-sm">Loading your profile...</p>
-        )}
-
-        {/* Top Summary Section */}
+        {/* Booking summary and calendar cards */}
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Card: Total Bookings */}
-          <div className="bg-white rounded-xl shadow-md p-6 w-full lg:w-[300px]">
-            <p className="text-lg font-semibold mb-2">Your Total Bookings</p>
-            <p className="text-4xl font-bold">{totalBookingCount}</p>
-          </div>
+          <BookingSummaryCard totalBookings={totalBookingCount} />
           <CalendarCard />
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex space-x-10 border-b">
-          {[
-            { name: "Bookings", active: true },
-            { name: "Seat Bookings" },
-            { name: "Parking Bookings" },
-          ].map((tab, idx) => (
-            <button
-              key={idx}
-              className={`pb-2 font-medium text-sm ${
-                tab.active
-                  ? "border-b-2 border-green-700 text-black"
-                  : "text-gray-500"
-              }`}
-            >
-              {tab.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Booking Cards Section */}
+        {/* Booking dashboard and action button */}
         <div className="flex flex-wrap gap-6">
-          {[
-            { title: "Today’s Schedule", data: todayBookings },
-            { title: "Yesterday’s Schedule", data: yesterdayBookings },
-          ].map((block, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-xl shadow-md p-6 w-[260px]"
-            >
-              <p className="font-semibold mb-2">{block.title}</p>
-              {block.data.length === 0 ? (
-                <p className="text-sm text-gray-500">No bookings</p>
-              ) : (
-                block.data.map((booking, i) => (
-                  <div key={i} className="mb-3 text-sm text-gray-700">
-                    <p className="font-medium text-green-700">
-                      {booking.type === "seat" ? "Seat" : "Parking"}:{" "}
-                      {booking.details}
-                    </p>
-                    {booking.floor && (
-                      <p className="text-xs text-gray-500">
-                        Floor: {booking.floor}
-                      </p>
-                    )}
-                    {booking.entryTime && booking.exitTime && (
-                      <p className="text-xs text-gray-500">
-                        {booking.entryTime} - {booking.exitTime}
-                      </p>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          ))}
+          <BookingDashboard />
 
-          {/* View All History Button */}
           <div className="flex items-center">
             <button className="px-4 py-2 bg-white rounded-xl shadow border font-semibold text-sm">
               View All Booking History →
@@ -244,23 +126,13 @@ const UserDashboard = () => {
         </div>
       </div>
 
-      {/* SIDEBAR */}
-      {/* Always mount the sidebar container to allow transition */}
-      <div
-        className={`fixed right-0 top-0 h-full w-[320px] bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 z-50 ${
-          sidebarOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <Sidebar isOpen={sidebarOpen} />
-      </div>
+      {/* Sidebar overlay for smaller screens */}
+      <SidebarWrapper
+        sidebarOpen={sidebarOpen}
+        closeSidebar={() => setSidebarOpen(false)}
+      />
 
-      {/* Optional: Overlay for mobile when sidebar is open */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-30 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Floating chatbot for user assistance */}
       <FloatingChatBot />
     </div>
   );

@@ -2,24 +2,37 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 
 const CalendarCard = () => {
+  // State for currently viewed month/year on calendar
   const [viewDate, setViewDate] = useState(new Date());
-  const [events, setEvents] = useState([]); // 🟦 Public events
-  const [bookings, setBookings] = useState([]); // 🟩 🟧 Seat & Parking bookings
+
+  // Public events (e.g., holidays)
+  const [events, setEvents] = useState([]);
+
+  // User bookings (seat & parking bookings)
+  const [bookings, setBookings] = useState([]);
+
+  // Selected date's info for popup display
   const [selectedInfo, setSelectedInfo] = useState(null);
+
+  // Position for popup (x, y coordinates)
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
 
+  // Current day number (1-31)
   const currentDay = new Date().getDate();
+
+  // Boolean: are we viewing the current month & year?
   const isCurrentMonth =
     viewDate.getMonth() === new Date().getMonth() &&
     viewDate.getFullYear() === new Date().getFullYear();
 
+  // Number of days in the current viewing month
   const daysInMonth = new Date(
     viewDate.getFullYear(),
     viewDate.getMonth() + 1,
     0
   ).getDate();
 
-  // 🟦 Load public holidays/events once
+  // Load public events/holidays only once when component mounts
   useEffect(() => {
     axios
       .get("http://localhost:5000/api/calendar/events")
@@ -27,7 +40,7 @@ const CalendarCard = () => {
       .catch((err) => console.error("Failed to load events:", err));
   }, []);
 
-  // 🟩🟧 Load all bookings for the visible month
+  // Load user bookings whenever the viewed month changes
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -40,29 +53,36 @@ const CalendarCard = () => {
       .catch((err) => console.error("Failed to load bookings:", err));
   }, [viewDate]);
 
+  // Navigate to previous month in calendar
   const goToPreviousMonth = () => {
     setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1));
   };
 
+  // Navigate to next month in calendar
   const goToNextMonth = () => {
     setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1));
   };
 
+  // Get all matching bookings/events for a specific date
   const getMatchesForDate = (date) => {
+    // Format date as yyyy-mm-dd for matching
     const dateStr =
       date.getFullYear() +
       "-" +
       String(date.getMonth() + 1).padStart(2, "0") +
       "-" +
       String(date.getDate()).padStart(2, "0");
+
     const matches = [];
 
+    // Add bookings matching this date
     bookings.forEach((b) => {
       if (b.date.startsWith(dateStr)) {
-        matches.push(b); // ✅ use full object
+        matches.push(b); // push full booking object
       }
     });
 
+    // Add events matching this date with event-specific properties
     events.forEach((e) => {
       if (e.date === dateStr) {
         matches.push({
@@ -77,6 +97,7 @@ const CalendarCard = () => {
     return matches;
   };
 
+  // Determine what type of marks to show on calendar day
   const getDateType = (matches) => {
     const hasSeat = matches.some((m) => m.type === "seat");
     const hasParking = matches.some((m) => m.type === "parking");
@@ -88,17 +109,20 @@ const CalendarCard = () => {
     return null;
   };
 
+  // Handler when user clicks on a day with matching info
   const handleDayClick = (matches, e) => {
     if (matches.length > 0) {
       setSelectedInfo(matches);
       setPopupPosition({ x: e.clientX, y: e.clientY });
+
+      // Auto-hide popup after 5 seconds
       setTimeout(() => setSelectedInfo(null), 5000);
     }
   };
 
   return (
     <div className="relative bg-white rounded-xl shadow-md p-6 w-full lg:w-[360px]">
-      {/* 📅 Month Navigation */}
+      {/* Month navigation header */}
       <div className="flex justify-between items-center mb-4">
         <button
           onClick={goToPreviousMonth}
@@ -118,14 +142,14 @@ const CalendarCard = () => {
         </button>
       </div>
 
-      {/* 📆 Weekday Labels */}
+      {/* Weekday labels */}
       <div className="grid grid-cols-7 text-center font-medium text-sm mb-2">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
           <div key={day}>{day}</div>
         ))}
       </div>
 
-      {/* 📅 Days */}
+      {/* Calendar days grid */}
       <div className="grid grid-cols-7 gap-2 text-sm">
         {Array.from({ length: daysInMonth }, (_, i) => {
           const date = new Date(
@@ -137,8 +161,11 @@ const CalendarCard = () => {
           const matches = getMatchesForDate(date);
           const type = getDateType(matches);
 
+          // Base styling for each day cell
           const baseStyle =
             "h-12 w-12 flex items-center justify-center rounded-lg font-medium cursor-pointer transition-colors duration-200 text-center";
+
+          // Styling based on day type
           const style =
             type === "booking"
               ? "bg-green-200 text-green-900"
@@ -146,8 +173,6 @@ const CalendarCard = () => {
               ? "bg-blue-200 text-blue-900"
               : type === "both"
               ? "bg-purple-300 text-white"
-              : isToday
-              ? "bg-black text-white"
               : "bg-gray-100 hover:bg-gray-200";
 
           return (
@@ -156,13 +181,17 @@ const CalendarCard = () => {
               className={`${baseStyle} ${style}`}
               onClick={(e) => handleDayClick(matches, e)}
             >
-              {i + 1}
+              {isToday ? (
+                <span className="font-bold animate-pulse">{i + 1}</span>
+              ) : (
+                <span>{i + 1}</span>
+              )}
             </div>
           );
         })}
       </div>
 
-      {/*Popup for clicked date */}
+      {/* Popup displaying details of selected date */}
       {selectedInfo && (
         <div
           className="fixed bg-white border shadow-md rounded-md p-4 text-sm z-50 w-[260px]"
