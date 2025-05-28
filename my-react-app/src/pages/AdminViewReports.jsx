@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { saveAs } from 'file-saver';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { FaCalendar } from 'react-icons/fa';
@@ -114,7 +114,7 @@ const AdminViewReports = () => {
     }
   };
 
-  //Fetch All Bookings
+                                        //Fetch All Bookings
   const fetchAllBookings = async () => {
     try {
       const response = await axios.get('http://localhost:5000/api/reports/all-bookings');
@@ -130,7 +130,7 @@ const AdminViewReports = () => {
     if (!appliedDateRange[0] || !appliedDateRange[1]) {// Use all bookings if no date range is applied
       return allBookings;
     }
-    // Filter bookings by date range
+                                                 // Filter bookings by date range
     const [start, end] = appliedDateRange;
     return allBookings.filter(booking => {
       const bookingDate = new Date(booking.date);

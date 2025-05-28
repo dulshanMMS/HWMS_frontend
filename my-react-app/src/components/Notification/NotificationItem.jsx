@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const NotificationItem = ({ notification, markAsRead, deleteNotification }) => {
   const [showSuccess, setShowSuccess] = useState(false);
@@ -29,7 +29,7 @@ const NotificationItem = ({ notification, markAsRead, deleteNotification }) => {
       }`}
     >
       {showSuccess && (
-        <div className="p-2 mb-2 bg-green-100 text-green-800 rounded">//notification success msg
+        <div className="p-2 mb-2 bg-green-100 text-green-800 rounded">
           Notification deleted successfully!
         </div>
       )}
@@ -45,21 +45,21 @@ const NotificationItem = ({ notification, markAsRead, deleteNotification }) => {
           {isRead ? (
             <button
               onClick={handleMarkAsUnread}
-              className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-lg"
+              className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-lg w-24"
             >
               Mark as Unread
             </button>
           ) : (
             <button
               onClick={handleMarkAsRead}
-              className="px-3 py-1 bg-green-100 text-green-800 rounded-lg"
+              className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-lg w-24"
             >
               Mark as Read
             </button>
           )}
           <button
             onClick={handleDelete}
-            className="px-3 py-1 bg-red-100 text-red-800 rounded-lg"
+            className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-lg w-24"
           >
             Delete
           </button>

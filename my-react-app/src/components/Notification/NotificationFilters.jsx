@@ -1,6 +1,4 @@
-import React from 'react';
-import { FaSearch, FaCalendar } from 'react-icons/fa';
-import DatePicker from 'react-datepicker';
+import { FaSearch } from 'react-icons/fa';
 
 const NotificationFilters = ({
   searchTerm,

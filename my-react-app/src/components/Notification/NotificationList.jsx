@@ -1,4 +1,3 @@
-import React from 'react';
 import NotificationItem from './NotificationItem';
 
 const NotificationList = ({ notifications, markAsRead, deleteNotification, error }) => {

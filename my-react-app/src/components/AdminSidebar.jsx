@@ -41,7 +41,7 @@ const AdminSidebar = ({ children }) => {
             <SidebarLink to="/seat-booking" icon={<FaExchangeAlt />} label="Seat Booking" />
             <SidebarLink to="/parking-booking" icon={<FaCar />} label="Parking Booking" />
             <SidebarLink to="/help" icon={<FaQuestionCircle />} label="Help Section" />
-          {/*  <SidebarLink to="/booking-history" icon={<FaHistory />} label="Booking History" /> */}
+            {/* <SidebarLink to="/booking-history" icon={<FaHistory />} label="Booking History" /> */}
           </ul>
         </div>
 

@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import AdminLayout from '../components/AdminLayout';
-import AdminProfile from '../components/AdminProfile';
 import useAuthGuard from '../components/AuthGuard';
 import EventCalendar from '../components/Notification/EventCalendar';
 import NotificationFilters from '../components/Notification/NotificationFilters';
 import NotificationList from '../components/Notification/NotificationList';
-import PaginationControls from '../components/Notification/PaginationControls';
-import { io } from 'socket.io-client';
+
 
 const API_BASE_URL = 'http://localhost:5000/api/notifications';
 
@@ -229,56 +228,52 @@ const AdminNotification = () => {
 
   return (
     <AdminLayout>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Notifications</h1>
       <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-            <AdminProfile />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg shadow-md">
-                <NotificationFilters
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  filter={filter}
-                  setFilter={setFilter}
-                  handleClearDateRange={handleClearDateRange}
-                  showClearButton={showClearButton}
-                />
-                <NotificationList
-                  notifications={filteredNotifications}
-                  markAsRead={markAsRead}
-                  deleteNotification={deleteNotification}
-                  error={error}
-                />
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg shadow-md">
+              <NotificationFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                filter={filter}
+                setFilter={setFilter}
+                handleClearDateRange={handleClearDateRange}
+                showClearButton={showClearButton}
+              />
+              <NotificationList
+                notifications={filteredNotifications}
+                markAsRead={markAsRead}
+                deleteNotification={deleteNotification}
+                error={error}
+              />
             </div>
-
-            <EventCalendar
-              date={date}
-              setDate={setDate}
-              eventDates={eventDates}
-              handleDayClick={handleDayClick}
-              showEventModal={showEventModal}
-              setShowEventModal={setShowEventModal}
-              events={events}
-            />
           </div>
 
-          <div className="flex justify-center items-center mt-4">
-            <button className="px-4 py-2 bg-gray-300 rounded-l-md" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
-              Previous
-            </button>
-            <span className="px-4">Page {currentPage} of {totalPages}</span>
-            <button className="px-4 py-2 bg-blue-500 text-white rounded-r-md" disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
-              Next
-            </button>
-          </div>
+          <EventCalendar
+            date={date}
+            setDate={setDate}
+            eventDates={eventDates}
+            handleDayClick={handleDayClick}
+            showEventModal={showEventModal}
+            setShowEventModal={setShowEventModal}
+            events={events}
+          />
+        </div>
 
-          {/* <button onClick={handleApply}>
-            Refresh
-          </button> */}
+        <div className="flex justify-center items-center mt-4">
+          <button className="px-4 py-2 bg-gray-300 rounded-l-md" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
+            Previous
+          </button>
+          <span className="px-4">Page {currentPage} of {totalPages}</span>
+          <button className="px-4 py-2 bg-blue-500 text-white rounded-r-md" disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
+            Next
+          </button>
+        </div>
+
+        {/* <button onClick={handleApply}>
+          Refresh
+        </button> */}
       </div>
     </AdminLayout>
   );
