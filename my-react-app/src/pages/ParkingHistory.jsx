@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import Sidebar from '../components/Sidebar';
+import ProfileSidebar from '../components/ProfileSidebar';
 import AdminSidebar from '../components/AdminSidebar';
 
 import BookingStats from '../components/parkingHistory/BookingStats';
@@ -238,7 +238,7 @@ export default function BookingHistory() {
       </div>
 
       <div className="w-64 h-full bg-white shadow-md">
-        <Sidebar />
+        <ProfileSidebar/>
       </div>
 
       {showDetailsPopup && selectedBooking && (
