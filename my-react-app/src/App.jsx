@@ -1,3 +1,6 @@
+
+import ParkingHistory from "./pages/ParkingHistory";
+
 import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Login from './pages/Login';
@@ -5,11 +8,12 @@ import AdminDashboard from './pages/AdminDashboard';
 import UserDashboard from './pages/UserDashboard';
 import AdminNotification from './pages/AdminNotification';
 import AdminViewReports from './pages/AdminViewReports';
-import BookingHistory from './pages/BookingHistory';
+
 import ParkingBooking from './pages/ParkingBooking';
 import AdminParking from './pages/AdminParking';
 import ResetPassword from './pages/ResetPassword';
 import UserNotification from './pages/UserNotification';
+
 
 
 const App = () => {
@@ -33,7 +37,7 @@ const App = () => {
         <Route path="/user" element={<UserDashboard />} />
         <Route path="/AdminNotification" element={<AdminNotification />} />
         <Route path="/admin-reports" element={<AdminViewReports />} />
-        <Route path="/history" element={<BookingHistory />} />
+        <Route path="/parkinghistory" element={<ParkingHistory/>} />
         <Route path="/user/parking-booking" element={<ParkingBooking />} />
         <Route path="admin/adminparking" element={<AdminParking/>} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
