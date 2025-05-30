@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from "react";
-import LeftSidebar from "../components/LeftSidebar";
+import { useEffect, useState } from "react";
 import CalendarCard from "../components/CalendarCard";
 import FloatingChatBot from "../components/FloatingChatBot";
+import LeftSidebar from "../components/LeftSidebar";
 
+import BookingSummaryCard from "../components/dashboard/BookingSummaryCard";
 import DashboardHeader from "../components/dashboard/DashboardHeader";
 import UserProfileSummary from "../components/dashboard/UserProfileSummary";
-import BookingSummaryCard from "../components/dashboard/BookingSummaryCard";
 
 import BookingDashboard from "../components/dashboard/BookingDashboard";
 import SidebarWrapper from "../components/profilesidebar/SidebarWrapper";
 
-import { getProfile } from "../api/userApi";
 import axios from "axios";
+import { getProfile } from "../api/userApi";
 
 const UserDashboard = () => {
   // State to hold the current user's profile data

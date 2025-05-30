@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { getProfile, updateProfile } from "../api/userApi";
+import { useEffect, useState } from "react";
 import { uploadProfileImage } from "../api/firebaseUpload";
+import { getProfile, updateProfile } from "../api/userApi";
 import LeftSidebar from "../components/LeftSidebar";
 
 const Profile = () => {
@@ -141,7 +141,7 @@ const Profile = () => {
       <div className="flex-1 p-8 relative">
         {/* Notification message (success or error) */}
         {successMsg && (
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-700 px-4 py-2 rounded shadow-md z-50 w-fit max-w-md text-center">
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-gray-600 text-green-700 px-4 py-2 rounded shadow-md z-50 w-fit max-w-md text-center">
             {successMsg}
           </div>
         )}
