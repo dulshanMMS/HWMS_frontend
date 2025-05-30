@@ -65,11 +65,11 @@ const UserNotification = () => {
   const getFilteredNotifications = () => {
     switch (filter) {
       case 'unread':
-        return notifications.filter(notif => !notif.read);
+        return notifications.filter(notif => !notif.read) || [];
       case 'read':
-        return notifications.filter(notif => notif.read);
+        return notifications.filter(notif => notif.read) || [];
       default:
-        return notifications;
+        return notifications || [];
     }
   };
 
