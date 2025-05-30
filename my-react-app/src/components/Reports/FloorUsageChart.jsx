@@ -11,12 +11,12 @@ const FLOOR_LABELS = {
 
 const UNUSED_COLOR = '#B3B0B3';  // light gray
 
-function getFloorFromDetails(details) {
+function getFloorFromDetails(details) {//Extracts floor number from a booking detail string
   const match = details.match(/Floor (\d+)/i);
   return match ? parseInt(match[1], 10) : null;
 }
 
-function getTeamFromBooking(booking) {
+function getTeamFromBooking(booking) {//returns the team name from the booking object
   return booking.team;
 }
 
