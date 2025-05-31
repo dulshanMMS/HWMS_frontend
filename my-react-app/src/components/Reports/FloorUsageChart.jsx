@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
-import teamColors from '../../constants/teamColors';
+import axios from 'axios';
 
 const FLOOR_LABELS = {
   14: 'Floor 14',
@@ -35,23 +35,42 @@ function getFloorUsageDataFromBookings(bookings, totalDesksPerFloor) {
     }
   });
 
-  // Build chart data
+  // Build chart data with absolute numbers
   return [14, 30, 31, 32].map(floor => {
     const total = totalDesksPerFloor[floor] || 1;
     const usedByTeam = floorTeamCounts[floor] || {};
     const data = {
       floor: FLOOR_LABELS[floor],
-      Unused: 100 - (floorTotals[floor] / total) * 100,
-      totalUsed: (floorTotals[floor] / total) * 100,
+      Unused: total - floorTotals[floor],
+      totalUsed: floorTotals[floor],
     };
     Object.keys(usedByTeam).forEach(team => {
-      data[team] = (usedByTeam[team] / total) * 100;
+      data[team] = usedByTeam[team];
     });
     return data;
   });
 }
 
 const FloorUsageChart = ({ bookings, totalDesksPerFloor }) => {
+  // Ensure teamColors is defined at the top of the component
+  const [teamColors, setTeamColors] = useState({});
+
+  useEffect(() => {
+    const fetchTeamColors = async () => {
+      try {
+        const response = await axios.get('/api/teams');
+        const colorMap = {};
+        response.data.forEach(team => {
+          colorMap[team.teamName] = team.color || '#888';
+        });
+        setTeamColors(colorMap);
+      } catch (error) {
+        console.error('Failed to fetch team colors:', error);
+      }
+    };
+    fetchTeamColors();
+  }, []);
+
   const chartData = getFloorUsageDataFromBookings(bookings, totalDesksPerFloor);
 
   // Get all teams present in the data
@@ -79,13 +98,13 @@ const FloorUsageChart = ({ bookings, totalDesksPerFloor }) => {
           margin={{ top: 20, right: 40, left: 40, bottom: 20 }}
           barCategoryGap="20%"
         >
-          <XAxis type="number" domain={[0, 100]} tickFormatter={v => `${v}%`} />
+          <XAxis type="number" domain={[0, Math.max(...Object.values(totalDesksPerFloor))]} tickFormatter={v => v} />
           <YAxis
             dataKey="floor"
             type="category"
             tick={{ fontWeight: 700, fontSize: 13 }}
           />
-          <Tooltip formatter={v => `${v.toFixed(2)}%`} />
+          <Tooltip formatter={v => `${v} desks`} />
           {allTeams.map(team => (
             <Bar key={team} dataKey={team} stackId="a" fill={teamColors[team] || '#888'}>
               {/* Only add the usage label to the last team bar */}
@@ -93,7 +112,7 @@ const FloorUsageChart = ({ bookings, totalDesksPerFloor }) => {
                 <LabelList
                   dataKey="totalUsed"
                   position="right"
-                  formatter={v => `${v.toFixed(2)}%`}
+                  formatter={v => `${v} desks`}
                   style={{ fontWeight: 700, fontSize: 14, fill: '#444' }}
                 />
               )}
