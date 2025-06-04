@@ -1,10 +1,12 @@
 import React from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
+//Handle form inputs
+
 const GeneralFormInput = ({
   type,
   value,
-  onChange,
+  onChange,         //callback function to handle changes
   placeholder,
   showToggle = false,
   showPassword,
@@ -12,7 +14,7 @@ const GeneralFormInput = ({
   required = true
 }) => {
   return (
-    <div className="relative">
+    <div className="relative">     {/**To position the eye icon inside the input field */}
       <input
         type={showToggle ? (showPassword ? 'text' : 'password') : type}
         value={value}

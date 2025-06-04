@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useEffect, useState } from 'react';
 import { BiBell } from 'react-icons/bi';
 import { Link } from 'react-router-dom';
 
