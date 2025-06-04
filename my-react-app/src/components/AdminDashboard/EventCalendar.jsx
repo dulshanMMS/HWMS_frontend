@@ -26,15 +26,19 @@ const EventCalendar = ({ date, setDate, eventDates, todayEvents, onDayClick }) =
         value={date}
         tileClassName={({ date: tileDate }) => {
           const today = new Date();
-          const isToday =
-            tileDate.getDate() === today.getDate() &&
-            tileDate.getMonth() === today.getMonth() &&
-            tileDate.getFullYear() === today.getFullYear();
+          today.setHours(0, 0, 0, 0); // Normalize today's date
+          const thisDate = new Date(tileDate);
+          thisDate.setHours(0, 0, 0, 0); // Normalize tile date
 
-          const isEventDay = eventDates.includes(formatDateToYMD(tileDate));
+          const isToday = thisDate.getTime() === today.getTime();
+          const isEventDay = eventDates.includes(formatDateToYMD(thisDate));
+          const isPast = thisDate < today;
 
           if (isToday) return "bg-green-300 text-white rounded-full";
+
+          if (isEventDay && isPast) return "bg-gray-100 text-gray-600 rounded-lg";
           if (isEventDay) return "bg-yellow-200 font-semibold rounded-lg";
+
           return null;
         }}
       />
