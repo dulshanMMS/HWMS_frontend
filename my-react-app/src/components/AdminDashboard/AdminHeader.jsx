@@ -1,4 +1,3 @@
-import React from "react";
 
 //Displays the dashboard title and admin role label.
 const AdminHeader = () => (

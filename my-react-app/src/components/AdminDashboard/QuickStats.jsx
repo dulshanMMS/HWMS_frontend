@@ -1,4 +1,3 @@
-import React from "react";
 
 /**
  * Shows today booking count and link to reports.

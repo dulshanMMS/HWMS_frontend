@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import signInImg from '../assets/signIn.jpeg';
 import AuthForm from '../components/Login/AuthForm';
-import Navbar from '../components/Login/Navbar';
 import ForgotPassword from '../components/Login/ForgotPassword';
+import Navbar from '../components/Login/Navbar';
 
 const Login = () => {
   const [currentState, setCurrentState] = useState('Sign In');

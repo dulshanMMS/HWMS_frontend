@@ -1,4 +1,3 @@
-import React from "react";
 
 /**
  * Shows top 3 teams' booking counts with colored indicators.
