@@ -1,3 +1,6 @@
+import { Route, Routes, useLocation } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import ParkingHistory from "./pages/ParkingHistory";
 
 import { Route, Routes, useLocation } from 'react-router-dom';
@@ -9,11 +12,13 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminNotification from './pages/AdminNotification';
 import AdminParking from './pages/AdminParking';
 import AdminViewReports from './pages/AdminViewReports';
+import BookingHistory from './pages/BookingHistory';
+import Login from './pages/Login';
 
 import ParkingBooking from './pages/ParkingBooking';
 import ResetPassword from './pages/ResetPassword';
+import UserDashboard from './pages/UserDashboard';
 import UserNotification from './pages/UserNotification';
-
 
 import UserDashboard from './pages/UserDashboard';
 
