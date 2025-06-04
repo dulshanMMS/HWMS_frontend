@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify'; // 👈 if not installed, run: npm install react-toastify
 
 const TeamColorPalette = () => {
   const [teams, setTeams] = useState([]);
@@ -27,20 +28,24 @@ const TeamColorPalette = () => {
     e.preventDefault();
     setFormLoading(true);
     try {
-      await axios.post('/api/teams', newTeam); 
+      const response = await axios.post('/api/teams', newTeam);
       setNewTeam({ teamId: '', teamName: '', color: '' });
       setShowForm(false);
-      fetchTeams(); // Refresh the list
+
+      // ✅ Append newly added team to the end (instead of refetching all)
+      setTeams(prev => [...prev, response.data]);
+
+      // ✅ Show toast
+      toast.success('Team added successfully!');
     } catch (error) {
       console.error('Error adding team:', error);
+      toast.error('Failed to add team');
     } finally {
       setFormLoading(false);
     }
   };
 
   if (loading) return <p>Loading team colors...</p>;
-
-  const sortedTeams = [...teams].sort((a, b) => a.teamName.localeCompare(b.teamName));
 
   return (
     <div className="bg-white p-6 rounded-lg shadow">
@@ -93,7 +98,7 @@ const TeamColorPalette = () => {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {sortedTeams.map((team, idx) => (
+        {teams.map((team, idx) => (
           <div key={idx} className="flex items-center space-x-2">
             <span className={`w-4 h-4 rounded-full ${team.color || 'bg-gray-300'}`}></span>
             <span>{team.teamName}</span>

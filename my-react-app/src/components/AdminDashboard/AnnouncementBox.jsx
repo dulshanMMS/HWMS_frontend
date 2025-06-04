@@ -1,4 +1,3 @@
-import React from "react";
 
 /**
  * Textarea input and send button for special announcements.

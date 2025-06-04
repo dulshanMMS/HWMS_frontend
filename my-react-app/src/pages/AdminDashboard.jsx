@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from "react";
-import useAuthGuard from "../components/AuthGuard";
-import AdminSidebar from "../components/AdminSidebar";
 import axios from "axios";
+import { useEffect, useState } from "react";
+import AdminSidebar from "../components/AdminSidebar";
+import useAuthGuard from "../components/AuthGuard";
 
 import AdminHeader from "../components/AdminDashboard/AdminHeader";
 import AnnouncementBox from "../components/AdminDashboard/AnnouncementBox";
-import TodayTeamStats from "../components/AdminDashboard/TodayTeamStats";
+import BookingChart from "../components/AdminDashboard/BookingChart";
 import EventCalendar from "../components/AdminDashboard/EventCalendar";
-import TeamColorPalette from "../components/shared/TeamColorPalette";
+import EventModal from "../components/AdminDashboard/EventModal";
 import ProfileSummary from "../components/AdminDashboard/ProfileSummary";
 import QuickStats from "../components/AdminDashboard/QuickStats";
-import BookingChart from "../components/AdminDashboard/BookingChart";
-import EventModal from "../components/AdminDashboard/EventModal";
+import TodayTeamStats from "../components/AdminDashboard/TodayTeamStats";
+import TeamColorPalette from "../components/shared/TeamColorPalette";
 
 const formatDateToYMD = (date) => {                     //utility function to convert a date to YYYY-MM-DD format
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);

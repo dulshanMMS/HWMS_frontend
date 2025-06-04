@@ -1,4 +1,3 @@
-import React from "react";
 
 // Modal component for viewing, adding and deleting events
 const EventModal = ({ date, events, newEvent, setNewEvent, onClose, onAdd, onDelete }) => {

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import resetImage from '../assets/reset-password.png'; 
+import { useNavigate, useParams } from 'react-router-dom';
+import resetImage from '../assets/reset-password.png';
 
 const ResetPassword = () => {
   const { token } = useParams();
