@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios'; 
-import Sidebar from '../components/Sidebar';
-import AdminSidebar from '../components/AdminSidebar';
+import { useState, useEffect } from "react";
+import axios from "axios";
+import Sidebar from "../components/ProfileSidebar";
+import AdminSidebar from "../components/AdminSidebar";
 
-// API 
-const API_BASE_URL = 'http://localhost:5000/api';
+// API
+const API_BASE_URL = "http://localhost:5000/api";
 
 export default function BookingHistory() {
   // State management
-  const [activeTab, setActiveTab] = useState('Parking Bookings'); 
+  const [activeTab, setActiveTab] = useState("Parking Bookings");
   const [bookingDates, setBookingDates] = useState([]);
   const [totalBookings, setTotalBookings] = useState(0);
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -18,15 +18,15 @@ export default function BookingHistory() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [deleteForm, setDeleteForm] = useState({
-    slotNumber: '',
-    date: '',
-    entryTime: '',
-    exitTime: ''
+    slotNumber: "",
+    date: "",
+    entryTime: "",
+    exitTime: "",
   });
 
   // Get token from localStorage
   const getToken = () => {
-    return localStorage.getItem('token');
+    return localStorage.getItem("token");
   };
 
   // Fetch  history data when component mounts or tab changes
@@ -38,47 +38,50 @@ export default function BookingHistory() {
   const fetchBookingHistory = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // Determine booking type based on active tab
-      let bookingType = "parking"; // Default to parking 
-      
-      if (activeTab === 'Seat Bookings') {
+      let bookingType = "parking"; // Default to parking
+
+      if (activeTab === "Seat Bookings") {
         bookingType = "seat";
       }
-      
+
       const token = getToken();
       if (!token) {
         throw new Error("Authentication token not found. Please login again.");
       }
-      
+
       // Make API request to get booking history
       const response = await axios.post(
         `${API_BASE_URL}/history/user`,
         { type: bookingType },
         {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
-      
+
       // Process the data
       const { totalBookings, bookedDates } = response.data;
-      
+
       // Format dates to match your UI
       const formattedDates = bookedDates.map((date, index) => ({
         id: index + 1,
         date: date,
-        bookings: [] // alredy detailed bookings data comes to  when a date is clicked
+        bookings: [], // alredy detailed bookings data comes to  when a date is clicked
       }));
-      
+
       setTotalBookings(totalBookings);
       setBookingDates(formattedDates);
-      
     } catch (err) {
-      console.error('Error fetching booking history:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to fetch booking history');
+      console.error("Error fetching booking history:", err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to fetch booking history"
+      );
     } finally {
       setLoading(false);
     }
@@ -88,39 +91,42 @@ export default function BookingHistory() {
   const fetchBookingDetails = async (date) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // Determine booking type
       let bookingType = "parking"; // Default to parking
-      
-      if (activeTab === 'Seat Bookings') {
+
+      if (activeTab === "Seat Bookings") {
         bookingType = "seat";
       }
-      
+
       const token = getToken();
       if (!token) {
         throw new Error("Authentication token not found. Please login again.");
       }
-      
+
       // Make API request to get booking details for the selected date
       const response = await axios.post(
         `${API_BASE_URL}/history/user/details`,
-        { 
+        {
           type: bookingType,
-          date: date 
+          date: date,
         },
         {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
-      
+
       setBookingDetails(response.data);
-      
     } catch (err) {
-      console.error('Error fetching booking details:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to fetch booking details');
+      console.error("Error fetching booking details:", err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to fetch booking details"
+      );
     } finally {
       setLoading(false);
     }
@@ -130,46 +136,44 @@ export default function BookingHistory() {
   const deleteBooking = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const token = getToken();
       if (!token) {
         throw new Error("Authentication token not found. Please login again.");
       }
-      
+
       // Make API request to delete the booking
-      await axios.delete(
-        `${API_BASE_URL}/history/user/delete`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          data: {
-            slotNumber: parseInt(deleteForm.slotNumber), // Convert to number if needed
-            date: deleteForm.date,
-            entryTime: deleteForm.entryTime,
-            exitTime: deleteForm.exitTime
-          }
-        }
-      );
-      
+      await axios.delete(`${API_BASE_URL}/history/user/delete`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: {
+          slotNumber: parseInt(deleteForm.slotNumber), // Convert to number if needed
+          date: deleteForm.date,
+          entryTime: deleteForm.entryTime,
+          exitTime: deleteForm.exitTime,
+        },
+      });
+
       // Close delete popup
       setShowDeletePopup(false);
-      
+
       // Clear form
       setDeleteForm({
-        slotNumber: '',
-        date: '',
-        entryTime: '',
-        exitTime: ''
+        slotNumber: "",
+        date: "",
+        entryTime: "",
+        exitTime: "",
       });
-      
+
       // Refresh booking history
       fetchBookingHistory();
-      
     } catch (err) {
-      console.error('Error deleting booking:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to delete booking');
+      console.error("Error deleting booking:", err);
+      setError(
+        err.response?.data?.message || err.message || "Failed to delete booking"
+      );
     } finally {
       setLoading(false);
     }
@@ -188,13 +192,13 @@ export default function BookingHistory() {
   const handleDeleteClick = (booking) => {
     setShowDetailsPopup(false);
     setShowDeletePopup(true);
-    
+
     // delete form with selected booking details(it is already pre filled !!!)
     setDeleteForm({
       slotNumber: booking.slotNumber.toString(),
       date: booking.date,
       entryTime: booking.entryTime,
-      exitTime: booking.exitTime
+      exitTime: booking.exitTime,
     });
   };
 
@@ -204,9 +208,9 @@ export default function BookingHistory() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setDeleteForm(prev => ({
+    setDeleteForm((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -216,7 +220,7 @@ export default function BookingHistory() {
       <div className="w-64 h-full bg-green-800 text-white">
         <AdminSidebar />
       </div>
-      
+
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto bg-green-50">
         <div className="flex justify-center py-6 px-4">
@@ -224,51 +228,67 @@ export default function BookingHistory() {
             <div className="p-6">
               <h1 className="text-2xl font-bold mb-1">Your Booking History</h1>
               <p className="text-gray-600 mb-6">Welcome back!</p>
-              
+
               {/* Tab Navigation */}
               <div className="flex border-b mb-6">
                 <button
-                  className={`py-2 px-4 ${activeTab === 'Bookings' ? 'border-b-2 border-green-700 font-medium' : ''}`}
-                  onClick={() => handleTabChange('Bookings')}
+                  className={`py-2 px-4 ${
+                    activeTab === "Bookings"
+                      ? "border-b-2 border-green-700 font-medium"
+                      : ""
+                  }`}
+                  onClick={() => handleTabChange("Bookings")}
                 >
                   Bookings
                 </button>
                 <button
-                  className={`py-2 px-4 ${activeTab === 'Seat Bookings' ? 'border-b-2 border-green-700 font-medium' : ''}`}
-                  onClick={() => handleTabChange('Seat Bookings')}
+                  className={`py-2 px-4 ${
+                    activeTab === "Seat Bookings"
+                      ? "border-b-2 border-green-700 font-medium"
+                      : ""
+                  }`}
+                  onClick={() => handleTabChange("Seat Bookings")}
                 >
                   Seat Bookings
                 </button>
                 <button
-                  className={`py-2 px-4 ${activeTab === 'Parking Bookings' ? 'border-b-2 border-green-700 font-medium' : ''}`}
-                  onClick={() => handleTabChange('Parking Bookings')}
+                  className={`py-2 px-4 ${
+                    activeTab === "Parking Bookings"
+                      ? "border-b-2 border-green-700 font-medium"
+                      : ""
+                  }`}
+                  onClick={() => handleTabChange("Parking Bookings")}
                 >
                   Parking Bookings
                 </button>
               </div>
-              
+
               {/* Error message */}
               {error && (
                 <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
                   {error}
                 </div>
               )}
-              
+
               {/* Stats Section */}
               <div className="mb-8">
-                <h2 className="text-sm font-medium text-gray-600 mb-2">Quick Stats</h2>
+                <h2 className="text-sm font-medium text-gray-600 mb-2">
+                  Quick Stats
+                </h2>
                 <div className="bg-white p-4 border rounded-lg shadow-sm inline-block">
                   <p className="text-sm text-gray-600">Your Total Bookings:</p>
                   <p className="text-3xl font-bold">
-                    {loading ? 'Loading...' : totalBookings}
+                    {loading ? "Loading..." : totalBookings}
                   </p>
                 </div>
               </div>
-              
+
               {/* Booking Dates Grid */}
               <div className="grid grid-cols-2 gap-4">
                 {loading ? (
-                  <div className="col-span-2 text-center py-4">Loading booking dates...</div>
+                  <div className="col-span-2 text-center py-4">
+                    Loading booking dates...
+                  </div>
                 ) : bookingDates.length > 0 ? (
                   bookingDates.map((date) => (
                     <button
@@ -290,18 +310,20 @@ export default function BookingHistory() {
           </div>
         </div>
       </div>
-      
+
       {/* Right Side Navigation - Sidebar */}
       <div className="w-64 h-full bg-white shadow-md">
         <Sidebar />
       </div>
-      
+
       {/* Booking Details Popup */}
       {showDetailsPopup && selectedBooking && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Booking Details for {selectedBooking.date}</h2>
-            
+            <h2 className="text-xl font-bold mb-4">
+              Booking Details for {selectedBooking.date}
+            </h2>
+
             {loading ? (
               <div className="text-center py-4">Loading booking details...</div>
             ) : bookingDetails.length > 0 ? (
@@ -310,16 +332,16 @@ export default function BookingHistory() {
                   <div className="grid grid-cols-2 gap-2">
                     <p className="text-gray-600">Slot Number:</p>
                     <p className="font-medium">{booking.slotNumber}</p>
-                    
+
                     <p className="text-gray-600">Floor Number:</p>
                     <p className="font-medium">{booking.floor}</p>
-                    
+
                     <p className="text-gray-600">Date:</p>
                     <p className="font-medium">{booking.date}</p>
-                    
+
                     <p className="text-gray-600">Entry Time:</p>
                     <p className="font-medium">{booking.entryTime}</p>
-                    
+
                     <p className="text-gray-600">Exit Time:</p>
                     <p className="font-medium">{booking.exitTime}</p>
                   </div>
@@ -330,7 +352,7 @@ export default function BookingHistory() {
                 No booking details found
               </div>
             )}
-            
+
             <div className="flex justify-end mt-4 space-x-2">
               {bookingDetails.length > 0 && (
                 <button
@@ -350,24 +372,28 @@ export default function BookingHistory() {
           </div>
         </div>
       )}
-      
+
       {/* Delete Confirmation Popup */}
       {showDeletePopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
             <h2 className="text-xl font-bold mb-4">Confirm Deletion</h2>
-            <p className="mb-4">Please confirm the booking details to delete:</p>
-            
+            <p className="mb-4">
+              Please confirm the booking details to delete:
+            </p>
+
             {/* Error message in delete form */}
             {error && (
               <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
                 {error}
               </div>
             )}
-            
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Slot Number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Slot Number
+                </label>
                 <input
                   type="text"
                   name="slotNumber"
@@ -376,9 +402,11 @@ export default function BookingHistory() {
                   className="w-full p-2 border rounded-md"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date (YYYY/MM/DD)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date (YYYY/MM/DD)
+                </label>
                 <input
                   type="text"
                   name="date"
@@ -387,9 +415,11 @@ export default function BookingHistory() {
                   className="w-full p-2 border rounded-md"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Entry Time</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Entry Time
+                </label>
                 <input
                   type="text"
                   name="entryTime"
@@ -398,9 +428,11 @@ export default function BookingHistory() {
                   className="w-full p-2 border rounded-md"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Exit Time</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Exit Time
+                </label>
                 <input
                   type="text"
                   name="exitTime"
@@ -410,14 +442,14 @@ export default function BookingHistory() {
                 />
               </div>
             </div>
-            
+
             <div className="flex justify-end mt-6 space-x-2">
               <button
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                 onClick={handleDeleteConfirm}
                 disabled={loading}
               >
-                {loading ? 'Deleting...' : 'Delete'}
+                {loading ? "Deleting..." : "Delete"}
               </button>
               <button
                 className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"

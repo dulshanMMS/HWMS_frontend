@@ -1,209 +1,123 @@
-import React, { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
+import { useEffect, useState } from "react";
+import CalendarCard from "../components/CalendarCard";
+import FloatingChatBot from "../components/FloatingChatBot";
 import LeftSidebar from "../components/LeftSidebar";
+
+import BookingSummaryCard from "../components/dashboard/BookingSummaryCard";
+import DashboardHeader from "../components/dashboard/DashboardHeader";
+import UserProfileSummary from "../components/dashboard/UserProfileSummary";
+
+import BookingDashboard from "../components/dashboard/BookingDashboard";
+import SidebarWrapper from "../components/profilesidebar/SidebarWrapper";
+
+import axios from "axios";
 import { getProfile } from "../api/userApi";
 
 const UserDashboard = () => {
+  // State to hold the current user's profile data
   const [userProfile, setUserProfile] = useState(null);
 
-  // idebar toggle state
+  // Controls sidebar visibility
+  // Sidebar is open by default on screens wider than 1024px (desktop)
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
 
-  // andle screen resize
+  // States to hold booking information
+  const [todayBookings, setTodayBookings] = useState([]); // Bookings for today
+  const [closestLastBookings, setClosestLastBookings] = useState([]); // Latest past bookings
+
+  // Booking counts for display and notifications
+  const [todaysBookingCount, setTodaysBookingCount] = useState(0); // Number of bookings today
+  const [totalBookingCount, setTotalBookingCount] = useState(0); // Total bookings count
+
+  // Controls active tab in dashboard (default "Bookings")
+  const [activeTab, setActiveTab] = useState("Bookings");
+
+  // Effect to update sidebar visibility on window resize
   useEffect(() => {
-    const handleResize = () => {
-      setSidebarOpen(window.innerWidth >= 1024);
-    };
+    const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
+
     window.addEventListener("resize", handleResize);
+    // Cleanup event listener on component unmount
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Load user profile
+  // Effect to fetch user profile and booking data on component mount
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      getProfile(token)
-        .then((data) => setUserProfile(data))
-        .catch((err) => console.error("Failed to load profile", err));
-    }
-  }, []);
-  // Get current date information
-  const today = new Date();
-  const currentDay = today.getDate();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
+    if (!token) return; // If no token found, do not fetch data
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    console.log("UserDashboard token:", token);
+    // Fetch user profile using token-based authentication
+    getProfile(token)
+      .then((data) => setUserProfile(data))
+      .catch((err) => console.error("Failed to load profile", err));
 
-    if (token) {
-      getProfile(token)
-        .then((data) => {
-          console.log("Fetched user profile:", data);
-          setUserProfile(data);
-        })
-        .catch((err) => {
-          console.error(
-            "Failed to load profile",
-            err.response?.data || err.message
+    // Fetch booking data for the user from backend API
+    axios
+      .get("http://localhost:5000/api/calendar/user-view", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        const allBookings = res.data || [];
+
+        // Set total booking count
+        setTotalBookingCount(allBookings.length);
+
+        // Get today's date string in ISO format yyyy-mm-dd
+        const todayStr = new Date().toISOString().split("T")[0];
+
+        // Filter bookings whose date starts with today's date string
+        const todayFiltered = allBookings.filter((b) =>
+          b.date.startsWith(todayStr)
+        );
+        setTodayBookings(todayFiltered);
+        setTodaysBookingCount(todayFiltered.length);
+
+        // Filter bookings that happened before today (past bookings)
+        const pastBookings = allBookings.filter((b) => b.date < todayStr);
+
+        if (pastBookings.length > 0) {
+          // Find the most recent date among past bookings
+          const maxDate = pastBookings.reduce(
+            (max, b) => (b.date > max ? b.date : max),
+            pastBookings[0].date
           );
-        });
-    } else {
-      console.warn("No token found in localStorage.");
-    }
+          // Get all bookings that happened on the most recent past date
+          const closestLast = pastBookings.filter((b) => b.date === maxDate);
+          setClosestLastBookings(closestLast);
+        } else {
+          // If no past bookings, clear the closest last bookings state
+          setClosestLastBookings([]);
+        }
+      })
+      .catch((err) => console.error("Failed to load bookings:", err));
   }, []);
 
   return (
     <div className="w-full min-h-screen flex flex-row">
-      {/* LEFT SIDEBAR */}
+      {/* Left Sidebar Navigation */}
       <LeftSidebar />
-      {/*MAIN CONTENT*/}
+
+      {/* Main content area */}
       <div className="flex flex-col flex-1 p-6 lg:p-10 gap-6">
-        {/* ✅ Mobile Toggle Button */}
+        {/* Header with sidebar toggle */}
+        <DashboardHeader
+          sidebarOpen={sidebarOpen}
+          toggleSidebar={() => setSidebarOpen((prev) => !prev)}
+        />
 
-        {/* Dashboard Heading */}
+        {/* User profile summary display */}
+        <UserProfileSummary userProfile={userProfile} />
 
-        <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold flex items-center gap-4">
-            Dashboard
-            <button
-              onClick={() => setSidebarOpen((prev) => !prev)}
-              className="lg:hidden p-2 focus:outline-none group"
-              aria-label="Toggle Sidebar"
-            >
-              <div className="space-y-1.5">
-                <span
-                  className={`block h-0.5 w-6 bg-gray-800 transform transition duration-300 ${
-                    sidebarOpen ? "rotate-45 translate-y-1.5" : ""
-                  }`}
-                />
-                <span
-                  className={`block h-0.5 w-6 bg-gray-800 transition duration-300 ${
-                    sidebarOpen ? "opacity-0" : ""
-                  }`}
-                />
-                <span
-                  className={`block h-0.5 w-6 bg-gray-800 transform transition duration-300 ${
-                    sidebarOpen ? "-rotate-45 -translate-y-1.5" : ""
-                  }`}
-                />
-              </div>
-            </button>
-          </h1>
-        </div>
-
-        {userProfile ? (
-          <div className="text-lg font-medium text-gray-600">
-            Welcome, {userProfile.firstName} {userProfile.lastName}!
-            <div className="text-sm text-gray-500">
-              Program: {userProfile.program} | Vehicle No:{" "}
-              {userProfile.vehicleNumber}
-            </div>
-            {userProfile.profilePhoto && (
-              <img
-                src={userProfile.profilePhoto}
-                alt="Profile"
-                className="w-16 h-16 rounded-full border mt-2"
-              />
-            )}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-sm">Loading your profile...</p>
-        )}
-
-        {/* Top Summary Section */}
+        {/* Booking summary and calendar cards */}
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Card: Total Bookings */}
-          <div className="bg-white rounded-xl shadow-md p-6 w-full lg:w-[300px]">
-            <p className="text-lg font-semibold mb-2">Your Total Bookings</p>
-            <p className="text-4xl font-bold">285</p>
-          </div>
-
-          {/* Card: Calendar */}
-          <div className="bg-white rounded-xl shadow-md p-6 w-full lg:w-[300px]">
-            <p className="text-sm font-medium mb-1 text-right">
-              Event Calendar
-            </p>
-            <p className="text-lg font-semibold text-right mb-4">
-              {today.toLocaleString("default", { month: "long" })} {currentYear}
-            </p>
-
-            {/* Calendar */}
-            <div className="grid grid-cols-7 text-center font-medium text-sm mb-2">
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                <div key={day}>{day}</div>
-              ))}
-            </div>
-
-            {/* Calendar: Dates */}
-            <div className="grid grid-cols-7 gap-2 text-sm">
-              {Array.from({ length: 31 }, (_, i) => {
-                const date = new Date(currentYear, currentMonth, i + 1);
-                const isToday =
-                  date.getDate() === currentDay &&
-                  date.getMonth() === currentMonth &&
-                  date.getFullYear() === currentYear;
-
-                return (
-                  <div
-                    key={i}
-                    className={`h-10 flex items-center justify-center rounded-lg font-medium cursor-pointer transition-colors duration-200 ${
-                      isToday
-                        ? "bg-black text-white"
-                        : "bg-gray-100 hover:bg-gray-200"
-                    }`}
-                  >
-                    {i + 1}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <BookingSummaryCard totalBookings={totalBookingCount} />
+          <CalendarCard />
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex space-x-10 border-b">
-          {[
-            { name: "Bookings", active: true },
-            { name: "Seat Bookings" },
-            { name: "Parking Bookings" },
-          ].map((tab, idx) => (
-            <button
-              key={idx}
-              className={`pb-2 font-medium text-sm ${
-                tab.active
-                  ? "border-b-2 border-green-700 text-black"
-                  : "text-gray-500"
-              }`}
-            >
-              {tab.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Booking Cards Section */}
+        {/* Booking dashboard and action button */}
         <div className="flex flex-wrap gap-6">
-          {/* Example Booking Cards */}
-          {["Today’s Schedule", "Yesterday’s Schedule"].map((title, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-xl shadow-md p-6 w-[260px]"
-            >
-              <p className="font-semibold mb-2">{title}</p>
-              <p className="text-green-700 text-sm font-medium mb-1">
-                Desk 5A-9
-              </p>
-              <p className="text-sm text-gray-500 mb-2">
-                4th floor, Conference Room, NetOffice
-              </p>
-              <p className="text-xs text-gray-600 whitespace-pre-line">
-                Feb 07, 2022 9 AM to 6 PM
-              </p>
-            </div>
-          ))}
+          <BookingDashboard />
 
-          {/* View All History Button */}
           <div className="flex items-center">
             <button className="px-4 py-2 bg-white rounded-xl shadow border font-semibold text-sm">
               View All Booking History →
@@ -212,12 +126,14 @@ const UserDashboard = () => {
         </div>
       </div>
 
-      {/* SIDEBAR */}
-      {sidebarOpen && (
-        <div className="w-[320px] min-h-screen bg-white border-l border-gray-200 shadow-md">
-          <Sidebar isOpen={sidebarOpen} />
-        </div>
-      )}
+      {/* Sidebar overlay for smaller screens */}
+      <SidebarWrapper
+        sidebarOpen={sidebarOpen}
+        closeSidebar={() => setSidebarOpen(false)}
+      />
+
+      {/* Floating chatbot for user assistance */}
+      <FloatingChatBot />
     </div>
   );
 };

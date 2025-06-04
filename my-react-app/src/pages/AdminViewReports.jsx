@@ -1,60 +1,65 @@
-import React, { useState, useEffect } from 'react';
-import AdminLayout from '../components/AdminLayout';
-import useAuthGuard from '../components/AuthGuard';
-import api from '../config/api';
-import { FaCalendar } from 'react-icons/fa';
+import axios from 'axios';
+import { saveAs } from 'file-saver';
+import { useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import DailyTrendsChart from '../components/Reports/DailyTrendsChart';
-import MonthlyStatsChart from '../components/Reports/MonthlyStatsChart';
-import DeskUsageTable from '../components/Reports/DeskUsageTable';
+import { FaCalendar } from 'react-icons/fa';
+import * as XLSX from 'xlsx';
+import AdminLayout from '../components/AdminLayout';
+import useAuthGuard from '../components/AuthGuard';
 import BookingLookup from '../components/Reports/BookingLookup';
-import teamColors from '../constants/teamColors';
-import UserBookingsTable from '../components/Reports/UserBookingsTable';
+import DailyTrendsChart from '../components/Reports/DailyTrendsChart';
 import FloorUsageChart from '../components/Reports/FloorUsageChart';
+import MonthlyStatsChart from '../components/Reports/MonthlyStatsChart';
+import RecentBookingsTable from '../components/Reports/RecentBookingsTable';
+import UserBookingTable from '../components/Reports/UserBookingTable';
 import TeamColorPalette from '../components/shared/TeamColorPalette';
+import api from '../config/api';
 
 const AdminViewReports = () => {
-  useAuthGuard('admin');
-
+  useAuthGuard('admin');//Authentication And State Initialization
+  //state variables
+  //Analytics & Loading States
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  //Date Range Filter
   const [dateRange, setDateRange] = useState([null, null]);
   const [appliedDateRange, setAppliedDateRange] = useState([null, null]);
   const [startDate, endDate] = dateRange;
   const [showClearButton, setShowClearButton] = useState(false);
   // Booking lookup state
-  const [searchType, setSearchType] = useState('userId');
+  const [searchType, setSearchType] = useState('username');
   const [searchQuery, setSearchQuery] = useState('');
   const [userError, setUserError] = useState(null);
   const [userBookings, setUserBookings] = useState(null);
   const [userLoading, setUserLoading] = useState(false);
-  const [allBookings, setAllBookings] = useState([]);
+  const [allBookings, setAllBookings] = useState([]);// Stores all fetched bookings used for generating certain report charts 
 
-  const totalDesksPerFloor = { 14: 64, 30: 64, 31: 64, 32: 64 };
+  const totalDesksPerFloor = { 14: 64, 30: 64, 31: 64, 32: 64 };//Represents the total desks available per given floor
 
-  useEffect(() => {
+  useEffect(() => { 
     fetchAnalyticsData();
     fetchAllBookings();
-  }, [appliedDateRange]);
+  }, [appliedDateRange]);//Runs when the component mounts or when a new date range is applied
 
   const handleApplyDateRange = () => {
     if (startDate && endDate) {
       setAppliedDateRange([startDate, endDate]);
       setShowClearButton(true);
-    }
+    }//Applies the selected date range.
   };
 
   const handleClearDateRange = () => {
     setDateRange([null, null]);
     setAppliedDateRange([null, null]);
     setShowClearButton(false);
-  };
+  };//Clears the date range selection.
 
-  const fetchAnalyticsData = async () => {
+
+  const fetchAnalyticsData = async () => {  //Fetch Analytics Data for the given date range
     try {
-      setLoading(true);
+      setLoading(true); //loading indicator
       const [appliedStart, appliedEnd] = appliedDateRange;
       
       const response = await api.get('/api/reports/analytics', {
@@ -73,6 +78,7 @@ const AdminViewReports = () => {
     }
   };
 
+//Fetch User Bookings (Lookup)
   const fetchUserBookings = async () => {
     if (!searchQuery.trim()) {
       setUserError('Please enter a search term');
@@ -82,43 +88,76 @@ const AdminViewReports = () => {
       setUserLoading(true);
       setUserError(null);
       setUserBookings(null);
-      // Replace with your actual API call logic
-      // Example:
-      // const response = await api.get(`/api/reports/user-lookup`, { params: { ... } });
-      // setUserBookings(response.data);
-      // Simulate error for demonstration:
-      setTimeout(() => {
-        setUserError('Error: Failed to fetch bookings: Server error');
-        setUserLoading(false);
-      }, 1000);
+      
+      //logs for debugging
+      console.log('Sending request with searchQuery:', searchQuery.trim(), 'and searchType:', searchType);
+
+      // Determine the parameter to send based on searchType
+      const params = { username: searchQuery.trim() };
+
+      console.log('Request URL:', `http://localhost:5000/api/reports/user-lookup?username=${searchQuery.trim()}`);
+
+      const response = await axios.get('http://localhost:5000/api/reports/user-lookup', {
+        params,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        }
+      });
+
+      console.log('Response data:', response.data);
+      setUserBookings(response.data);
     } catch (err) {
+      console.error('Error fetching user bookings:', err);
       setUserError(`Error: Failed to fetch bookings: ${err.message}`);
+    } finally {
       setUserLoading(false);
     }
   };
 
+                                        //Fetch All Bookings
   const fetchAllBookings = async () => {
     try {
-      const response = await api.get('/api/reports/all-bookings');
+      const response = await axios.get('http://localhost:5000/api/reports/all-bookings');
       setAllBookings(response.data);
     } catch (err) {
       console.error('Error fetching all bookings:', err);
     }
   };
+  
 
   const getFloorUsageBookings = () => {
-    // Use all bookings if no date range is applied
-    if (!appliedDateRange[0] || !appliedDateRange[1]) {
+    
+    if (!appliedDateRange[0] || !appliedDateRange[1]) {// Use all bookings if no date range is applied
       return allBookings;
     }
-    // Filter bookings by date range
+                                                 // Filter bookings by date range
     const [start, end] = appliedDateRange;
     return allBookings.filter(booking => {
       const bookingDate = new Date(booking.date);
       return bookingDate >= start && bookingDate <= end;
     });
   };
-
+  
+  //Creates and downloads an Excel file with summary analytics data
+  const downloadExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    const worksheetData = [
+      ['Total Bookings', analyticsData?.overallStats?.totalBookings || 0],
+      ['Parking Bookings', analyticsData?.overallStats?.totalParking || 0],
+      ['Seat Bookings', analyticsData?.overallStats?.totalSeats || 0],
+      //
+      //
+      //
+      // Add more data as needed
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(data, 'AdminViewReports.xlsx');
+  };
+    
+    //Loading & Error States
   const renderContent = () => {
     if (loading) {
       return (
@@ -136,6 +175,9 @@ const AdminViewReports = () => {
         </div>
       );
     }
+  
+
+
 
     return (
       <div className="max-w-7xl mx-auto">
@@ -195,6 +237,7 @@ const AdminViewReports = () => {
           </div>
         </div>
 
+        
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -245,9 +288,19 @@ const AdminViewReports = () => {
             error={userError}
           />
           {userBookings && userBookings.length > 0 && (
-            <UserBookingsTable bookings={userBookings} />
+            <UserBookingTable bookings={userBookings} />
           )}
         </div>
+        <RecentBookingsTable bookings={allBookings} />
+        
+
+      
+        <button
+          onClick={downloadExcel}
+          className="fixed bottom-5 right-5 px-5 py-2 bg-green-500 text-white rounded-md shadow-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 z-50"
+        >
+          Download Excel
+        </button>
       </div>
     );
   };
