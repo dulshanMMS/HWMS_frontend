@@ -28,7 +28,8 @@
     "react-swipeable": "^7.0.2",
     "recharts": "^2.15.3",
     "socket.io-client": "^4.8.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "react-toastify": "^11.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^8.56.0",
