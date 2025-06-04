@@ -21,7 +21,9 @@ export default {
     'bg-violet-500',
     'bg-amber-500',
     'bg-stone-500',
-    'bg-gray-300', // for fallback/default
+    'bg-gray-300', 
+    'bg-orange-200',
+    'bg-red-200',
   ],
   theme: {
     extend: {

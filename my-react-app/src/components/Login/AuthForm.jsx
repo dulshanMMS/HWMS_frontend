@@ -1,4 +1,3 @@
-import React from 'react';
 import GeneralFormInput from '../shared/GeneralFormInput';
 
 const AuthForm = ({

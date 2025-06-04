@@ -1,28 +1,26 @@
-
 import ParkingHistory from "./pages/ParkingHistory";
 
-import React from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Login from './pages/Login';
+
 import AdminDashboard from './pages/AdminDashboard';
-import UserDashboard from './pages/UserDashboard';
 import AdminNotification from './pages/AdminNotification';
+import AdminParking from './pages/AdminParking';
 import AdminViewReports from './pages/AdminViewReports';
 
 import ParkingBooking from './pages/ParkingBooking';
-import AdminParking from './pages/AdminParking';
 import ResetPassword from './pages/ResetPassword';
 import UserNotification from './pages/UserNotification';
 
 
+import UserDashboard from './pages/UserDashboard';
 
 const App = () => {
   const location = useLocation();
 
-  // List of routes that need simple green background (without center)
   const greenPages = ["/user/parking-booking", "/history"];
-
-  // Check if current page matches
   const isSimpleGreenPage = greenPages.includes(location.pathname);
 
   const containerClass = isSimpleGreenPage
@@ -39,10 +37,13 @@ const App = () => {
         <Route path="/admin-reports" element={<AdminViewReports />} />
         <Route path="/parkinghistory" element={<ParkingHistory/>} />
         <Route path="/user/parking-booking" element={<ParkingBooking />} />
-        <Route path="admin/adminparking" element={<AdminParking/>} />
+        <Route path="admin/adminparking" element={<AdminParking />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/user/notifications" element={<UserNotification />} />
       </Routes>
+
+      {/* Toast Container for notifications */}
+      <ToastContainer position="top-right" autoClose={2500} />
     </div>
   );
 };
