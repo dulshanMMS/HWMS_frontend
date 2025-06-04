@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { useEffect, useState } from 'react';
-import { toast } from 'react-toastify'; // 👈 if not installed, run: npm install react-toastify
+import { toast } from 'react-toastify'; 
 
 const TeamColorPalette = () => {
   const [teams, setTeams] = useState([]);
