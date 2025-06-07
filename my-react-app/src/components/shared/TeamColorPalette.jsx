@@ -142,28 +142,37 @@ const TeamColorPalette = () => {
       </div>
 
       {selectedTeam && (
-        <div className="mt-4 bg-white p-4 border rounded shadow">
-          <h3 className="text-md font-semibold mb-2">
-            Members of {teams.find(t => t.teamId === selectedTeam)?.teamName}:
-          </h3>
+  <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
+    <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-5 relative">
+      <h3 className="text-lg font-semibold mb-3">
+        Members of {teams.find(t => t.teamId === selectedTeam)?.teamName}
+      </h3>
 
-          {membersLoading ? (
-            <p>Loading members...</p>
-          ) : teamMembers.length > 0 ? (
-            <ul className="list-disc pl-5 space-y-1 text-sm text-gray-800">
-              {teamMembers.map((member, idx) => (
-                <li key={idx}>
-                  {(member.firstName || member.lastName)
-                    ? `${member.firstName || ''} ${member.lastName || ''}`.trim()
-                    : member.userName || 'Unnamed Member'}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-gray-500">No members in this team.</p>
-          )}
-        </div>
+      {membersLoading ? (
+        <p>Loading members...</p>
+      ) : teamMembers.length > 0 ? (
+        <ul className="list-disc pl-5 space-y-1 text-sm text-gray-800 max-h-60 overflow-y-auto">
+          {teamMembers.map((member, idx) => (
+            <li key={idx}>
+              {(member.firstName || member.lastName)
+                ? `${member.firstName || ''} ${member.lastName || ''}`.trim()
+                : member.userName || 'Unnamed Member'}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-gray-500">No members in this team.</p>
       )}
+
+      <button
+        onClick={() => setSelectedTeam(null)}
+        className="absolute top-2 right-2 text-gray-500 hover:text-black text-lg font-bold"
+      >
+        &times;
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 };
