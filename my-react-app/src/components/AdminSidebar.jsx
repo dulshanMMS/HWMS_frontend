@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
-  FaHome, FaExchangeAlt, FaCar, FaQuestionCircle, FaHistory,
-  FaBell, FaCog, FaUser, FaChartBar, FaSignOutAlt, FaBars
-} from 'react-icons/fa';
+  FaHome,
+  FaExchangeAlt,
+  FaCar,
+  FaQuestionCircle,
+  FaHistory,
+  FaBell,
+  FaCog,
+  FaUser,
+  FaChartBar,
+  FaSignOutAlt,
+  FaBars,
+} from "react-icons/fa";
 
 const AdminSidebar = ({ children }) => {
   const location = useLocation();
@@ -25,23 +34,45 @@ const AdminSidebar = ({ children }) => {
       </button>
 
       {/* Sidebar */}
-      <div className={`fixed top-0 left-0 h-full bg-[#052E19] text-white flex flex-col overflow-y-auto transition-all duration-300 ease-in-out z-[1000] 
-        ${isOpen ? 'w-72 p-6 translate-x-0' : 'w-0 p-0 -translate-x-full'} lg:w-72 lg:p-6 lg:translate-x-0`}>
-
+      <div
+        className={`fixed top-0 left-0 h-full bg-[#052E19] text-white flex flex-col overflow-y-auto transition-all duration-300 ease-in-out z-[1000] 
+        ${
+          isOpen ? "w-72 p-6 translate-x-0" : "w-0 p-0 -translate-x-full"
+        } lg:w-72 lg:p-6 lg:translate-x-0`}
+      >
         {/* Logo */}
         <div className="mb-6">
-          <span className="text-white text-xl font-semibold tracking-wide uppercase">WILEYBOOKING</span>
+          <span className="text-white text-xl font-semibold tracking-wide uppercase">
+            WILEYBOOKING
+          </span>
         </div>
 
         {/* Quick Access */}
         <div className="mb-6">
           <h3 className="text-gray-400 text-sm uppercase mb-3">Quick Access</h3>
           <ul>
-            <SidebarLink to="/admin" icon={<FaHome />} label="Dashboard" active={isActive('/admin')} />
-            <SidebarLink to="/seat-booking" icon={<FaExchangeAlt />} label="Seat Booking" />
-            <SidebarLink to="/parking-booking" icon={<FaCar />} label="Parking Booking" />
-            <SidebarLink to="/help" icon={<FaQuestionCircle />} label="Help Section" />
-            <SidebarLink to="/booking-history" icon={<FaHistory />} label="Booking History" />
+            <SidebarLink
+              to="/admin"
+              icon={<FaHome />}
+              label="Dashboard"
+              active={isActive("/admin")}
+            />
+            <SidebarLink
+              to="/seat-booking"
+              icon={<FaExchangeAlt />}
+              label="Seat Booking"
+            />
+            <SidebarLink
+              to="/parking-booking"
+              icon={<FaCar />}
+              label="Parking Booking"
+            />
+            <SidebarLink
+              to="/help"
+              icon={<FaQuestionCircle />}
+              label="Help Section"
+            />
+            {/* <SidebarLink to="/booking-history" icon={<FaHistory />} label="Booking History" /> */}
           </ul>
         </div>
 
@@ -49,10 +80,20 @@ const AdminSidebar = ({ children }) => {
         <div className="mb-6">
           <h3 className="text-gray-400 text-sm uppercase mb-3">Account</h3>
           <ul>
-            <SidebarLink to="/AdminNotification" icon={<FaBell />} label="Notifications" active={isActive('/AdminNotification')} />
+            <SidebarLink
+              to="/AdminNotification"
+              icon={<FaBell />}
+              label="Notifications"
+              active={isActive("/AdminNotification")}
+            />
             <SidebarLink to="/settings" icon={<FaCog />} label="Settings" />
             <SidebarLink to="/profile" icon={<FaUser />} label="Profile" />
-            <SidebarLink to="/admin-reports" icon={<FaChartBar />} label="View Reports" active={isActive('/admin-reports')} />
+            <SidebarLink
+              to="/admin-reports"
+              icon={<FaChartBar />}
+              label="View Reports"
+              active={isActive("/admin-reports")}
+            />
           </ul>
         </div>
 
@@ -60,8 +101,8 @@ const AdminSidebar = ({ children }) => {
         <div className="mt-auto mb-4">
           <button
             onClick={() => {
-              localStorage.removeItem('token');
-              window.location.href = '/';
+              localStorage.removeItem("token");
+              window.location.href = "/";
             }}
             className="flex items-center gap-4 w-full py-3 px-4 text-white hover:bg-[#331108] rounded"
           >
@@ -79,14 +120,16 @@ const AdminSidebar = ({ children }) => {
       )}
 
       {/* Main Content Area */}
-      <div className="flex flex-col lg:ml-72 p-8 bg-gray-100 min-h-screen">{children}</div>
+      <div className="flex flex-col lg:ml-72 p-8 bg-gray-100 min-h-screen">
+        {children}
+      </div>
     </>
   );
 };
 
 // Reusable Link component
 const SidebarLink = ({ to, icon, label, active = false }) => (
-  <li className={`mb-1 ${active ? 'font-semibold bg-[#331108] relative' : ''}`}>
+  <li className={`mb-1 ${active ? "font-semibold bg-[#331108] relative" : ""}`}>
     <Link
       to={to}
       className="flex items-center gap-4 py-3 px-4 text-white rounded hover:bg-[#331108] relative"
