@@ -22,8 +22,8 @@ const Login = () => {
     e.preventDefault();
 
     const endpoint = currentState === 'Sign In'
-      ? 'http://localhost:5000/api/auth/signin'
-      : 'http://localhost:5000/api/auth/signup';
+      ? 'http://localhost:5004/api/auth/signin'
+      : 'http://localhost:5004/api/auth/signup';
 
     const requestData = currentState === 'Sign In'
       ? { username, email, password }
@@ -46,10 +46,14 @@ const Login = () => {
           localStorage.setItem('user', JSON.stringify(data));
           localStorage.setItem('token', data.token);
 
+          navigate('/datebooking');
+
           if (data.role === 'admin') {
-            navigate('/admin');
+            navigate('/datebooking');
+
           } else {
-            navigate('/user');
+            navigate('/datebooking');
+
           }
         }
 

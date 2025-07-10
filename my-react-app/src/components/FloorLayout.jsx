@@ -1,29 +1,51 @@
 /* eslint-disable no-undef */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Seat from './seat';
 import '../styles/floorlayout.css';
 import '../styles/seatlable.css';
 import LeftSidebar from './LeftSidebar';
-import { useSearchParams } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
+
+// Convert Tailwind classes to hex colors
+const getColorFromTailwind = (tailwindClass) => {
+  const colorMap = {
+    'bg-red-500': '#ef4444',
+    'bg-blue-500': '#3b82f6',
+    'bg-green-500': '#22c55e',
+    'bg-yellow-500': '#eab308',
+    'bg-purple-500': '#a855f7',
+    'bg-pink-500': '#ec4899',
+    'bg-indigo-500': '#6366f1',
+    'bg-orange-500': '#f97316',
+    'bg-teal-500': '#14b8a6',
+    'bg-cyan-500': '#06b6d4'
+  };
+  return colorMap[tailwindClass] || '#808080';
+};
 
 export default function FloorLayout() {
-  const [searchParams] = useSearchParams();
+  const { state } = useLocation();
+  const navigate = useNavigate();
 
-  // Booking info from query params (date, entry/exit time, floor)
-  const [bookingInfo, setBookingInfo] = useState({
-    date: null,
-    entryTime: null,
-    exitTime: null,
-    floor: null,
-  });
-  // User details and state
+  // Memoize bookingInfo to prevent re-creation on every render
+  const bookingInfo = useMemo(() => ({
+    date: state?.date || null,
+    entryTime: state?.entryTime || null,
+    exitTime: state?.exitTime || null,
+    floor: state?.floor || null,
+  }), [state]);
+
+  // State variables
   const [memberId, setMemberId] = useState('');
   const [role, setRole] = useState('member');
   const [teamName, setTeamName] = useState('');
+  const [teamColor, setTeamColor] = useState('#808080');
   const [entered, setEntered] = useState(false);
   const [bookedChairs, setBookedChairs] = useState({});
   const [userBooking, setUserBooking] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
+  const [allTeamMembers, setAllTeamMembers] = useState([]);
   const [selectedMember, setSelectedMember] = useState('');
   const [message, setMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,65 +54,154 @@ export default function FloorLayout() {
   const [newMemberId, setNewMemberId] = useState('');
   const [memberDetails, setMemberDetails] = useState(null);
 
-  // Refs for input focus management
-  const memberIdInputRef = useRef(null);
-  const memberIdPopUpRef = useRef(null);
-
-  // Parse query params and set booking info on mount or change
+  // Get JWT token and decode username
   useEffect(() => {
-    setBookingInfo({
-      date: searchParams.get("date"),
-      entryTime: searchParams.get("entryTime"),
-      exitTime: searchParams.get("exitTime"),
-      floor: Number(searchParams.get("floor")),
-    });
-  }, [searchParams]);
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setMemberId(decoded.username);
+      } catch (e) {
+        console.error("Invalid token", e);
+        setMessage('Invalid token. Please log in again.');
+        navigate('/');
+      }
+    } else {
+      setMessage('No token found. Please log in.');
+      navigate('/');
+    }
+  }, [navigate]);
 
-  // Fetch all current bookings from backend on mount
+  // Validate booking info and fetch bookings
   useEffect(() => {
+    if (!bookingInfo.floor || !bookingInfo.date || !bookingInfo.entryTime || !bookingInfo.exitTime) {
+      setMessage('Please select a floor, date, entry time, and exit time.');
+      setIsLoading(false);
+      navigate('/datebooking');
+      return;
+    }
+    
     setIsLoading(true);
-    fetch('http://localhost:5004/api/bookings')
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.chairs) {
-          setBookedChairs(data.chairs);
-        } else {
-          setBookedChairs({});
-          console.warn('No chairs data received from API');
-        }
+    
+    // Fetch bookings from API - filtered by date and floor
+    const fetchBookings = async () => {
+      try {
+        // Add date and floor filters to only show bookings for the selected date/floor
+        const queryParams = new URLSearchParams({
+          date: bookingInfo.date,
+          floor: bookingInfo.floor
+        });
+        
+        const response = await fetch(`http://localhost:5004/api/bookings/filtered?${queryParams}`);
+        if (!response.ok) throw new Error('Failed to fetch bookings');
+        
+        const data = await response.json();
+        setBookedChairs(data.chairs || {});
         setIsLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
+        console.error("Failed to fetch bookings:", err);
         setMessage('Failed to fetch bookings: ' + err.message);
         setBookedChairs({});
         setIsLoading(false);
-        console.error('Booking fetch error:', err);
-      });
-  }, []);
+      }
+    };
+    
+    fetchBookings();
+  }, [bookingInfo, navigate]);
 
-  // Manage focus on inputs depending on user state
+  // Fetch user and team data when memberId is available
   useEffect(() => {
-    if (entered && role === 'leader' && memberIdInputRef.current) {
-      memberIdInputRef.current.focus();
-    }
-    if (showAddMemberIdPopUp && memberIdPopUpRef.current) {
-      memberIdPopUpRef.current.focus();
-    }
-    if (!entered && memberIdInputRef.current) {
-      memberIdInputRef.current.focus();
-    }
-  }, [entered, role, showAddMemberIdPopUp]);
+    if (!memberId) return;
 
-  // Show and close message handlers
+    const fetchUserAndTeam = async () => {
+      try {
+        // Fetch user data
+        const userRes = await fetch(`http://localhost:5004/api/bookings/users/${memberId}`);
+        if (!userRes.ok) throw new Error('User not found');
+        const user = await userRes.json();
+        
+        if (!user.username || !user.teamId) {
+          throw new Error('User data incomplete - missing username or teamId');
+        }
+
+        // Fetch team data
+        const teamRes = await fetch(`http://localhost:5004/api/teams/${user.teamId}`);
+        if (!teamRes.ok) throw new Error('Team not found');
+        const team = await teamRes.json();
+        
+        // Convert team color from Tailwind to hex - ensure it's always a valid hex color
+        const colorValue = team.color || '#808080';
+        let actualColor = '#808080'; // Default fallback
+        
+        if (colorValue.startsWith('#')) {
+          // Already a hex color
+          actualColor = colorValue;
+        } else if (colorValue.includes('bg-')) {
+          // Tailwind class - convert to hex
+          actualColor = getColorFromTailwind(colorValue);
+        } else {
+          // Other color formats or invalid - use default
+          actualColor = '#808080';
+        }
+
+        // Create memberDetails object with teamColor (compatible with old logic)
+        const memberDetailsWithColor = {
+          ...user,
+          teamColor: actualColor,
+          memberName: user.username // Add memberName for consistency with old logic
+        };
+
+        setMemberDetails(memberDetailsWithColor);
+        setTeamName(team.teamName);
+        setTeamColor(actualColor); // Ensure teamColor is always hex
+        setRole(user.role); // This will be 'leader' or 'member' due to route mapping
+
+        // Fetch team members
+        const teamUsersRes = await fetch(`http://localhost:5004/api/bookings/users/team/${user.teamId}`);
+        if (teamUsersRes.ok) {
+          const teamUsers = await teamUsersRes.json();
+          setAllTeamMembers(teamUsers.map(u => u.username));
+        } else {
+          console.warn('Could not fetch team members, using current user only');
+          setAllTeamMembers([user.username]);
+        }
+        
+        setTeamMembers([user.username]);
+        setEntered(true);
+      } catch (error) {
+        console.error('Error fetching user/team data:', error);
+        setMessage('Failed to load user/team info: ' + error.message);
+        setEntered(false);
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserAndTeam();
+  }, [memberId]);
+
+  // Message handling
   const showMessage = (msg) => setMessage(msg);
   const closeMessage = () => setMessage(null);
 
-  // Popup generic component for messages and prompts
+  // Function to refresh bookings
+  const refreshBookings = async () => {
+    try {
+      const queryParams = new URLSearchParams({
+        date: bookingInfo.date,
+        floor: bookingInfo.floor
+      });
+      
+      const response = await fetch(`http://localhost:5004/api/bookings/filtered?${queryParams}`);
+      if (!response.ok) throw new Error('Failed to fetch bookings');
+      
+      const data = await response.json();
+      setBookedChairs(data.chairs || {});
+    } catch (err) {
+      console.error("Failed to refresh bookings:", err);
+    }
+  };
+
+  // Popup components
   const PopUp = ({ message, onClose, children }) => (
     <div className="popup-overlay">
       <div className="popup-content">
@@ -103,15 +214,14 @@ export default function FloorLayout() {
       </div>
     </div>
   );
-  // Popup component for entering member ID (used by team leaders)
+
   const AddMemberIdPopUp = ({ onSubmit, onCancel, onChange, value }) => (
     <div className="popup-overlay">
       <div className="popup-content">
         <p className="popup-message">Enter the member ID of the new team member:</p>
         <input
-          ref={memberIdPopUpRef}
           className="header-input"
-          placeholder="Enter member ID (e.g., M001)"
+          placeholder="Enter member ID (e.g., user123)"
           value={value}
           onChange={onChange}
           onKeyPress={(e) => {
@@ -130,138 +240,115 @@ export default function FloorLayout() {
       </div>
     </div>
   );
-  // Verify if a member exists on backend
-  const checkMemberExists = async (memberId) => {
-    try {
-      const response = await fetch('http://localhost:5004/api/teams/checkMember', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memberId }),
-      });
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      showMessage('Failed to verify member. Please try again.');
-      return { exists: false };
-    }
-  };
 
-  // Get member name by ID if exists in team
-  const getMemberById = async (memberId) => {
-    const memberData = await checkMemberExists(memberId);
-    if (memberData.exists && memberData.teamName === teamName) {
-      return memberData.memberName;
-    }
-    return null;
-  };
-  // Handler for user "join" with member ID
-  const handleJoin = async () => {
-    if (!memberId.trim()) {
-      showMessage('Please enter your member ID');
-      return;
-    }
-
-    const memberData = await checkMemberExists(memberId);
-    if (!memberData.exists) {
-      showMessage('You are not registered. Contact the administrator.');
-      return;
-    }
-
-    setMemberDetails(memberData);
-    setTeamName(memberData.teamName);
-    setRole(memberData.role);
-    setEntered(true);
-    // If leader, initialize team members list with self
-    if (memberData.role === 'leader') {
-      setTeamMembers([memberData.memberName]);
-      setSelectedMember(memberData.memberName);
-    }
-  };
-  // Handler for clicking a seat: book/unbook logic depending on role
+  // Chair click handler
   const handleChairClick = (chairId, tableId) => {
+    console.log("=== SEAT CLICK DEBUG ===");
+    console.log("ChairId:", chairId);
+    console.log("Entered:", entered);
+    console.log("Member Details:", memberDetails);
+    console.log("Team Color:", teamColor);
+    console.log("Booked Chairs:", bookedChairs);
+    console.log("========================");
+
     if (!entered || !memberDetails) {
-      showMessage('Please join with a valid member ID first.');
+      showMessage('Please ensure you are logged in and have valid team data.');
       return;
     }
-    // Booking logic differs for 'member' and 'leader'
+
     if (role === 'member') {
-      // Check if user already has a booking
+      // Check if member already has booking
       const memberHasBooking = Object.values(bookedChairs).some(
         (chair) => chair?.memberName === memberDetails?.memberName
       );
-      if (memberHasBooking) {
-        return; // Ignore if already booked
+      
+      if (memberHasBooking && !bookedChairs[chairId]) {
+        showMessage('You already have a booked seat.');
+        return;
       }
 
-      if (userBooking && userBooking?.chairId !== chairId) {
-        return; // Ignore if booking exists for different chair
-      }
-
-      // Update booked chairs state and call backend for booking/unbooking
-      setBookedChairs((prev) => {
-        const updated = { ...prev };
-        if (updated[chairId]) {
-          // Unbooking if user clicks their own seat again
-          if (updated[chairId].memberName === memberDetails?.memberName) {
-            console.log("Unbooking:", tableId, chairId, bookingInfo.floor, bookingInfo.date);
-      fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${bookingInfo.date}`, {
-              method: 'DELETE',
-            })
-              .then((response) => {
-                if (!response.ok) {
-                  throw new Error('Unbooking failed');
-                }
-                delete updated[chairId];
-                setUserBooking(null);
-              })
-              .catch((err) => {
-                console.error('Unbooking error:', err);
-              });
-          } else {
-            return prev; // Ignore if seat booked by another user
-          }
-        } else {
-          // Booking a new seat
-          if (!memberDetails.memberName) {
-            return prev; 
-          }
-          const bookingDetails = {
-            roomId: tableId,
-            teamName,
-            teamColor: memberDetails.teamColor,
-            memberName: memberDetails.memberName,
-            floor: bookingInfo.floor,
-            date: bookingInfo.date,
-            entryTime: bookingInfo.entryTime,
-            exitTime: bookingInfo.exitTime,
-          };
-          fetch(`http://localhost:5004/api/bookings/member/${memberDetails.memberName}/seat/${chairId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bookingDetails),
+      // Check if this seat is already booked
+      if (bookedChairs[chairId]) {
+        // UNBOOKING LOGIC
+        if (bookedChairs[chairId].memberName === memberDetails?.memberName) {
+          const dateToUse = bookingInfo.date;
+          
+          console.log("🔍 Unbooking with date:", {
+            bookingInfoDate: bookingInfo.date,
+            dateToUse: dateToUse,
+            unbookingURL: `http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`
+          });
+          
+          fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
+            method: 'DELETE',
           })
             .then((response) => {
               if (!response.ok) {
-                return response.text().then((text) => { throw new Error(text || 'Booking failed'); });
+                return response.json().then((errorData) => {
+                  console.error('❌ Unbooking failed:', errorData);
+                  throw new Error(errorData.error || 'Unbooking failed');
+                });
               }
               return response.json();
             })
             .then(() => {
-              updated[chairId] = {
-                memberName: memberDetails.memberName,
-                teamColor: memberDetails.teamColor,
-              };
-              setUserBooking({ chairId, tableId });
+              console.log("✅ Unbooking successful");
+              setUserBooking(null);
+              // Remove success message for seat click unbooking
+              // Refresh bookings after unbooking
+              refreshBookings();
             })
             .catch((err) => {
-              showMessage(`Booking error: ${err.message}`);
-              console.error('Booking error:', err);
+              console.error('❌ Unbooking error:', err);
+              showMessage('Failed to unbook seat: ' + err.message);
             });
+        } else {
+          showMessage('This seat is booked by another user.');
         }
-        return updated;
-      });
+      } else {
+        // BOOKING LOGIC
+        if (!memberDetails.memberName) {
+          showMessage('Member details incomplete.');
+          return;
+        }
+        
+        const bookingDetails = {
+          roomId: tableId,
+          teamName,
+          teamColor: memberDetails.teamColor,
+          memberName: memberDetails.memberName,
+          floor: bookingInfo.floor,
+          date: bookingInfo.date,
+          entryTime: bookingInfo.entryTime,
+          exitTime: bookingInfo.exitTime,
+        };
+        
+        fetch(`http://localhost:5004/api/bookings/member/${memberDetails.memberName}/seat/${chairId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bookingDetails),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              return response.json().then((data) => {
+                throw new Error(data.message || 'Booking failed');
+              });
+            }
+            return response.json();
+          })
+          .then(() => {
+            setUserBooking({ chairId, tableId });
+            // Remove success message for seat click booking
+            // Refresh bookings after successful booking
+            refreshBookings();
+          })
+          .catch((err) => {
+            console.error('Booking error:', err);
+            showMessage(`Booking error: ${err.message}`);
+          });
+      }
     } else if (role === 'leader') {
-      // For leaders, booking for selected team member
+      // Leader booking logic
       if (!selectedMember) {
         showMessage('Please select a team member to book for.');
         return;
@@ -270,114 +357,128 @@ export default function FloorLayout() {
       const memberHasBooking = Object.values(bookedChairs).some(
         (chair) => chair?.memberName === selectedMember
       );
-      if (memberHasBooking) {
-        return; // Ignore if selected member already booked
+      
+      if (memberHasBooking && !bookedChairs[chairId]) {
+        showMessage(`${selectedMember} already has a booked seat.`);
+        return;
       }
 
-      setBookedChairs((prev) => {
-        const updated = { ...prev };
-        if (updated[chairId]) {
-          if (updated[chairId].memberName === selectedMember) {
-            console.log("Unbooking:", tableId, chairId, bookingInfo.floor, bookingInfo.date);
-      fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${bookingInfo.date}`, {
-              method: 'DELETE',
-            })
-              .then((response) => {
-                if (!response.ok) {
-                  throw new Error('Unbooking failed');
-                }
-                delete updated[chairId];
-                if (selectedMember === memberDetails?.memberName) setUserBooking(null);
-              })
-              .catch((err) => {
-                console.error('Unbooking error:', err);
-              });
-          } else {
-            return prev; // Ignore if seat booked by other member
-          }
-        } else {
-          if (!memberDetails.memberName) {
-            return prev; // Silently fail if member details are missing
-          }
-          const bookingDetails = {
-            roomId: tableId,
-            teamName,
-            teamColor: memberDetails.teamColor,
-            memberName: selectedMember,
-            floor: bookingInfo.floor,
-            date: bookingInfo.date,
-            entryTime: bookingInfo.entryTime,
-            exitTime: bookingInfo.exitTime,
-          };
-          fetch(`http://localhost:5004/api/bookings/leader/${memberDetails.memberName}/member/${selectedMember}/seat/${chairId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bookingDetails),
+      if (bookedChairs[chairId]) {
+        // UNBOOKING LOGIC FOR LEADER
+        if (bookedChairs[chairId].memberName === selectedMember) {
+          const dateToUse = bookingInfo.date;
+          
+          fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
+            method: 'DELETE',
           })
             .then((response) => {
               if (!response.ok) {
-                return response.text().then((text) => { throw new Error(text || 'Booking failed'); });
+                return response.json().then((errorData) => {
+                  console.error('Leader unbooking failed:', errorData);
+                  throw new Error(errorData.error || 'Unbooking failed');
+                });
               }
               return response.json();
             })
             .then(() => {
-              updated[chairId] = {
-                memberName: selectedMember,
-                teamColor: memberDetails.teamColor,
-              };
-              if (selectedMember === memberDetails?.memberName) setUserBooking({ chairId, tableId });
+              if (selectedMember === memberDetails?.memberName) setUserBooking(null);
+              // Remove success message for seat click unbooking
+              // Refresh bookings after unbooking
+              refreshBookings();
             })
             .catch((err) => {
-              console.error('Booking error:', err);
+              console.error('Unbooking error:', err);
+              showMessage('Failed to unbook seat: ' + err.message);
             });
+        } else {
+          showMessage('This seat is booked by another user.');
         }
-        return updated;
-      });
+      } else {
+        // BOOKING LOGIC FOR LEADER
+        const bookingDetails = {
+          roomId: tableId,
+          teamName,
+          teamColor: memberDetails.teamColor,
+          memberName: selectedMember,
+          floor: bookingInfo.floor,
+          date: bookingInfo.date,
+          entryTime: bookingInfo.entryTime,
+          exitTime: bookingInfo.exitTime,
+        };
+        
+        fetch(`http://localhost:5004/api/bookings/leader/${memberDetails.memberName}/member/${selectedMember}/seat/${chairId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bookingDetails),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              return response.json().then((data) => {
+                throw new Error(data.message || 'Booking failed');
+              });
+            }
+            return response.json();
+          })
+          .then(() => {
+            if (selectedMember === memberDetails?.memberName) setUserBooking({ chairId, tableId });
+            // Remove success message for seat click booking
+            // Refresh bookings after successful booking
+            refreshBookings();
+          })
+          .catch((err) => {
+            console.error('Booking error:', err);
+            showMessage(`Booking error: ${err.message}`);
+          });
+      }
     }
   };
-  // Handler to unbook currently booked seat
+
+  // Other handlers
   const handleUnbook = () => {
-    if (Object.keys(bookedChairs).length === 0) {
-      showMessage('No bookings available to unbook.');
+    const targetMember = role === 'leader' ? selectedMember : memberDetails?.memberName;
+    if (!targetMember) {
+      showMessage('No member selected.');
       return;
     }
-  
+
     const chairId = Object.keys(bookedChairs).find(
-      (id) =>
-        bookedChairs[id]?.memberName === (role === 'leader' ? selectedMember : memberDetails?.memberName)
+      (id) => bookedChairs[id]?.memberName === targetMember
     );
-  
+
     if (!chairId) {
       showMessage('No seat booked to unbook.');
       return;
     }
-  
+
     const tableId = chairId.split('-')[0];
-  
-    setBookedChairs((prev) => {
-      const updated = { ...prev };
-      console.log("Unbooking:", tableId, chairId, bookingInfo.floor, bookingInfo.date);
-      fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${bookingInfo.date}`, {
-        method: 'DELETE',
+    const dateToUse = bookingInfo.date;
+    
+    fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
+      method: 'DELETE',
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((errorData) => {
+            console.error('Unbook button failed:', errorData);
+            throw new Error(errorData.error || 'Unbooking failed');
+          });
+        }
+        return response.json();
       })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error('Unbooking failed');
-          }
-          delete updated[chairId];
-          if (role === 'member' || (role === 'leader' && selectedMember === memberDetails?.memberName)) {
-            setUserBooking(null);
-          }
-          showMessage(`Seat ${chairId} unbooked successfully!`);
-        })
-        .catch((err) => {
-          showMessage(`Failed to unbook seat (${chairId}): ${err.message}`);
-        });
-      return updated;
-    });
+      .then(() => {
+        if (role === 'member' || (role === 'leader' && selectedMember === memberDetails?.memberName)) {
+          setUserBooking(null);
+        }
+        // Remove success message for unbook button
+        // Refresh bookings after unbooking
+        refreshBookings();
+      })
+      .catch((err) => {
+        console.error('Unbooking error:', err);
+        showMessage(`Unbooking error: ${err.message}`);
+      });
   };
-  
-  // Submit the booking (finalize)
+
   const handleSubmit = () => {
     const targetMember = role === 'leader' ? selectedMember : memberDetails?.memberName;
     if (!targetMember) {
@@ -385,50 +486,57 @@ export default function FloorLayout() {
       return;
     }
 
-    const bookedSeat = Object.keys(bookedChairs).find(
-      (chairId) =>
-        bookedChairs[chairId]?.memberName?.trim().toLowerCase() === targetMember?.trim().toLowerCase()
+    const bookedSeat = userBooking?.chairId || Object.keys(bookedChairs).find(
+      (chairId) => bookedChairs[chairId]?.memberName === targetMember
     );
 
     if (!bookedSeat) {
       showMessage('Please book a seat before submitting.');
       return;
     }
-    // Reset state or show prompt depending on role
+
+    // Show success message only when Submit button is clicked
+    showMessage('Seat booking submitted successfully!');
+
     if (role === 'member') {
-      showMessage('Booking submitted successfully!');
       setEntered(false);
       setMemberId('');
       setTeamName('');
+      setTeamColor('#808080');
       setRole('member');
       setUserBooking(null);
       setMemberDetails(null);
+      setTeamMembers([]);
+      setAllTeamMembers([]);
+      setSelectedMember('');
     } else if (role === 'leader') {
-      showMessage('Booking submitted successfully!');
+      setSelectedMember('');
       setShowAddMemberPrompt(true);
     }
   };
-  // Cancel the booking session and clear state
+
   const handleCancel = () => {
     setEntered(false);
     setMemberId('');
     setTeamName('');
+    setTeamColor('#808080');
     setRole('member');
     setUserBooking(null);
     setTeamMembers([]);
+    setAllTeamMembers([]);
     setSelectedMember('');
     setMemberDetails(null);
     showMessage('Session canceled successfully!');
+    navigate('/datebooking');
   };
-  // Check if a seat is booked for current user/selected member
+
   const hasBookedSeat = () => {
     const targetMember = role === 'leader' ? selectedMember : memberDetails?.memberName;
     return Object.keys(bookedChairs).some(
-      (chairId) =>
-        bookedChairs[chairId]?.memberName?.trim().toLowerCase() === targetMember?.trim().toLowerCase()
+      (chairId) => bookedChairs[chairId]?.memberName === targetMember
     );
   };
-  // Handlers for prompts to add team members (leaders only)
+
   const handleAddMemberPromptYes = () => {
     setShowAddMemberPrompt(false);
     setShowAddMemberIdPopUp(true);
@@ -441,49 +549,73 @@ export default function FloorLayout() {
     setEntered(false);
     setMemberId('');
     setTeamName('');
+    setTeamColor('#808080');
     setRole('member');
     setTeamMembers([]);
+    setAllTeamMembers([]);
     setSelectedMember('');
     setUserBooking(null);
     setMemberDetails(null);
     setMessage(null);
+    navigate('/datebooking');
   };
-  // Submit new member ID for adding to team
+
   const handleAddMemberIdSubmit = async () => {
     if (newMemberId.trim()) {
-      const memberName = await getMemberById(newMemberId);
-      if (memberName && !teamMembers.includes(memberName)) {
-        setTeamMembers((prev) => [...prev, memberName]);
-        setSelectedMember(memberName);
+      try {
+        // Check if user exists and is in the same team
+        const userRes = await fetch(`http://localhost:5004/api/bookings/users/${newMemberId}`);
+        if (!userRes.ok) {
+          setMessage('User not found with this username.');
+          setNewMemberId('');
+          setShowAddMemberIdPopUp(false);
+          return;
+        }
+        
+        const userData = await userRes.json();
+        if (userData.teamId !== memberDetails.teamId) {
+          setMessage('This user is not in your team.');
+          setNewMemberId('');
+          setShowAddMemberIdPopUp(false);
+          return;
+        }
+        
+        if (teamMembers.includes(userData.username)) {
+          setMessage('This member is already in the team list.');
+          setNewMemberId('');
+          setShowAddMemberIdPopUp(false);
+          return;
+        }
+        
+        // Add member to team list
+        setTeamMembers((prev) => [...prev, userData.username]);
+        setSelectedMember(userData.username);
         setNewMemberId('');
         setShowAddMemberIdPopUp(false);
         setMessage(null);
         setEntered(true);
-      } else if (teamMembers.includes(memberName)) {
-        setMessage('This member is already in the team.');
-        setNewMemberId('');
-        setShowAddMemberIdPopUp(false);
-      } else {
-        setMessage('Invalid member ID or member not in your team.');
+      } catch (error) {
+        console.error('Error adding member:', error);
+        setMessage('Failed to add member. Please try again.');
         setNewMemberId('');
         setShowAddMemberIdPopUp(false);
       }
     } else {
-      setMessage('Please enter a valid member ID.');
+      setMessage('Please enter a valid username.');
       setShowAddMemberIdPopUp(false);
     }
   };
-  // Cancel adding member ID popup
+
   const handleAddMemberIdCancel = () => {
     setNewMemberId('');
     setShowAddMemberIdPopUp(false);
     setMessage(null);
   };
-  // Trigger adding a new team member prompt
+
   const addTeamMember = () => {
     setShowAddMemberPrompt(true);
   };
-  // Loading screen while fetching bookings
+
   if (isLoading) {
     return (
       <div className="floor-layout">
@@ -491,176 +623,160 @@ export default function FloorLayout() {
       </div>
     );
   }
-  // Main UI rendering
+
   return (
     <LeftSidebar>
       <div className="floor-layout">
-      <div className="layout-container">
-        {/* Member ID input before joining */}
-        {!entered && (
-          <div className="header-container">
-            <input
-              ref={memberIdInputRef}
-              className="header-input"
-              placeholder="Enter your member ID (e.g., M001)"
-              value={memberId}
-              onChange={(e) => setMemberId(e.target.value)}
-            />
-            <button className="green-button" onClick={handleJoin}>
-              Join
-            </button>
-          </div>
-        )}
-
-        {/* Leader member selection and add member button */}
-        {entered && role === 'leader' && (
-          <div className="header-container">
-            <div>
-              <label className="header-label">Book a seat for:</label>
-              <select
-                className="header-select"
-                value={selectedMember}
-                onChange={(e) => setSelectedMember(e.target.value)}
-              >
-                <option value="">Select a member</option>
-                {teamMembers.map((member) => (
-                  <option key={member} value={member}>
-                    {member}
-                  </option>
-                ))}
-              </select>
+        <div className="layout-container">
+          {/* Removed welcome message and booking status display */}
+          {entered && role === 'leader' && (
+            <div className="header-container">
+              <div>
+                <label className="header-label">Book a seat for:</label>
+                <select
+                  className="header-select"
+                  value={selectedMember}
+                  onChange={(e) => setSelectedMember(e.target.value)}
+                >
+                  <option value="">Select a member</option>
+                  {allTeamMembers.map((member) => (
+                    <option key={member} value={member}>
+                      {member}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button className="green-button" onClick={addTeamMember}>
+                Add Team Member
+              </button>
             </div>
-            <button className="green-button" onClick={addTeamMember}>
-              Add Team Member
-            </button>
-          </div>
-        )}
-        {/* Seat layout rendering: left side tables T1-T4, lobby center, right side tables T5-T8 */}
-        <div className="seat-layout">
-          <div className="left-containers">
-            {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
-              <div key={tableId} className="table-container">
-                <div className="seat-row top-row">
-                  {Array.from({ length: 4 }, (_, i) => {
-                    const chairId = `${tableId}-chair${i + 1}`;
-                    return (
-                      <Seat
-                        key={i}
-                        chairId={chairId}
-                        tableId={tableId}
-                        bookedChairs={bookedChairs}
-                        onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
-                        label={`Seat-${i + 1}`}
-                      />
-                    );
-                  })}
+          )}
+          <div className="seat-layout">
+            <div className="left-containers">
+              {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
+                <div key={tableId} className="table-container">
+                  <div className="seat-row top-row">
+                    {Array.from({ length: 4 }, (_, i) => {
+                      const chairId = `${tableId}-chair${i + 1}`;
+                      return (
+                        <Seat
+                          key={i}
+                          chairId={chairId}
+                          tableId={tableId}
+                          bookedChairs={bookedChairs}
+                          onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
+                          label={`Seat-${i + 1}`}
+                          isUserBooked={userBooking?.chairId === chairId}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="table-label">Table {index + 1}</div>
+                  <div className="seat-row bottom-row">
+                    {Array.from({ length: 4 }, (_, i) => {
+                      const chairId = `${tableId}-chair${i + 5}`;
+                      return (
+                        <Seat
+                          key={i + 4}
+                          chairId={chairId}
+                          tableId={tableId}
+                          bookedChairs={bookedChairs}
+                          onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
+                          label={`Seat-${i + 5}`}
+                          isUserBooked={userBooking?.chairId === chairId}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="table-label">Table {index + 1}</div>
-                <div className="seat-row bottom-row">
-                  {Array.from({ length: 4 }, (_, i) => {
-                    const chairId = `${tableId}-chair${i + 5}`;
-                    return (
-                      <Seat
-                        key={i + 4}
-                        chairId={chairId}
-                        tableId={tableId}
-                        bookedChairs={bookedChairs}
-                        onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
-                        label={`Seat-${i + 5}`}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <div className="lobby-container">
-            <span className="lobby-text">Lobby</span>
-          </div>
+            <div className="lobby-container">
+              <span className="lobby-text">Lobby</span>
+            </div>
 
-          <div className="right-containers">
-            {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
-              <div key={tableId} className="table-container">
-                <div className="seat-row top-row">
-                  {Array.from({ length: 4 }, (_, i) => {
-                    const chairId = `${tableId}-chair${i + 1}`;
-                    return (
-                      <Seat
-                        key={i}
-                        chairId={chairId}
-                        tableId={tableId}
-                        bookedChairs={bookedChairs}
-                        onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
-                        label={`Seat-${i + 1}`}
-                      />
-                    );
-                  })}
+            <div className="right-containers">
+              {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
+                <div key={tableId} className="table-container">
+                  <div className="seat-row top-row">
+                    {Array.from({ length: 4 }, (_, i) => {
+                      const chairId = `${tableId}-chair${i + 1}`;
+                      return (
+                        <Seat
+                          key={i}
+                          chairId={chairId}
+                          tableId={tableId}
+                          bookedChairs={bookedChairs}
+                          onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
+                          label={`Seat-${i + 1}`}
+                          isUserBooked={userBooking?.chairId === chairId}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="table-label">Table {index + 5}</div>
+                  <div className="seat-row bottom-row">
+                    {Array.from({ length: 4 }, (_, i) => {
+                      const chairId = `${tableId}-chair${i + 5}`;
+                      return (
+                        <Seat
+                          key={i + 4}
+                          chairId={chairId}
+                          tableId={tableId}
+                          bookedChairs={bookedChairs}
+                          onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
+                          label={`Seat-${i + 5}`}
+                          isUserBooked={userBooking?.chairId === chairId}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="table-label">Table {index + 5}</div>
-                <div className="seat-row bottom-row">
-                  {Array.from({ length: 4 }, (_, i) => {
-                    const chairId = `${tableId}-chair${i + 5}`;
-                    return (
-                      <Seat
-                        key={i + 4}
-                        chairId={chairId}
-                        tableId={tableId}
-                        bookedChairs={bookedChairs}
-                        onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
-                        label={`Seat-${i + 5}`}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+          {entered && (
+            <div className="control-panel">
+              <button className="red-button" onClick={handleUnbook}>
+                Unbook
+              </button>
+              <button
+                className="green-button"
+                onClick={handleSubmit}
+                disabled={!hasBookedSeat()}
+                style={{ opacity: hasBookedSeat() ? 1 : 0.5 }}
+              >
+                Submit
+              </button>
+              <button className="gray-button" onClick={handleCancel}>
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
-        {/* Control panel with unbook, submit, and cancel buttons */}
-        {entered && (
-          <div className="control-panel">
-            <button className="red-button" onClick={handleUnbook}>
-              Unbook
-            </button>
-            <button
-              className="green-button"
-              onClick={handleSubmit}
-              disabled={!hasBookedSeat()}
-              style={{ opacity: hasBookedSeat() ? 1 : 0.5 }}
-            >
-              Submit
-            </button>
-            <button className="gray-button" onClick={handleCancel}>
-              Cancel
-            </button>
-          </div>
+        {message && <PopUp message={message} onClose={closeMessage} />}
+        {showAddMemberPrompt && (
+          <PopUp message="Do you want to book for another member?">
+            <div className="popup-buttons">
+              <button className="popup-button green" onClick={handleAddMemberPromptYes}>
+                Yes
+              </button>
+              <button className="popup-button red" onClick={handleAddMemberPromptNo}>
+                No
+              </button>
+            </div>
+          </PopUp>
+        )}
+        {showAddMemberIdPopUp && (
+          <AddMemberIdPopUp
+            value={newMemberId}
+            onChange={(e) => setNewMemberId(e.target.value)}
+            onSubmit={handleAddMemberIdSubmit}
+            onCancel={handleAddMemberIdCancel}
+          />
         )}
       </div>
-      {/* Popup messages and prompts */}
-      {message && <PopUp message={message} onClose={closeMessage} />}
-      {showAddMemberPrompt && (
-        <PopUp message="Do you want to book for another member?">
-          <div className="popup-buttons">
-            <button className="popup-button green" onClick={handleAddMemberPromptYes}>
-              Yes
-            </button>
-            <button className="popup-button red" onClick={handleAddMemberPromptNo}>
-              No
-            </button>
-          </div>
-        </PopUp>
-      )}
-      {showAddMemberIdPopUp && (
-        <AddMemberIdPopUp
-          value={newMemberId}
-          onChange={(e) => setNewMemberId(e.target.value)}
-          onSubmit={handleAddMemberIdSubmit}
-          onCancel={handleAddMemberIdCancel}
-        />
-      )}
-    </div>
     </LeftSidebar>
-    
   );
 }

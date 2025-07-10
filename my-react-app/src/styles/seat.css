@@ -19,8 +19,12 @@
 }
 
 .seat.booked {
-  border-color: #48bb78; /* Adjust border color for booked seats */
+  color: white;
+  font-weight: bold;
+  border-color: #2f855a;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
 }
+
 
 .seat.booked:hover {
   border-color: #2f855a;

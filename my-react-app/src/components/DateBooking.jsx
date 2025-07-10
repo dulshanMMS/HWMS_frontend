@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "../styles/DateBooking.css";
@@ -6,6 +6,7 @@ import LeftSidebar from './LeftSidebar';
 import Popup from "./Popup";
 import { FaChevronUp, FaChevronDown } from "react-icons/fa";
 import { useNavigate } from "react-router-dom"; 
+import { jwtDecode } from "jwt-decode";
 
 export default function DateBooking() {
   const navigate = useNavigate();
@@ -20,10 +21,25 @@ export default function DateBooking() {
   const [showPopup, setShowPopup] = useState(false);// Popup visibility for messages
   const [message, setMessage] = useState("");// Popup message content
   const [popupType, setPopupType] = useState("error"); // Popup type: "error" or "success"
+  const [user, setUser] = useState(''); // Store decoded username from JWT
+
+  // Decode JWT to get the logged-in user's username
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUser(decoded.username);
+      } catch (e) {
+        console.error("Invalid token");
+      }
+    }
+  }, []);
 
   // Helper to pad numbers <10 with a leading zero for display
   const pad = (num) => (num < 10 ? "0" + num : num);
- // Validate inputs and navigate to FloorLayout page with booking params
+
+  // Validate inputs and navigate to FloorLayout page with booking params
   const handleSubmit = () => {
     if (!date || floor === "") {
       setMessage("Please select a date and floor.");
@@ -41,16 +57,34 @@ export default function DateBooking() {
       return;
     }
 
-    // Construct query parameters for booking details
-    const bookingParams = new URLSearchParams({
-      date: date.toISOString(),
-      entryTime: `${pad(entryHour)}:${pad(entryMinute)}`,
-      exitTime: `${pad(exitHour)}:${pad(exitMinute)}`,
-      floor,
-    }).toString();
-    // Navigate to floor layout page for seat selection
-    navigate(`/floorlayout?${bookingParams}`);
+    // Format date consistently - use local date string in YYYY-MM-DD format
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0); // Set to start of day
+    
+    // Convert to YYYY-MM-DD format (avoids timezone issues)
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+    
+    console.log("📅 DateBooking - Sending date:", {
+      originalDate: date,
+      formattedDate: formattedDate,
+      selectedDate: selectedDate
+    });
+
+    // Navigate to FloorLayout with booking info + user
+    navigate("/floorlayout", {
+      state: {
+        date: formattedDate, // Send YYYY-MM-DD format instead of ISO string
+        entryTime: `${pad(entryHour)}:${pad(entryMinute)}`,
+        exitTime: `${pad(exitHour)}:${pad(exitMinute)}`,
+        floor,
+        user,
+      },
+    });
   };
+
   // Close popup handler
   const handleClosePopup = () => {
     setShowPopup(false);
@@ -91,71 +125,71 @@ export default function DateBooking() {
       </div>
     );
   };
+
   // Main component JSX rendering
   return (
     <LeftSidebar>
-        <div className="booking-page-layout">
-      <div className="booking-middle-section">
-        <h2 className="booking-title">Book your Seat</h2>
-        <p className="sub-title">Choose Date and Time</p>
+      <div className="booking-page-layout">
+        <div className="booking-middle-section">
+          <h2 className="booking-title">Book your Seat</h2>
+          <p className="sub-title">Choose Date and Time</p>
 
-        <div className="booking-boxes">
-          <div className="booking-card">
-            <div className="selected-date-display">
-              Selected Date: <strong>{date.toDateString()}</strong>
+          <div className="booking-boxes">
+            <div className="booking-card">
+              <div className="selected-date-display">
+                Selected Date: <strong>{date.toDateString()}</strong>
+              </div>
+
+              <Calendar onChange={setDate} value={date} />
+
+              <div className="time-picker-row" style={{ marginTop: "1rem" }}>
+                <TimePicker
+                  label="ENTRY TIME"
+                  hour={entryHour}
+                  minute={entryMinute}
+                  setHour={setEntryHour}
+                  setMinute={setEntryMinute}
+                />
+                <TimePicker
+                  label="EXIT TIME"
+                  hour={exitHour}
+                  minute={exitMinute}
+                  setHour={setExitHour}
+                  setMinute={setExitMinute}
+                />
+              </div>
+
+              <label className="time-label" htmlFor="floor-select">Choose Floor</label>
+              <select
+                id="floor-select"
+                value={floor}
+                onChange={(e) => setFloor(e.target.value)}
+                className="booking-input"
+              >
+                <option value="">Choose floor</option>
+                {[...Array(32)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    Floor {i + 1}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                className="submit-button"
+                onClick={handleSubmit}
+                style={{ marginTop: "1.5rem" }}
+                type="button"
+              >
+                DONE
+              </button>
             </div>
-
-            <Calendar onChange={setDate} value={date} />
-
-            <div className="time-picker-row" style={{ marginTop: "1rem" }}>
-              <TimePicker
-                label="ENTRY TIME"
-                hour={entryHour}
-                minute={entryMinute}
-                setHour={setEntryHour}
-                setMinute={setEntryMinute}
-              />
-              <TimePicker
-                label="EXIT TIME"
-                hour={exitHour}
-                minute={exitMinute}
-                setHour={setExitHour}
-                setMinute={setExitMinute}
-              />
-            </div>
-
-            <label className="time-label" htmlFor="floor-select">Choose Floor</label>
-            <select
-              id="floor-select"
-              value={floor}
-              onChange={(e) => setFloor(e.target.value)}
-              className="booking-input"
-            >
-              <option value="">Choose floor</option>
-              {[...Array(32)].map((_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  Floor {i + 1}
-                </option>
-              ))}
-            </select>
-
-            <button
-              className="submit-button"
-              onClick={handleSubmit}
-              style={{ marginTop: "1.5rem" }}
-              type="button"
-            >
-              DONE
-            </button>
           </div>
-        </div>
 
-        {showPopup && (
-          <Popup message={message} onClose={handleClosePopup} type={popupType} />
-        )}
+          {showPopup && (
+            <Popup message={message} onClose={handleClosePopup} type={popupType} />
+          )}
+        </div>
       </div>
-    </div>
     </LeftSidebar>
-    
   );
 }
