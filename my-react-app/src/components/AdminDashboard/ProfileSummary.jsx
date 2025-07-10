@@ -1,4 +1,3 @@
-import React from "react";
 import avatar from "../../assets/profile_photo.jpg";
 
 // Displays admin avatar, greeting and profile button.

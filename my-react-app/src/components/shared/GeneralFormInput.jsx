@@ -1,4 +1,3 @@
-import React from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 //Handle form inputs
