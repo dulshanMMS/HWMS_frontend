@@ -7,8 +7,11 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminNotification from './pages/AdminNotification';
 import AdminParking from './pages/AdminParking';
 import AdminViewReports from './pages/AdminViewReports';
+
+import AboutUsPage  from './pages/AboutUsPage';
 import BookingHistory from './pages/BookingHistory';
 import Login from './pages/Login';
+
 
 import ParkingBooking from './pages/ParkingBooking';
 import ResetPassword from './pages/ResetPassword';
@@ -17,6 +20,12 @@ import UserNotification from './pages/UserNotification';
 
 const App = () => {
   const location = useLocation();
+
+
+  // List of routes that need simple green background (without center)
+  const greenPages = ["/user/parking-booking","/history","/user/AboutUsPage"];        //  "/history"
+
+  // Check if current page matches
 
   const greenPages = ["/user/parking-booking", "/history"];
   const isSimpleGreenPage = greenPages.includes(location.pathname);
@@ -38,6 +47,7 @@ const App = () => {
         <Route path="admin/adminparking" element={<AdminParking />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/user/notifications" element={<UserNotification />} />
+        <Route path="/user/AboutUsPage" element={<AboutUsPage/>}/>
       </Routes>
 
       {/* Toast Container for notifications */}
