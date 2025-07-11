@@ -230,36 +230,36 @@ const AdminNotification = () => {
     <AdminLayout>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Notifications</h1>
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md">
-              <NotificationFilters
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                filter={filter}
-                setFilter={setFilter}
-                handleClearDateRange={handleClearDateRange}
-                showClearButton={showClearButton}
-              />
-              <NotificationList
-                notifications={filteredNotifications}
-                markAsRead={markAsRead}
-                deleteNotification={deleteNotification}
-                error={error}
-              />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg shadow-md">
+                <NotificationFilters
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  filter={filter}
+                  setFilter={setFilter}
+                  handleClearDateRange={handleClearDateRange}
+                  showClearButton={showClearButton}
+                />
+                <NotificationList
+                  notifications={filteredNotifications}
+                  markAsRead={markAsRead}
+                  deleteNotification={deleteNotification}
+                  error={error}
+                />
+              </div>
             </div>
-          </div>
 
-          <EventCalendar
-            date={date}
-            setDate={setDate}
-            eventDates={eventDates}
-            handleDayClick={handleDayClick}
-            showEventModal={showEventModal}
-            setShowEventModal={setShowEventModal}
-            events={events}
-          />
-        </div>
+            <EventCalendar
+              date={date}
+              setDate={setDate}
+              eventDates={eventDates}
+              handleDayClick={handleDayClick}
+              showEventModal={showEventModal}
+              setShowEventModal={setShowEventModal}
+              events={events}
+            />
+          </div>
 
         <div className="flex justify-center items-center mt-4">
           <button className="px-4 py-2 bg-gray-300 rounded-l-md" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
@@ -269,7 +269,7 @@ const AdminNotification = () => {
           <button className="px-4 py-2 bg-blue-500 text-white rounded-r-md" disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
             Next
           </button>
-        </div>
+          </div>
 
         {/* <button onClick={handleApply}>
           Refresh

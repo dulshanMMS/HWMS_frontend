@@ -25,16 +25,16 @@ const TeamColorPalette = () => {
     fetchTeams();
   }, []);
 
-  const fetchTeams = async () => {
-    try {
-      const response = await axios.get('/api/teams');
-      setTeams(response.data);
-    } catch (error) {
-      console.error('Failed to fetch team colors:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchTeams = async () => {
+      try {
+        const response = await axios.get('/api/teams');
+        setTeams(response.data);
+      } catch (error) {
+        console.error('Failed to fetch team colors:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   const generateNextTeamId = () => {
     const lastTeam = teams[teams.length - 1];
@@ -136,8 +136,8 @@ const TeamColorPalette = () => {
               <span className="break-words text-sm font-medium max-w-[6rem]">
                 {team.teamName}
               </span>
-            </div>
-          ))}
+          </div>
+        ))}
         </div>
       </div>
 
