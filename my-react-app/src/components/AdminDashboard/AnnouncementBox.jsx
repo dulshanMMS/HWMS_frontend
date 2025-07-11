@@ -1,4 +1,3 @@
-import React from "react";
 
 /**
  * Textarea input and send button for special announcements.
@@ -22,7 +21,7 @@ const AnnouncementBox = ({ announcement, setAnnouncement, onSend }) => (
     <div className="text-right mt-2">
       <button
         onClick={onSend}
-        className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+        className="bg-green-800 text-white px-4 py-2 rounded-lg hover:bg-green-600"
       >
         Send
       </button>

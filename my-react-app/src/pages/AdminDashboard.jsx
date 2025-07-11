@@ -1,25 +1,26 @@
-import React, { useState, useEffect } from "react";
-import useAuthGuard from "../components/AuthGuard";
-import AdminSidebar from "../components/AdminSidebar";
 import axios from "axios";
+import { useEffect, useState } from "react";
+import AdminSidebar from "../components/AdminSidebar";
+import useAuthGuard from "../components/AuthGuard";
+import { toast } from "react-toastify";
 
 import AdminHeader from "../components/AdminDashboard/AdminHeader";
 import AnnouncementBox from "../components/AdminDashboard/AnnouncementBox";
-import TodayTeamStats from "../components/AdminDashboard/TodayTeamStats";
+import BookingChart from "../components/AdminDashboard/BookingChart";
 import EventCalendar from "../components/AdminDashboard/EventCalendar";
-import TeamColorPalette from "../components/shared/TeamColorPalette";
+import EventModal from "../components/AdminDashboard/EventModal";
 import ProfileSummary from "../components/AdminDashboard/ProfileSummary";
 import QuickStats from "../components/AdminDashboard/QuickStats";
-import BookingChart from "../components/AdminDashboard/BookingChart";
-import EventModal from "../components/AdminDashboard/EventModal";
+import TodayTeamStats from "../components/AdminDashboard/TodayTeamStats";
+import TeamColorPalette from "../components/shared/TeamColorPalette";
 
-const formatDateToYMD = (date) => {                     //utility function to convert a date to YYYY-MM-DD format
+const formatDateToYMD = (date) => {
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return localDate.toISOString().split("T")[0];
 };
 
 const AdminDashboard = () => {
-  useAuthGuard("admin");        //Route protection (Blocks non-admins right at component mount)
+  useAuthGuard("admin");
 
   const [date, setDate] = useState(new Date());
   const [todayBookingCount, setTodayBookingCount] = useState(null);
@@ -33,28 +34,35 @@ const AdminDashboard = () => {
   const [todayEvents, setTodayEvents] = useState([]);
   const [eventDates, setEventDates] = useState([]);
   const [teamColors, setTeamColors] = useState({});
+  const [parkingStats, setParkingStats] = useState([]);
+  const [seatingStats, setSeatingStats] = useState([]);
   const [avatar, setAvatar] = useState("https://i.pravatar.cc/150?img=13");
 
   const handleSendAnnouncement = async () => {
     if (!announcement.trim()) return alert("Please enter an announcement.");
+
+    const token = localStorage.getItem("token"); // Get the token
+
     try {
       const res = await fetch("/api/notifications/send-bulk", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`, // Send token to backend
         },
         body: JSON.stringify({ message: announcement }),
       });
 
       const data = await res.json();
+
       if (res.ok) {
-        alert("Announcement sent to all users!");
-        setAnnouncement("");
+        toast.success("Announcement sent to all users!");
+        setAnnouncement(""); // Clear the text area
       } else {
-        alert(data?.message || "Failed to send announcement.");
+        toast.error(data?.message || "Failed to send announcement.");
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error sending announcement:", error);
       alert("Something went wrong!");
     }
   };
@@ -62,7 +70,7 @@ const AdminDashboard = () => {
   const fetchEventsForDate = async (selectedDate) => {
     try {
       const formattedDate = formatDateToYMD(selectedDate);
-      const res = await axios.get(`/api/events/${formattedDate}`); 
+      const res = await axios.get(`/api/events/${formattedDate}`);
       if (res.data.success) {
         setEvents(res.data.events);
       }
@@ -70,7 +78,7 @@ const AdminDashboard = () => {
       console.error("Error fetching events:", err);
     }
   };
-  //quick stat
+
   const fetchBookingCount = async () => {
     try {
       const res = await axios.get("/api/bookings/count/today");
@@ -81,30 +89,26 @@ const AdminDashboard = () => {
       console.error("Error fetching today's booking count:", err);
     }
   };
-  //Today part
+
   const fetchTeamBookings = async () => {
     try {
       const res = await axios.get("/api/bookings/count-by-team/today");
       if (res.data.success) {
-        setTeamBookings(res.data.teams); 
+        setTeamBookings(res.data.teams);
       }
     } catch (err) {
       console.error("Error fetching team-wise booking count:", err);
     }
   };
 
-  const topTeams = [...teamBookings]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 3);
+  const topTeams = [...teamBookings].sort((a, b) => b.count - a.count).slice(0, 3);
 
-  //Event calendar
   const fetchAllEvents = async () => {
     try {
-      const res = await axios.get(`/api/events`);
+      const res = await axios.get("/api/events");
       if (res.data.success) {
         setAllEvents(res.data.events);
-
-        const dates = res.data.events.map(event => event.date);
+        const dates = res.data.events.map((event) => event.date);
         setEventDates(dates);
       }
     } catch (err) {
@@ -124,26 +128,17 @@ const AdminDashboard = () => {
     }
   };
 
-  // const handleDayClick = (value) => {
-  //   setDate(value);
-  //   fetchEventsForDate(value);
-  //   setShowEventModal(true);
-  // };
-
   const addEvent = async () => {
     if (!newEvent.title.trim()) return alert("Please enter a title");
-  
+
     try {
       const formattedDate = formatDateToYMD(date);
-      const res = await axios.post("/api/events", {
-        ...newEvent,
-        date: formattedDate
-      });
-  
+      const res = await axios.post("/api/events", { ...newEvent, date: formattedDate });
+
       if (res.data.success) {
         alert("Event added!");
         setShowEventModal(false);
-        setNewEvent({ title: "", description: "" });
+        setNewEvent({ title: "", description: "", time: "" });
         fetchAllEvents();
         fetchEventsForDate(date);
       }
@@ -155,13 +150,13 @@ const AdminDashboard = () => {
 
   const deleteEvent = async (eventId) => {
     if (!window.confirm("Are you sure you want to delete this event?")) return;
-  
+
     try {
       const res = await axios.delete(`/api/events/${eventId}`);
       if (res.data.success) {
         alert("Event deleted");
-        fetchAllEvents();                // Refresh calendar highlights
-        fetchEventsForDate(date);        // Refresh modal list
+        fetchAllEvents();
+        fetchEventsForDate(date);
       } else {
         alert("Failed to delete event");
       }
@@ -171,50 +166,44 @@ const AdminDashboard = () => {
     }
   };
 
-  // Booking chart
   const fetchFloorBookingStats = async () => {
     try {
       const res = await axios.get("/api/bookings/count-by-floor");
       if (res.data.success) {
-        setFloorStats(res.data.data);
+        setParkingStats(res.data.parking);
+        setSeatingStats(res.data.seating);
       }
     } catch (err) {
       console.error("Error fetching floor booking stats:", err);
     }
   };
 
-  //Removes entries with empty floor values for the chart
-  const filteredData = floorStats.filter(item => item.floor && item.floor.trim() !== '');
-
-  //Maps teamName to teamColor
   const fetchTeamColors = async () => {
-      try {
-        const res = await axios.get('/api/teams');
-        const colorMap = {};
-        res.data.forEach(team => {
-          colorMap[team.teamName] = team.teamColor;
-        });
-        setTeamColors(colorMap);
-      } catch (err) {
-        console.error("Failed to load team colors", err);
-      }
+    try {
+      const res = await axios.get("/api/teams");
+      const colorMap = {};
+      res.data.forEach((team) => {
+        colorMap[team.teamName] = team.teamColor;
+      });
+      setTeamColors(colorMap);
+    } catch (err) {
+      console.error("Failed to load team colors", err);
+    }
   };
 
   useEffect(() => {
-    const fetchAllData = async () => {
+    const fetchCoreData = async () => {
       await fetchTeamBookings();
       await fetchBookingCount();
       await fetchEventsForDate(date);
-      await fetchFloorBookingStats();
-      await fetchAllEvents();
       await fetchTodayEvents();
-      await fetchTeamColors();
     };
 
-    fetchAllData();
+    fetchCoreData();
+    fetchFloorBookingStats(); 
+    fetchTeamColors();        
 
-    const interval = setInterval(fetchAllData, 10000);     //Initial and auto-refreshing data every 10 seconds when the date changes
-    
+    const interval = setInterval(fetchCoreData, 10000);
     return () => clearInterval(interval);
   }, [date]);
 
@@ -254,7 +243,7 @@ const AdminDashboard = () => {
           <div className="space-y-4">
             <ProfileSummary avatar={avatar} />
             <QuickStats todayBookingCount={todayBookingCount} />
-            <BookingChart data={floorStats} />
+            <BookingChart parkingData={parkingStats} seatingData={seatingStats} />
           </div>
         </div>
       </div>
