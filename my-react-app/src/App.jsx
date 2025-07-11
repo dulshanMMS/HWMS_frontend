@@ -27,7 +27,7 @@ const App = () => {
 
   // Check if current page matches
 
-  const greenPages = ["/user/parking-booking", "/history"];
+  
   const isSimpleGreenPage = greenPages.includes(location.pathname);
 
   const containerClass = isSimpleGreenPage
