@@ -34,6 +34,8 @@ const AdminDashboard = () => {
   const [todayEvents, setTodayEvents] = useState([]);
   const [eventDates, setEventDates] = useState([]);
   const [teamColors, setTeamColors] = useState({});
+  const [parkingStats, setParkingStats] = useState([]);
+  const [seatingStats, setSeatingStats] = useState([]);
   const [avatar, setAvatar] = useState("https://i.pravatar.cc/150?img=13");
 
   const handleSendAnnouncement = async () => {
@@ -168,7 +170,8 @@ const AdminDashboard = () => {
     try {
       const res = await axios.get("/api/bookings/count-by-floor");
       if (res.data.success) {
-        setFloorStats(res.data.data);
+        setParkingStats(res.data.parking);
+        setSeatingStats(res.data.seating);
       }
     } catch (err) {
       console.error("Error fetching floor booking stats:", err);
@@ -197,8 +200,8 @@ const AdminDashboard = () => {
     };
 
     fetchCoreData();
-    fetchFloorBookingStats();  // One-time or infrequent
-    fetchTeamColors();         // One-time or rarely needed
+    fetchFloorBookingStats(); 
+    fetchTeamColors();        
 
     const interval = setInterval(fetchCoreData, 10000);
     return () => clearInterval(interval);
@@ -240,7 +243,7 @@ const AdminDashboard = () => {
           <div className="space-y-4">
             <ProfileSummary avatar={avatar} />
             <QuickStats todayBookingCount={todayBookingCount} />
-            <BookingChart data={floorStats.filter(item => item.floor && item.floor.trim() !== '')} />
+            <BookingChart parkingData={parkingStats} seatingData={seatingStats} />
           </div>
         </div>
       </div>
