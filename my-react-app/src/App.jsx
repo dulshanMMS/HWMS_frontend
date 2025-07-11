@@ -8,6 +8,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import UserDashboard from './pages/UserDashboard';
 import AdminNotification from './pages/AdminNotification';
 import AdminViewReports from './pages/AdminViewReports';
+import AboutUsPage  from './pages/AboutUsPage';
 
 import ParkingBooking from './pages/ParkingBooking';
 import AdminParking from './pages/AdminParking';
@@ -20,7 +21,7 @@ const App = () => {
   const location = useLocation();
 
   // List of routes that need simple green background (without center)
-  const greenPages = ["/user/parking-booking", "/history"];
+  const greenPages = ["/user/parking-booking","/history","/user/AboutUsPage"];        //  "/history"
 
   // Check if current page matches
   const isSimpleGreenPage = greenPages.includes(location.pathname);
@@ -42,6 +43,7 @@ const App = () => {
         <Route path="admin/adminparking" element={<AdminParking/>} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/user/notifications" element={<UserNotification />} />
+        <Route path="/user/AboutUsPage" element={<AboutUsPage/>}/>
       </Routes>
     </div>
   );

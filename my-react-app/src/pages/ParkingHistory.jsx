@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import ProfileSidebar from '../components/ProfileSidebar';
-import AdminSidebar from '../components/AdminSidebar';
+//import ProfileSidebar from '../components/ProfileSidebar';
+//import SidebarWrapper from '../components/profilesidebar/SidebarWrapper';    //* * methn1
+//import AdminSidebar from '../components/AdminSidebar';
+import LeftSidebar from "../components/LeftSidebar";
 
 import BookingStats from '../components/parkingHistory/BookingStats';
 import BookingDatesList from '../components/parkingHistory/BookingDatesList';
@@ -22,6 +24,10 @@ export default function BookingHistory() {
   const [bookingDetails, setBookingDetails] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  //profile_side bar wdeta
+  //const [sidebarOpen, setSidebarOpen] = useState(true); // or false based on what you want  // * *methn 2
+  // 
   const [deleteForm, setDeleteForm] = useState({
     slotNumber: '',
     date: '',
@@ -206,9 +212,12 @@ export default function BookingHistory() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
-      <div className="w-64 h-full bg-green-800 text-white">
-        <AdminSidebar />
-      </div>
+
+      {/*<div className="w-64 h-full bg-green-800 text-white">
+        <LeftSidebar />
+      </div> */}       {/*_me widiht _demmam kola pata theeruw nethi unt responsive ek nethi wnw */}
+
+      <LeftSidebar />
 
       <div className="flex-1 overflow-y-auto bg-green-50">
         <div className="flex justify-center py-6 px-4">
@@ -237,9 +246,16 @@ export default function BookingHistory() {
         </div>
       </div>
 
-      <div className="w-64 h-full bg-white shadow-md">
-        <ProfileSidebar/>
-      </div>
+     {/*<div className="w-64 h-full bg-white shadow-md">
+        <SidebarWrapper/>
+      </div> */}
+
+      {/*<SidebarWrapper                          // * * methn 3
+        sidebarOpen={sidebarOpen}
+        closeSidebar={() => setSidebarOpen(false)}
+      /> */}
+
+      
 
       {showDetailsPopup && selectedBooking && (
         <BookingDetailsPopup
