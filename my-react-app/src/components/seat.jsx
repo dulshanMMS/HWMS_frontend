@@ -3,7 +3,7 @@ import React from 'react';
 const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked }) => {
   const booking = bookedChairs[chairId];
   const isBooked = !!booking;
-  const memberName = booking?.memberName || '';
+  const userName = booking?.userName || '';  // ✅ CHANGED: memberName → userName
   const teamColor = booking?.teamColor || '#808080';
 
   const getSeatClasses = () => {
@@ -37,10 +37,10 @@ const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked }) => {
       className={getSeatClasses()}
       style={getSeatStyle()}
       onClick={onClick}
-      title={isBooked ? `Booked by: ${memberName}` : `Available seat: ${label}`}
+      title={isBooked ? `Booked by: ${userName}` : `Available seat: ${label}`}  // ✅ CHANGED: memberName → userName
     >
       <span className="truncate px-1 text-center leading-tight">
-        {isBooked ? memberName : label}
+        {isBooked ? userName : label}  {/* ✅ CHANGED: memberName → userName */}
       </span>
     </div>
   );

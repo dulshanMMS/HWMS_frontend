@@ -65,14 +65,18 @@ export default function FloorLayout() {
   const [memberDetails, setMemberDetails] = useState(null);
   const [bookingSubmitted, setBookingSubmitted] = useState(false);
 
-  // Check for persisted booking submission state on component mount
+  // Check for persisted booking submission state on component mount (USER-SPECIFIC)
   useEffect(() => {
-    const submissionKey = `booking_submitted_${bookingInfo.date}_${bookingInfo.floor}`;
+    if (!memberId) return; // Wait for memberId to be available
+    
+    const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
     const isSubmitted = localStorage.getItem(submissionKey) === 'true';
     if (isSubmitted) {
       setBookingSubmitted(true);
+    } else {
+      setBookingSubmitted(false); // Reset for different users
     }
-  }, [bookingInfo.date, bookingInfo.floor]);
+  }, [memberId, bookingInfo.date, bookingInfo.floor]);
 
   // Get JWT token and decode username
   useEffect(() => {
@@ -159,7 +163,7 @@ export default function FloorLayout() {
         const memberDetailsWithColor = {
           ...user,
           teamColor: actualColor,
-          memberName: user.username
+          userName: user.username  // ✅ CHANGED: memberName → userName
         };
 
         setMemberDetails(memberDetailsWithColor);
@@ -281,7 +285,7 @@ export default function FloorLayout() {
 
     if (role === 'member') {
       const memberHasBooking = Object.values(bookedChairs).some(
-        (chair) => chair?.memberName === memberDetails?.memberName
+        (chair) => chair?.userName === memberDetails?.userName  // ✅ CHANGED: memberName → userName
       );
       
       if (memberHasBooking && !bookedChairs[chairId]) {
@@ -290,7 +294,7 @@ export default function FloorLayout() {
       }
 
       if (bookedChairs[chairId]) {
-        if (bookedChairs[chairId].memberName === memberDetails?.memberName) {
+        if (bookedChairs[chairId].userName === memberDetails?.userName) {  // ✅ CHANGED: memberName → userName
           const dateToUse = bookingInfo.date;
           
           fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
@@ -315,7 +319,7 @@ export default function FloorLayout() {
           showMessage('This seat is booked by another user.');
         }
       } else {
-        if (!memberDetails.memberName) {
+        if (!memberDetails.userName) {  // ✅ CHANGED: memberName → userName
           showMessage('Member details incomplete.');
           return;
         }
@@ -324,14 +328,14 @@ export default function FloorLayout() {
           roomId: tableId,
           teamName,
           teamColor: memberDetails.teamColor,
-          memberName: memberDetails.memberName,
+          userName: memberDetails.userName,  // ✅ CHANGED: memberName → userName
           floor: bookingInfo.floor,
           date: bookingInfo.date,
           entryTime: bookingInfo.entryTime,
           exitTime: bookingInfo.exitTime,
         };
         
-        fetch(`http://localhost:5004/api/bookings/member/${memberDetails.memberName}/seat/${chairId}`, {
+        fetch(`http://localhost:5004/api/bookings/member/${memberDetails.userName}/seat/${chairId}`, {  // ✅ CHANGED: memberName → userName
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bookingDetails),
@@ -359,7 +363,7 @@ export default function FloorLayout() {
       }
 
       const memberHasBooking = Object.values(bookedChairs).some(
-        (chair) => chair?.memberName === selectedMember
+        (chair) => chair?.userName === selectedMember  // ✅ CHANGED: memberName → userName
       );
       
       if (memberHasBooking && !bookedChairs[chairId]) {
@@ -368,7 +372,7 @@ export default function FloorLayout() {
       }
 
       if (bookedChairs[chairId]) {
-        if (bookedChairs[chairId].memberName === selectedMember) {
+        if (bookedChairs[chairId].userName === selectedMember) {  // ✅ CHANGED: memberName → userName
           const dateToUse = bookingInfo.date;
           
           fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
@@ -383,7 +387,7 @@ export default function FloorLayout() {
               return response.json();
             })
             .then(() => {
-              if (selectedMember === memberDetails?.memberName) setUserBooking(null);
+              if (selectedMember === memberDetails?.userName) setUserBooking(null);  // ✅ CHANGED: memberName → userName
               refreshBookings();
             })
             .catch((err) => {
@@ -397,14 +401,14 @@ export default function FloorLayout() {
           roomId: tableId,
           teamName,
           teamColor: memberDetails.teamColor,
-          memberName: selectedMember,
+          userName: selectedMember,  // ✅ CHANGED: memberName → userName
           floor: bookingInfo.floor,
           date: bookingInfo.date,
           entryTime: bookingInfo.entryTime,
           exitTime: bookingInfo.exitTime,
         };
         
-        fetch(`http://localhost:5004/api/bookings/leader/${memberDetails.memberName}/member/${selectedMember}/seat/${chairId}`, {
+        fetch(`http://localhost:5004/api/bookings/leader/${memberDetails.userName}/member/${selectedMember}/seat/${chairId}`, {  // ✅ CHANGED: memberName → userName
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bookingDetails),
@@ -418,7 +422,7 @@ export default function FloorLayout() {
             return response.json();
           })
           .then(() => {
-            if (selectedMember === memberDetails?.memberName) setUserBooking({ chairId, tableId });
+            if (selectedMember === memberDetails?.userName) setUserBooking({ chairId, tableId });  // ✅ CHANGED: memberName → userName
             refreshBookings();
           })
           .catch((err) => {
@@ -430,14 +434,14 @@ export default function FloorLayout() {
 
   // Handler functions
   const handleUnbook = () => {
-    const targetMember = role === 'leader' ? selectedMember : memberDetails?.memberName;
+    const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;  // ✅ CHANGED: memberName → userName
     if (!targetMember) {
       showMessage('No member selected.');
       return;
     }
 
     const chairId = Object.keys(bookedChairs).find(
-      (id) => bookedChairs[id]?.memberName === targetMember
+      (id) => bookedChairs[id]?.userName === targetMember  // ✅ CHANGED: memberName → userName
     );
 
     if (!chairId) {
@@ -460,7 +464,7 @@ export default function FloorLayout() {
         return response.json();
       })
       .then(() => {
-        if (role === 'member' || (role === 'leader' && selectedMember === memberDetails?.memberName)) {
+        if (role === 'member' || (role === 'leader' && selectedMember === memberDetails?.userName)) {  // ✅ CHANGED: memberName → userName
           setUserBooking(null);
         }
         refreshBookings();
@@ -471,14 +475,14 @@ export default function FloorLayout() {
   };
 
   const handleSubmit = () => {
-    const targetMember = role === 'leader' ? selectedMember : memberDetails?.memberName;
+    const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;  // ✅ CHANGED: memberName → userName
     if (!targetMember) {
       showMessage('No member selected for submission.');
       return;
     }
 
     const bookedSeat = userBooking?.chairId || Object.keys(bookedChairs).find(
-      (chairId) => bookedChairs[chairId]?.memberName === targetMember
+      (chairId) => bookedChairs[chairId]?.userName === targetMember  // ✅ CHANGED: memberName → userName
     );
 
     if (!bookedSeat) {
@@ -486,9 +490,9 @@ export default function FloorLayout() {
       return;
     }
 
-    // Set booking as submitted and persist to localStorage
+    // Set booking as submitted and persist to localStorage with user-specific key
     setBookingSubmitted(true);
-    const submissionKey = `booking_submitted_${bookingInfo.date}_${bookingInfo.floor}`;
+    const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
     localStorage.setItem(submissionKey, 'true');
     
     showMessage('Seat booking submitted successfully!');
@@ -504,8 +508,8 @@ export default function FloorLayout() {
       return;
     }
     
-    // Clear the submission state from localStorage when canceling
-    const submissionKey = `booking_submitted_${bookingInfo.date}_${bookingInfo.floor}`;
+    // Clear the submission state from localStorage when canceling (user-specific)
+    const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
     localStorage.removeItem(submissionKey);
     
     setEntered(false);
@@ -522,9 +526,9 @@ export default function FloorLayout() {
   };
 
   const hasBookedSeat = () => {
-    const targetMember = role === 'leader' ? selectedMember : memberDetails?.memberName;
+    const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;  // ✅ CHANGED: memberName → userName
     return Object.keys(bookedChairs).some(
-      (chairId) => bookedChairs[chairId]?.memberName === targetMember
+      (chairId) => bookedChairs[chairId]?.userName === targetMember  // ✅ CHANGED: memberName → userName
     );
   };
 
@@ -539,8 +543,8 @@ export default function FloorLayout() {
     setShowAddMemberPrompt(false);
     
     if (!bookingSubmitted) {
-      // Clear the submission state from localStorage when navigating away
-      const submissionKey = `booking_submitted_${bookingInfo.date}_${bookingInfo.floor}`;
+      // Clear the submission state from localStorage when navigating away (user-specific)
+      const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
       localStorage.removeItem(submissionKey);
       
       setEntered(false);
