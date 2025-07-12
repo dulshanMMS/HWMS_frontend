@@ -53,7 +53,7 @@ const UserDashboard = () => {
 
     // Fetch booking data for the user from backend API
     axios
-      .get("http://localhost:5000/api/calendar/user-view", {
+      .get("http://localhost:5004/api/calendar/user-view", {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {

@@ -5,6 +5,7 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   safelist: [
+    // Specific background colors
     'bg-red-500',
     'bg-blue-500',
     'bg-green-500',
@@ -22,16 +23,17 @@ export default {
     'bg-amber-500',
     'bg-stone-500',
     'bg-gray-300', // for fallback/default
-  ],
-
-  safelist: [
-    {
-      pattern: /bg-(red|blue|green|yellow|purple|pink|indigo|teal|orange|cyan|lime|emerald|rose|violet|amber|stone|gray|slate|neutral|zinc|sky|fuchsia|brown|maroon|coffee|wine|darkorange|cream|ivory)-(100|200|300|400|500|600|700|800|900)/,
-    },
+    
+    // Custom colors
     'bg-ivory',
     'bg-cream',
     'bg-wine',
     'bg-darkorange',
+    
+    // Pattern for dynamic color generation
+    {
+      pattern: /bg-(red|blue|green|yellow|purple|pink|indigo|teal|orange|cyan|lime|emerald|rose|violet|amber|stone|gray|slate|neutral|zinc|sky|fuchsia|brown|maroon|coffee|wine|darkorange|cream|ivory)-(100|200|300|400|500|600|700|800|900)/,
+    },
   ],
   theme: {
     extend: {
@@ -104,7 +106,6 @@ export default {
         '18': '4.5rem',
         '88': '22rem',
       },
-
     },
   },
   plugins: [],
