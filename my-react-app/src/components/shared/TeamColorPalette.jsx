@@ -123,7 +123,7 @@ const TeamColorPalette = () => {
       )}
 
       <div className="max-h-[16rem] overflow-y-auto pr-1">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {teams.map((team, idx) => (
             <div
               key={idx}
@@ -138,7 +138,7 @@ const TeamColorPalette = () => {
               </span>
           </div>
         ))}
-        </div>
+      </div>
       </div>
 
       {selectedTeam && (

@@ -12,7 +12,7 @@ import DailyTrendsChart from '../components/Reports/DailyTrendsChart';
 import FloorUsageChart from '../components/Reports/FloorUsageChart';
 import MonthlyStatsChart from '../components/Reports/MonthlyStatsChart';
 import RecentBookingsTable from '../components/Reports/RecentBookingsTable';
-import UserBookingTable from '../components/Reports/UserBookingTable';
+
 import TeamColorPalette from '../components/shared/TeamColorPalette';
 import api from '../config/api';
 
@@ -35,6 +35,9 @@ const AdminViewReports = () => {
   const [userBookings, setUserBookings] = useState(null);
   const [userLoading, setUserLoading] = useState(false);
   const [allBookings, setAllBookings] = useState([]);// Stores all fetched bookings used for generating certain report charts 
+  const [teamStats, setTeamStats] = useState(null);
+  const [teamStatsError, setTeamStatsError] = useState(null);
+  const [loadingTeamStats, setLoadingTeamStats] = useState(false);
 
   const totalDesksPerFloor = { 14: 64, 30: 64, 31: 64, 32: 64 };//Represents the total desks available per given floor
 
@@ -79,40 +82,74 @@ const AdminViewReports = () => {
   };
 
 //Fetch User Bookings (Lookup)
-  const fetchUserBookings = async () => {
-    if (!searchQuery.trim()) {
-      setUserError('Please enter a search term');
-      return;
-    }
+// Fetch user bookings by username (case-insensitive)
+const fetchUserBookings = async () => {
+  const query = searchQuery.trim();
+  if (!query) {
+    setUserError('Please enter a search term');
+    return;
+  }
+
+  try {
+    setUserLoading(true);
+    setUserError(null);
+    setUserBookings(null);
+
+    console.log('Sending user search with query:', query);
+
+    const response = await axios.get('http://localhost:5000/api/reports/user-lookup', {
+      params: { username: query },
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+    });
+
+    console.log('User lookup response:', response.data);
+    setUserBookings(response.data);
+  } catch (err) {
+    console.error('Error fetching user bookings:', err);
+    setUserError(`Error: Failed to fetch bookings: ${err.message}`);
+  } finally {
+    setUserLoading(false);
+  }
+};
+
+// Handle search (username or team)
+const handleSearch = async () => {
+  const query = searchQuery.trim();
+  if (!query) {
+    setUserError('Please enter a search term');
+    return;
+  }
+
+  if (searchType === 'team') {
+    setLoadingTeamStats(true);
+    setTeamStats(null);
+    setTeamStatsError(null);
+
     try {
-      setUserLoading(true);
-      setUserError(null);
-      setUserBookings(null);
-      
-      //logs for debugging
-      console.log('Sending request with searchQuery:', searchQuery.trim(), 'and searchType:', searchType);
+      console.log('Sending team search with query:', query);
 
-      // Determine the parameter to send based on searchType
-      const params = { username: searchQuery.trim() };
-
-      console.log('Request URL:', `http://localhost:5000/api/reports/user-lookup?username=${searchQuery.trim()}`);
-
-      const response = await axios.get('http://localhost:5000/api/reports/user-lookup', {
-        params,
+      const res = await axios.get('http://localhost:5000/api/reports/team-stats', {
+        params: { teamName: query },
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        }
+        },
       });
 
-      console.log('Response data:', response.data);
-      setUserBookings(response.data);
+      setTeamStats(res.data);
     } catch (err) {
-      console.error('Error fetching user bookings:', err);
-      setUserError(`Error: Failed to fetch bookings: ${err.message}`);
+      console.error('Error fetching team stats:', err);
+      setTeamStatsError(`Failed to fetch team stats: ${err.message}`);
     } finally {
-      setUserLoading(false);
+      setLoadingTeamStats(false);
     }
-  };
+
+  } else if (searchType === 'username') {
+    fetchUserBookings(); // reuse function
+  }
+};
+
 
                                         //Fetch All Bookings
   const fetchAllBookings = async () => {
@@ -284,9 +321,42 @@ const AdminViewReports = () => {
             setSearchType={setSearchType}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
-            onSearch={fetchUserBookings}
+            onSearch={handleSearch}
             error={userError}
           />
+          {loadingTeamStats && <div>Loading team stats...</div>}
+          {teamStatsError && (
+            <div className="mt-3 bg-red-100 border border-red-300 text-red-700 px-4 py-2 rounded text-sm">
+              {teamStatsError}
+            </div>
+          )}
+          {teamStats && (
+            <div className="mt-6">
+              <h3 className="font-bold mb-2">Team Stats for "{searchQuery}" (Previous Month)</h3>
+              <table className="min-w-full bg-white border rounded shadow">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 border">Team Members</th>
+                    <th className="px-4 py-2 border">Total Seat Bookings</th>
+                    <th className="px-4 py-2 border">Total Parking Bookings</th>
+                    <th className="px-4 py-2 border">Total Team Bookings</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="px-4 py-2 border">
+                      {teamStats.members && teamStats.members.length > 0
+                        ? teamStats.members.join(', ')
+                        : 'No members found'}
+                    </td>
+                    <td className="px-4 py-2 border">{teamStats.seatBookings}</td>
+                    <td className="px-4 py-2 border">{teamStats.parkingBookings}</td>
+                    <td className="px-4 py-2 border">{teamStats.totalBookings}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
           {userBookings && userBookings.length > 0 && (
             <UserBookingTable bookings={userBookings} />
           )}

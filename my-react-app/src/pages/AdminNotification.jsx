@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import AdminLayout from '../components/AdminLayout';
 import useAuthGuard from '../components/AuthGuard';
-import EventCalendar from '../components/Notification/EventCalendar';
+import EventCalendar from '../components/AdminDashboard/EventCalendar';
 import NotificationFilters from '../components/Notification/NotificationFilters';
 import NotificationList from '../components/Notification/NotificationList';
-
+import NotificationPreferences from "../components/Notification/NotificationPreferences";
 
 const API_BASE_URL = 'http://localhost:5000/api/notifications';
 
@@ -154,67 +154,60 @@ const AdminNotification = () => {
  
 
   const filteredNotifications = notifications.filter(notification => {
-    const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.message.toLowerCase().includes(searchTerm.toLowerCase());
+    // Remove searchTerm logic if not needed, otherwise keep it
+    // const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    //                    notification.message.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesFilter = filter === 'all' ||
-                          (filter === 'parking' && notification.type === 'parking') ||
-                          (filter === 'seat' && notification.type === 'seat');
+    let matchesFilter = false;
+    if (filter === 'all') {
+      matchesFilter = true;
+    } else if (filter === 'announcements') {
+      matchesFilter = notification.type === 'announcement';
+    } else if (filter === 'parking') {
+      matchesFilter = notification.type === 'parking';
+    } else if (filter === 'seating') {
+      matchesFilter = notification.type === 'seating';
+    }
 
-    return matchesSearch && matchesFilter;
+    return matchesFilter;
   });
 
 
-  const fetchAllEvents = async () => {
-    try {
-      const res = await fetch(`/api/events`);
-      const data = await res.json();
-      if (data.success) {
-        setAllEvents(data.events);
-        const dates = data.events.map(event => event.date);
-        setEventDates(dates);
-      }
-    } catch (err) {
-      console.error('Error fetching all events:', err);
-    }
-  };
+  // const fetchAllEvents = async () => {
+  //   try {
+  //     const res = await fetch(`/api/events`);
+  //     const data = await res.json();
+  //     if (data.success) {
+  //       setAllEvents(data.events);
+  //       const dates = data.events.map(event => event.date);
+  //       setEventDates(dates);
+  //     }
+  //   } catch (err) {
+  //     console.error('Error fetching all events:', err);
+  //   }
+  // };
 
-
-  const fetchEventsForDate = async (selectedDate) => {
-    try {
-      const formattedDate = formatDateToYMD(selectedDate);
-      const res = await fetch(`/api/events/${formattedDate}`);
-      const data = await res.json();
-      if (data.success) {
-        setEvents(data.events);
-      }
-    } catch (err) {
-      console.error('Error fetching events:', err);
-    }
-  };
-
-  const handleDayClick = (value) => {
-    setDate(value);
-    fetchEventsForDate(value);
-    setShowEventModal(true);
-  };
 
   
 
-  const handleClearDateRange = () => {
-    setDateRange([null, null]);
-    setShowClearButton(false);
-  };
+  
 
-  const handleApply = () => {
-    fetchNotifications();
-  };
+  
+
+  // const handleClearDateRange = () => {
+  //   setDateRange([null, null]);
+  //   setShowClearButton(false);
+  // };
+
+  // const handleApply = () => {
+  //   fetchNotifications();
+  // };
 
   const totalPages = totalNotifications > 0 ? Math.ceil(totalNotifications / notificationsPerPage) : 1;
 
-  useEffect(() => {
-    fetchAllEvents();
-  }, []);
+  // useEffect(() => {
+  //   fetchAllEvents();
+  // }, []);
 
   if (loading) {
     return (
@@ -234,12 +227,10 @@ const AdminNotification = () => {
             <div className="lg:col-span-2">
               <div className="bg-white rounded-lg shadow-md">
                 <NotificationFilters
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
                   filter={filter}
                   setFilter={setFilter}
-                  handleClearDateRange={handleClearDateRange}
-                  showClearButton={showClearButton}
+                  // handleClearDateRange={handleClearDateRange}
+                  // showClearButton={showClearButton}
                 />
                 <NotificationList
                   notifications={filteredNotifications}
@@ -249,16 +240,22 @@ const AdminNotification = () => {
                 />
               </div>
             </div>
+            <div className="lg:col-span-1 flex flex-col gap-4">
+               {/* Button above calendar */}
+              <div className="bg-white p-4 rounded shadow w-full">
+                 <NotificationPreferences />
+              </div>
 
-            <EventCalendar
-              date={date}
-              setDate={setDate}
-              eventDates={eventDates}
-              handleDayClick={handleDayClick}
-              showEventModal={showEventModal}
-              setShowEventModal={setShowEventModal}
-              events={events}
-            />
+              {/* Calendar same width as above */}
+              <div className="bg-white p-4 rounded shadow w-full">
+              <EventCalendar
+                   date={date}
+                   setDate={setDate}
+                   eventDates={eventDates || []}
+                   todayEvents={events || []}
+               />
+              </div>
+            </div>
           </div>
 
         <div className="flex justify-center items-center mt-4">

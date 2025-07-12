@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import useAuthGuard from "../components/AuthGuard";
 import  UserLayout from '../components/UserLayout';
-import EventCalendar from "../components/Notification/EventCalendar";
+//import EventCalendar from "../components/Notification/EventCalendar";
+import CalendarCard from "../components/CalendarCard";
 import NotificationFilters from "../components/Notification/NotificationFilters";
 import NotificationList from "../components/Notification/NotificationList";
-
+import NotificationPreferences from "../components/Notification/NotificationPreferences";
 
 const API_BASE_URL = 'http://localhost:5000/api/notifications/user/own';
 
@@ -203,15 +204,18 @@ const UserNotification = () => {
               />
             </div>
           </div>
-          <EventCalendar
-            date={date}
-            setDate={setDate}
-            eventDates={eventDates}
-            handleDayClick={handleDayClick}
-            showEventModal={showEventModal}
-            setShowEventModal={setShowEventModal}
-            events={events}
-          />
+          <div className="lg:col-span-1 flex flex-col gap-4">
+               {/* Button above calendar */}
+            <div className="bg-white p-4 rounded shadow w-full">
+                 <NotificationPreferences />
+            </div>
+
+              {/* Calendar same width as above */}
+              <div className="bg-white p-4 rounded shadow w-full">
+              <CalendarCard/>
+              </div>
+            
+          </div>
         </div>
         <div className="flex justify-center items-center mt-4">
           <button className="px-4 py-2 bg-gray-300 rounded-l-md" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
@@ -223,6 +227,7 @@ const UserNotification = () => {
           </button>
         </div>
       </div>
+      
     </UserLayout>
   );
 };
