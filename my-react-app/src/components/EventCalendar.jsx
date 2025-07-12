@@ -35,10 +35,11 @@ const EventCalendar = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setEvents(data);
+        setEvents(Array.isArray(data.events) ? data.events : []);
       }
     } catch (error) {
       console.error('Error fetching events:', error);
+      setEvents([]);
     }
   };
 

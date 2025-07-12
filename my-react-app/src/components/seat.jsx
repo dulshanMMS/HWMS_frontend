@@ -1,5 +1,4 @@
 import React from 'react';
-import '../styles/seat.css';
 
 const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked }) => {
   const booking = bookedChairs[chairId];
@@ -7,30 +6,42 @@ const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked }) => {
   const memberName = booking?.memberName || '';
   const teamColor = booking?.teamColor || '#808080';
 
+  const getSeatClasses = () => {
+    const baseClasses = `
+      w-16 h-8 flex items-center justify-center cursor-pointer
+      rounded-md transition-all duration-200 ease-in-out
+      text-xs font-semibold border border-gray-300 bg-white
+      hover:shadow-sm
+    `;
+
+    if (isBooked) {
+      return `${baseClasses} text-white`;
+    } else {
+      return `${baseClasses} text-gray-700 hover:bg-gray-50`;
+    }
+  };
+
   const getSeatStyle = () => {
     if (isBooked) {
       return {
         backgroundColor: teamColor,
-        color: 'white',
-        border: isUserBooked ? '3px solid #ffd700' : '1px solid #ccc'
-      };
-    } else {
-      return {
-        backgroundColor: '#f0f0f0',
-        color: '#333',
-        border: '1px solid #ccc'
+        borderColor: isUserBooked ? '#ffd700' : undefined,
+        borderWidth: isUserBooked ? '3px' : '2px'
       };
     }
+    return {};
   };
 
   return (
     <div
-      className="seat"
+      className={getSeatClasses()}
       style={getSeatStyle()}
       onClick={onClick}
       title={isBooked ? `Booked by: ${memberName}` : `Available seat: ${label}`}
     >
-      <span>{isBooked ? memberName : label}</span>
+      <span className="truncate px-1 text-center leading-tight">
+        {isBooked ? memberName : label}
+      </span>
     </div>
   );
 };

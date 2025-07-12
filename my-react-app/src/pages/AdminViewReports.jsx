@@ -1,70 +1,66 @@
-import React, { useState, useEffect } from 'react';
-import AdminLayout from '../components/AdminLayout';
-import AdminProfile from '../components/AdminProfile';
-import api from '../config/api';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  LineChart,
-  Line
-} from 'recharts';
-import { FaCalendar, FaSearch, FaUser } from 'react-icons/fa';
+import axios from 'axios';
+import { saveAs } from 'file-saver';
+import { useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import { PROGRAM_COLORS } from '../constants/colors';
-import EventCalendar from '../components/EventCalendar';
+import { FaCalendar } from 'react-icons/fa';
+import * as XLSX from 'xlsx';
+import AdminLayout from '../components/AdminLayout';
+import useAuthGuard from '../components/AuthGuard';
+import BookingLookup from '../components/Reports/BookingLookup';
+import DailyTrendsChart from '../components/Reports/DailyTrendsChart';
+import FloorUsageChart from '../components/Reports/FloorUsageChart';
+import MonthlyStatsChart from '../components/Reports/MonthlyStatsChart';
+import RecentBookingsTable from '../components/Reports/RecentBookingsTable';
+import UserBookingTable from '../components/Reports/UserBookingTable';
+import TeamColorPalette from '../components/shared/TeamColorPalette';
+import api from '../config/api';
 
 const AdminViewReports = () => {
+  useAuthGuard('admin');//Authentication And State Initialization
+  //state variables
+  //Analytics & Loading States
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  //Date Range Filter
   const [dateRange, setDateRange] = useState([null, null]);
   const [appliedDateRange, setAppliedDateRange] = useState([null, null]);
   const [startDate, endDate] = dateRange;
-  const [userId, setUserId] = useState('');
+  const [showClearButton, setShowClearButton] = useState(false);
+  // Booking lookup state
+  const [searchType, setSearchType] = useState('username');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [userError, setUserError] = useState(null);
   const [userBookings, setUserBookings] = useState(null);
   const [userLoading, setUserLoading] = useState(false);
-  const [userError, setUserError] = useState(null);
-  const [bookings, setBookings] = useState([]);
-  const [showClearButton, setShowClearButton] = useState(false);
-  const [searchType, setSearchType] = useState('userId');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [allBookings, setAllBookings] = useState([]);// Stores all fetched bookings used for generating certain report charts 
 
-  useEffect(() => {
+  const totalDesksPerFloor = { 14: 64, 30: 64, 31: 64, 32: 64 };//Represents the total desks available per given floor
+
+  useEffect(() => { 
     fetchAnalyticsData();
-    fetchBookings();
-  }, [appliedDateRange]);
+    fetchAllBookings();
+  }, [appliedDateRange]);//Runs when the component mounts or when a new date range is applied
 
   const handleApplyDateRange = () => {
     if (startDate && endDate) {
       setAppliedDateRange([startDate, endDate]);
       setShowClearButton(true);
-    }
+    }//Applies the selected date range.
   };
 
   const handleClearDateRange = () => {
     setDateRange([null, null]);
     setAppliedDateRange([null, null]);
     setShowClearButton(false);
-  };
+  };//Clears the date range selection.
 
-  const fetchAnalyticsData = async () => {
+
+  const fetchAnalyticsData = async () => {  //Fetch Analytics Data for the given date range
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
+      setLoading(true); //loading indicator
       const [appliedStart, appliedEnd] = appliedDateRange;
-      
-      console.log('Fetching analytics data...', {
-        token: !!token,
-        startDate: appliedStart?.toISOString(),
-        endDate: appliedEnd?.toISOString()
-      });
       
       const response = await api.get('/api/reports/analytics', {
         params: {
@@ -73,221 +69,95 @@ const AdminViewReports = () => {
         }
       });
       
-      console.log('Received analytics data:', response.data);
       setAnalyticsData(response.data);
       setError(null);
     } catch (err) {
-      console.error('Error details:', {
-        message: err.message,
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-        config: err.config
-      });
       setError(`Failed to fetch analytics data: ${err.response?.data?.message || err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
+//Fetch User Bookings (Lookup)
   const fetchUserBookings = async () => {
     if (!searchQuery.trim()) {
       setUserError('Please enter a search term');
       return;
     }
-
     try {
       setUserLoading(true);
       setUserError(null);
-      const response = await api.get(`/api/reports/bookings`, {
-        params: {
-          searchType,
-          searchQuery: searchQuery.trim()
+      setUserBookings(null);
+      
+      //logs for debugging
+      console.log('Sending request with searchQuery:', searchQuery.trim(), 'and searchType:', searchType);
+
+      // Determine the parameter to send based on searchType
+      const params = { username: searchQuery.trim() };
+
+      console.log('Request URL:', `http://localhost:5000/api/reports/user-lookup?username=${searchQuery.trim()}`);
+
+      const response = await axios.get('http://localhost:5000/api/reports/user-lookup', {
+        params,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         }
       });
+
+      console.log('Response data:', response.data);
       setUserBookings(response.data);
     } catch (err) {
-      console.error('Error fetching bookings:', err);
-      setUserError(`Failed to fetch bookings: ${err.response?.data?.message || err.message}`);
-      setUserBookings(null);
+      console.error('Error fetching user bookings:', err);
+      setUserError(`Error: Failed to fetch bookings: ${err.message}`);
     } finally {
       setUserLoading(false);
     }
   };
 
-  const fetchBookings = async () => {
+                                        //Fetch All Bookings
+  const fetchAllBookings = async () => {
     try {
-      setLoading(true);
-      console.log('Attempting to fetch bookings...');
-      const response = await api.get('/api/reports/recent');
-      console.log('Response received:', response);
-      setBookings(response.data);
-    } catch (error) {
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response,
-        status: error.response?.status
-      });
-      setError('Failed to fetch recent bookings');
-    } finally {
-      setLoading(false);
+      const response = await axios.get('http://localhost:5000/api/reports/all-bookings');
+      setAllBookings(response.data);
+    } catch (err) {
+      console.error('Error fetching all bookings:', err);
     }
   };
+  
 
-  const transformDailyTrends = () => {
-    if (!analyticsData?.dailyTrends) {
-      console.log('No daily trends data available');
-      return [];
-    }
-    const transformed = analyticsData.dailyTrends.map(item => {
-      const date = item._id.date ? new Date(item._id.date) : new Date();
-      return {
-        date: date.toLocaleDateString('en-US', {
-          year: '2-digit',
-          month: 'short',
-          day: 'numeric'
-        }),
-        seats: item.seatsCount || 0,
-        parking: item.parkingCount || 0,
-        total: (item.seatsCount || 0) + (item.parkingCount || 0)
-      };
-    });
-    console.log('Transformed daily trends:', transformed);
-    return transformed;
-  };
-
-  const transformMonthlyStats = () => {
-    if (!analyticsData?.dailyTrends) return [];
-    const [appliedStart, appliedEnd] = appliedDateRange;
+  const getFloorUsageBookings = () => {
     
-    let startDate, endDate;
-    if (!appliedStart || !appliedEnd) {
-      endDate = new Date();
-      startDate = new Date();
-      startDate.setDate(startDate.getDate() - 6);
-    } else {
-      startDate = new Date(appliedStart);
-      endDate = new Date(appliedEnd);
+    if (!appliedDateRange[0] || !appliedDateRange[1]) {// Use all bookings if no date range is applied
+      return allBookings;
     }
-
-    const dates = [];
-    let currentDate = new Date(startDate);
-    
-    while (currentDate <= endDate) {
-      dates.push(new Date(currentDate));
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    return dates.map(date => {
-      const matchingData = analyticsData.dailyTrends.find(item => 
-        new Date(item._id.date).toDateString() === date.toDateString()
-      ) || { seatsCount: 0, parkingCount: 0 };
-
-      return {
-        date: date.toLocaleDateString('en-US', {
-          year: '2-digit',
-          month: 'short',
-          day: 'numeric'
-        }),
-        seats: matchingData.seatsCount || 0,
-        parking: matchingData.parkingCount || 0
-      };
+                                                 // Filter bookings by date range
+    const [start, end] = appliedDateRange;
+    return allBookings.filter(booking => {
+      const bookingDate = new Date(booking.date);
+      return bookingDate >= start && bookingDate <= end;
     });
   };
-
-  const transformProgramBookings = (analyticsData) => {
-    if (!analyticsData?.programBookings?.length) return [];
+  
+  //Creates and downloads an Excel file with summary analytics data
+  const downloadExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    const worksheetData = [
+      ['Total Bookings', analyticsData?.overallStats?.totalBookings || 0],
+      ['Parking Bookings', analyticsData?.overallStats?.totalParking || 0],
+      ['Seat Bookings', analyticsData?.overallStats?.totalSeats || 0],
+      //
+      //
+      //
+      // Add more data as needed
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(data, 'AdminViewReports.xlsx');
+  };
     
-    return analyticsData.programBookings.map(booking => {
-      // Convert old program names to new team names
-      const bookingData = {
-        ...booking,
-        month: new Date(booking.month).toLocaleDateString('en-US', { 
-          year: 'numeric',
-          month: 'short'
-        })
-      };
-
-      // Map old program names to new team names
-      if (booking.SENG !== undefined) bookingData['Team A'] = booking.SENG;
-      if (booking.BM !== undefined) bookingData['Team B'] = booking.BM;
-      if (booking.IT !== undefined) bookingData['Team C'] = booking.IT;
-
-      // Delete old program properties
-      delete bookingData.SENG;
-      delete bookingData.BM;
-      delete bookingData.IT;
-
-      return bookingData;
-    });
-  };
-
-  const transformDeskUsage = () => {
-    if (!analyticsData?.deskUsage) return [];
-    return analyticsData.deskUsage.map(item => ({
-      floor: item.floor,
-      used: item.used,
-      unused: item.unused
-    }));
-  };
-
-  const renderUserBookings = () => {
-    if (userLoading) return <div className="text-center">Loading user bookings...</div>;
-    if (userError) return <div className="text-red-500">{userError}</div>;
-    if (!userBookings) return null;
-
-    return (
-      <div className="mt-4">
-        <h3 className="text-lg font-semibold mb-3">Booking History</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border rounded-lg">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {userBookings.map((booking, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap">{booking.type}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{new Date(booking.date).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                      booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {booking.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{booking.details}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
-
-  const renderAvatar = (userId, program) => {
-    const backgroundColor = PROGRAM_COLORS[program] || '#9E9E9E';
-    
-    return (
-      <div className="h-10 w-10 flex-shrink-0">
-        <div 
-          className="h-10 w-10 rounded-full flex items-center justify-center text-white"
-          style={{ backgroundColor }}
-        >
-          <FaUser className="h-5 w-5" />
-        </div>
-      </div>
-    );
-  };
-
+    //Loading & Error States
   const renderContent = () => {
     if (loading) {
       return (
@@ -305,9 +175,12 @@ const AdminViewReports = () => {
         </div>
       );
     }
+  
+
+
 
     return (
-      <div className="max-w-7xl mx-auto p-4">
+      <div className="max-w-7xl mx-auto">
         {/* Header with Date Range Picker */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <h1 className="text-2xl font-semibold text-gray-800">Analytics & Reports</h1>
@@ -364,6 +237,7 @@ const AdminViewReports = () => {
           </div>
         </div>
 
+        
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -388,421 +262,45 @@ const AdminViewReports = () => {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Daily Trends */}
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Daily Booking Trends</h2>
-            <div className="h-[300px] overflow-x-auto">
-              <div className="min-w-full" style={{ minWidth: `${Math.max(600, transformDailyTrends().length * 40)}px` }}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={transformDailyTrends()}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fill: '#6B7280', fontSize: 10 }}
-                      interval={0}
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                      tickMargin={15}
-                    />
-                    <YAxis tick={{ fill: '#6B7280' }} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'white',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '0.375rem'
-                      }}
-                    />
-                    <Legend />
-                    <Bar dataKey="seats" fill={PROGRAM_COLORS['Team A']} name="Seats" />
-                    <Bar dataKey="parking" fill={PROGRAM_COLORS['Team B']} name="Parking" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+          <DailyTrendsChart data={analyticsData} />
+          <MonthlyStatsChart data={analyticsData} dateRange={appliedDateRange} />
           </div>
 
-          {/* Monthly Stats */}
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Monthly Statistics</h2>
-            <div className="h-[300px] overflow-x-auto">
-              <div className="min-w-full" style={{ minWidth: `${Math.max(600, transformMonthlyStats().length * 40)}px` }}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={transformMonthlyStats()}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fill: '#6B7280', fontSize: 10 }}
-                      tickLine={{ stroke: '#6B7280' }}
-                      interval={0}
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                      tickMargin={15}
-                    />
-                    <YAxis 
-                      tick={{ fill: '#6B7280' }}
-                      tickLine={{ stroke: '#6B7280' }}
-                      axisLine={{ stroke: '#6B7280' }}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'white',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '0.375rem'
-                      }}
-                    />
-                    <Legend 
-                      verticalAlign="top" 
-                      height={36}
-                      iconType="line"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="seats" 
-                      stroke="#00BCD4" 
-                      name="Seats"
-                      strokeWidth={2}
-                      dot={{ fill: '#00BCD4', r: 4 }}
-                      activeDot={{ r: 6, fill: '#00BCD4' }}
-                      connectNulls
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="parking" 
-                      stroke="#9C27B0" 
-                      name="Parking"
-                      strokeWidth={2}
-                      dot={{ fill: '#9C27B0', r: 4 }}
-                      activeDot={{ r: 6, fill: '#9C27B0' }}
-                      connectNulls
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+        {/* Tables Section */}
+        <div className="flex flex-col md:flex-row items-start">
+          <div className="flex-1 h-[340px] mr-6">
+            <FloorUsageChart
+              bookings={getFloorUsageBookings()}
+              totalDesksPerFloor={totalDesksPerFloor}
+            />
           </div>
-
-          {/* Desk Usage Statistics */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 col-span-2">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Desk Usage by Floor</h2>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={transformDeskUsage()}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 50, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fill: '#6B7280' }} />
-                  <YAxis dataKey="floor" type="category" tick={{ fill: '#6B7280' }} />
-                  <Tooltip 
-                    formatter={(value) => `${value.toFixed(2)}%`}
-                    contentStyle={{ 
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '0.375rem'
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="used" fill="#8884d8" name="Used" stackId="a" />
-                  <Bar dataKey="unused" fill="#d3d3d3" name="Unused" stackId="a" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Monthly Desk Bookings By Program */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 col-span-2">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">Bookings Count</h2>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={transformProgramBookings(analyticsData)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" tick={{ fill: '#6B7280' }} />
-                  <YAxis tick={{ fill: '#6B7280' }} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '0.375rem'
-                    }}
-                  />
-                  <Legend />
-                  <Bar 
-                    dataKey="Team A" 
-                    stackId="a" 
-                    fill={PROGRAM_COLORS['Team A']} 
-                    name="Team A" 
-                  />
-                  <Bar 
-                    dataKey="Team B" 
-                    stackId="a" 
-                    fill={PROGRAM_COLORS['Team B']} 
-                    name="Team B" 
-                  />
-                  <Bar 
-                    dataKey="Team C" 
-                    stackId="a" 
-                    fill={PROGRAM_COLORS['Team C']} 
-                    name="Team C" 
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          <div className="self-start">
+            <TeamColorPalette />
           </div>
         </div>
+        <div className="mt-10">
+          <BookingLookup
+            searchType={searchType}
+            setSearchType={setSearchType}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onSearch={fetchUserBookings}
+            error={userError}
+          />
+          {userBookings && userBookings.length > 0 && (
+            <UserBookingTable bookings={userBookings} />
+          )}
+        </div>
+        <RecentBookingsTable bookings={allBookings} />
         
-        {/* Recent Bookings Table */}
-        <div className="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex flex-col gap-4">
-              {/* User Booking Lookup Section */}
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <FaSearch className="text-primary text-xl" />
-                    <h3 className="text-lg font-semibold text-gray-800">Booking Lookup</h3>
-                  </div>
-                  <div className="flex gap-4 items-center w-full sm:w-auto">
-                    <select
-                      value={searchType}
-                      onChange={(e) => {
-                        setSearchType(e.target.value);
-                        setSearchQuery('');
-                        setUserBookings(null);
-                        setUserError(null);
-                      }}
-                      className="border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary bg-white text-gray-700"
-                    >
-                      <option value="userId">Search by User ID</option>
-                      <option value="team">Search by Team</option>
-                    </select>
-                    <div className="relative flex-1 sm:w-64">
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={searchType === 'userId' ? "Enter User ID" : "Enter Team Name"}
-                        className="w-full border rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary pr-10"
-                      />
-                      {searchQuery && (
-                        <button
-                          onClick={() => {
-                            setSearchQuery('');
-                            setUserBookings(null);
-                            setUserError(null);
-                          }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          <span className="text-xl">×</span>
-                        </button>
-                      )}
-                    </div>
-                    <button
-                      onClick={fetchUserBookings}
-                      disabled={userLoading}
-                      className="bg-primary text-white px-6 py-2 rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 whitespace-nowrap font-medium"
-                    >
-                      {userLoading ? (
-                        <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Searching...
-                        </span>
-                      ) : (
-                        <>
-                          <FaSearch className="inline mr-2" />
-                          Search
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-                {userError && (
-                  <div className="mt-3 text-red-500 text-sm bg-red-50 p-2 rounded border border-red-200">
-                    <span className="font-medium">Error:</span> {userError}
-                  </div>
-                )}
-              </div>
-              
-              {/* Table Title */}
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  {userBookings ? (
-                    searchType === 'userId' 
-                      ? `Bookings for User: ${searchQuery}`
-                      : `Bookings for Team: ${searchQuery}`
-                  ) : (
-                    'Recent Bookings'
-                  )}
-                </h2>
-                {userBookings && (
-                  <button
-                    onClick={() => {
-                      setUserBookings(null);
-                      setSearchQuery('');
-                      setUserError(null);
-                    }}
-                    className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
-                  >
-                    <span>Clear Search</span>
-                    <span className="text-xs">×</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User ID
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Program
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Booking Type
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {userBookings ? (
-                  userBookings.map((booking, index) => (
-                    <tr key={booking._id || index} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {booking.userId}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {renderAvatar(booking.userId, booking.program)}
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {booking.userId}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {booking.program}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div 
-                            className="w-3 h-3 rounded-full mr-2"
-                            style={{ backgroundColor: PROGRAM_COLORS[booking.program] }}
-                          ></div>
-                          <span className="text-sm text-gray-900">{booking.program}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                          ${booking.type === 'seat' 
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-purple-100 text-purple-800'}`}>
-                          {booking.type === 'seat' ? 'Seat Booking' : 'Parking Booking'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                          ${booking.status === 'confirmed' 
-                            ? 'bg-green-100 text-green-800'
-                            : booking.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'}`}>
-                          {booking.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(booking.date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  bookings && bookings.length > 0 ? (
-                    bookings.map((booking, index) => (
-                      <tr key={booking._id || index} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {booking.userId}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {renderAvatar(booking.userId, booking.program)}
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {booking.userId}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {booking.program}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div 
-                              className="w-3 h-3 rounded-full mr-2"
-                              style={{ backgroundColor: PROGRAM_COLORS[booking.program] }}
-                            ></div>
-                            <span className="text-sm text-gray-900">{booking.program}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                            ${booking.bookingType === 'seat' 
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'}`}>
-                            {booking.bookingType === 'seat' ? 'Seat Booking' : 'Parking Booking'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                            ${booking.status === 'confirmed' 
-                              ? 'bg-green-100 text-green-800'
-                              : booking.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'}`}>
-                            {booking.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(booking.date).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                        No bookings found
-                      </td>
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+
+      
+        <button
+          onClick={downloadExcel}
+          className="fixed bottom-5 right-5 px-5 py-2 bg-green-500 text-white rounded-md shadow-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 z-50"
+        >
+          Download Excel
+        </button>
       </div>
     );
   };

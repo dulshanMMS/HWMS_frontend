@@ -1,26 +1,56 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import BookingPage from './components/DateBooking';
-import FloorLayout from './components/FloorLayout';
-import Login from './pages/Login'; 
+import { Route, Routes, useLocation } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+// Component imports
+import ParkingHistory from "./pages/ParkingHistory";
+import AdminDashboard from './pages/AdminDashboard';
+import AdminNotification from './pages/AdminNotification';
+import AdminParking from './pages/AdminParking';
+import AdminViewReports from './pages/AdminViewReports';
+import BookingHistory from './pages/BookingHistory';
+import Login from './pages/Login';
+import BookingPage from './pages/DateBooking';
+import FloorLayout from './pages/FloorLayout';
 import ErrorBoundary from './components/ErrorBoundary';
+import ParkingBooking from './pages/ParkingBooking';
+import ResetPassword from './pages/ResetPassword';
+import UserDashboard from './pages/UserDashboard';
+import UserNotification from './pages/UserNotification';
 
+const App = () => {
+  const location = useLocation();
 
+  const greenPages = ["/user/parking-booking", "/history"];
+  const isSimpleGreenPage = greenPages.includes(location.pathname);
 
-function App() {
+  const containerClass = isSimpleGreenPage
+    ? "min-h-screen bg-green-100"
+    : "min-h-screen bg-green-100 flex items-center justify-center";
+
   return (
-    <ErrorBoundary>
-      <div className="App">
-        <Router>
-          <Routes>
-            <Route path="/" element={<Login />} />
-            <Route path="/datebooking" element={<BookingPage />} />
-            <Route path="/floorlayout" element={<FloorLayout />} />
-          </Routes>
-        </Router>
-      </div>
-    </ErrorBoundary>
+    <div className={containerClass}>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/datebooking" element={<BookingPage />} />
+        <Route path="/floorlayout" element={<FloorLayout />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/user" element={<UserDashboard />} />
+        <Route path="/AdminNotification" element={<AdminNotification />} />
+        <Route path="/admin-reports" element={<AdminViewReports />} />
+        <Route path="/parkinghistory" element={<ParkingHistory />} />
+        <Route path="/user/parking-booking" element={<ParkingBooking />} />
+        <Route path="/admin/adminparking" element={<AdminParking />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/user/notifications" element={<UserNotification />} />
+        <Route path="/booking-history" element={<BookingHistory />} />
+      </Routes>
+
+      {/* Toast Container for notifications */}
+      <ToastContainer position="top-right" autoClose={2500} />
+    </div>
   );
-}
+};
 
 export default App;

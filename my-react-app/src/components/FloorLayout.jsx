@@ -1,10 +1,7 @@
 /* eslint-disable no-undef */
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Seat from './seat';
-import '../styles/floorlayout.css';
-import '../styles/seatlable.css';
-import LeftSidebar from './LeftSidebar';
+import Seat from './Seat';
 import { jwtDecode } from "jwt-decode";
 
 // Convert Tailwind classes to hex colors
@@ -28,6 +25,20 @@ export default function FloorLayout() {
   const { state } = useLocation();
   const navigate = useNavigate();
 
+  // Prevent scrolling when component mounts
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalDocumentOverflow = document.documentElement.style.overflow;
+    
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.documentElement.style.overflow = originalDocumentOverflow;
+    };
+  }, []);
+
   // Memoize bookingInfo to prevent re-creation on every render
   const bookingInfo = useMemo(() => ({
     date: state?.date || null,
@@ -40,7 +51,6 @@ export default function FloorLayout() {
   const [memberId, setMemberId] = useState('');
   const [role, setRole] = useState('member');
   const [teamName, setTeamName] = useState('');
-  const [teamColor, setTeamColor] = useState('#808080');
   const [entered, setEntered] = useState(false);
   const [bookedChairs, setBookedChairs] = useState({});
   const [userBooking, setUserBooking] = useState(null);
@@ -53,6 +63,16 @@ export default function FloorLayout() {
   const [showAddMemberIdPopUp, setShowAddMemberIdPopUp] = useState(false);
   const [newMemberId, setNewMemberId] = useState('');
   const [memberDetails, setMemberDetails] = useState(null);
+  const [bookingSubmitted, setBookingSubmitted] = useState(false);
+
+  // Check for persisted booking submission state on component mount
+  useEffect(() => {
+    const submissionKey = `booking_submitted_${bookingInfo.date}_${bookingInfo.floor}`;
+    const isSubmitted = localStorage.getItem(submissionKey) === 'true';
+    if (isSubmitted) {
+      setBookingSubmitted(true);
+    }
+  }, [bookingInfo.date, bookingInfo.floor]);
 
   // Get JWT token and decode username
   useEffect(() => {
@@ -83,10 +103,8 @@ export default function FloorLayout() {
     
     setIsLoading(true);
     
-    // Fetch bookings from API - filtered by date and floor
     const fetchBookings = async () => {
       try {
-        // Add date and floor filters to only show bookings for the selected date/floor
         const queryParams = new URLSearchParams({
           date: bookingInfo.date,
           floor: bookingInfo.floor
@@ -115,7 +133,6 @@ export default function FloorLayout() {
 
     const fetchUserAndTeam = async () => {
       try {
-        // Fetch user data
         const userRes = await fetch(`http://localhost:5004/api/bookings/users/${memberId}`);
         if (!userRes.ok) throw new Error('User not found');
         const user = await userRes.json();
@@ -124,39 +141,31 @@ export default function FloorLayout() {
           throw new Error('User data incomplete - missing username or teamId');
         }
 
-        // Fetch team data
         const teamRes = await fetch(`http://localhost:5004/api/teams/${user.teamId}`);
         if (!teamRes.ok) throw new Error('Team not found');
         const team = await teamRes.json();
         
-        // Convert team color from Tailwind to hex - ensure it's always a valid hex color
         const colorValue = team.color || '#808080';
-        let actualColor = '#808080'; // Default fallback
+        let actualColor = '#808080';
         
         if (colorValue.startsWith('#')) {
-          // Already a hex color
           actualColor = colorValue;
         } else if (colorValue.includes('bg-')) {
-          // Tailwind class - convert to hex
           actualColor = getColorFromTailwind(colorValue);
         } else {
-          // Other color formats or invalid - use default
           actualColor = '#808080';
         }
 
-        // Create memberDetails object with teamColor (compatible with old logic)
         const memberDetailsWithColor = {
           ...user,
           teamColor: actualColor,
-          memberName: user.username // Add memberName for consistency with old logic
+          memberName: user.username
         };
 
         setMemberDetails(memberDetailsWithColor);
         setTeamName(team.teamName);
-        setTeamColor(actualColor); // Ensure teamColor is always hex
-        setRole(user.role); // This will be 'leader' or 'member' due to route mapping
+        setRole(user.role);
 
-        // Fetch team members
         const teamUsersRes = await fetch(`http://localhost:5004/api/bookings/users/team/${user.teamId}`);
         if (teamUsersRes.ok) {
           const teamUsers = await teamUsersRes.json();
@@ -180,8 +189,13 @@ export default function FloorLayout() {
   }, [memberId]);
 
   // Message handling
-  const showMessage = (msg) => setMessage(msg);
-  const closeMessage = () => setMessage(null);
+  const showMessage = (msg) => {
+    setMessage(msg);
+  };
+  
+  const closeMessage = () => {
+    setMessage(null);
+  };
 
   // Function to refresh bookings
   const refreshBookings = async () => {
@@ -203,11 +217,16 @@ export default function FloorLayout() {
 
   // Popup components
   const PopUp = ({ message, onClose, children }) => (
-    <div className="popup-overlay">
-      <div className="popup-content">
-        <p className="popup-message">{message}</p>
+    <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm z-50 animate-fade-in">
+      <div className="bg-white rounded-xl shadow-2xl p-8 min-w-96 min-h-48 flex flex-col justify-center items-center border-2 border-green-400 animate-pop-in">
+        <p className="mb-4 text-gray-800 text-xl font-semibold text-center">
+          {message}
+        </p>
         {children || (
-          <button className="popup-button green" onClick={onClose}>
+          <button 
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg"
+            onClick={onClose}
+          >
             Close
           </button>
         )}
@@ -216,11 +235,13 @@ export default function FloorLayout() {
   );
 
   const AddMemberIdPopUp = ({ onSubmit, onCancel, onChange, value }) => (
-    <div className="popup-overlay">
-      <div className="popup-content">
-        <p className="popup-message">Enter the member ID of the new team member:</p>
+    <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm z-50">
+      <div className="bg-white rounded-xl shadow-2xl p-8 min-w-96 flex flex-col justify-center items-center border-2 border-green-400">
+        <p className="mb-6 text-gray-800 text-xl font-semibold text-center">
+          Enter the member ID of the new team member:
+        </p>
         <input
-          className="header-input"
+          className="w-full max-w-xs px-4 py-2 border-2 border-green-300 rounded-lg text-base mb-6 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 transition-all duration-300"
           placeholder="Enter member ID (e.g., user123)"
           value={value}
           onChange={onChange}
@@ -229,11 +250,17 @@ export default function FloorLayout() {
           }}
           autoFocus
         />
-        <div className="popup-input-container">
-          <button className="popup-button green" onClick={onSubmit} style={{ marginRight: '10px' }}>
+        <div className="flex gap-4">
+          <button 
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg"
+            onClick={onSubmit}
+          >
             Enter
           </button>
-          <button className="popup-button red" onClick={onCancel}>
+          <button 
+            className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg"
+            onClick={onCancel}
+          >
             Cancel
           </button>
         </div>
@@ -243,13 +270,9 @@ export default function FloorLayout() {
 
   // Chair click handler
   const handleChairClick = (chairId, tableId) => {
-    console.log("=== SEAT CLICK DEBUG ===");
-    console.log("ChairId:", chairId);
-    console.log("Entered:", entered);
-    console.log("Member Details:", memberDetails);
-    console.log("Team Color:", teamColor);
-    console.log("Booked Chairs:", bookedChairs);
-    console.log("========================");
+    if (bookingSubmitted) {
+      return;
+    }
 
     if (!entered || !memberDetails) {
       showMessage('Please ensure you are logged in and have valid team data.');
@@ -257,7 +280,6 @@ export default function FloorLayout() {
     }
 
     if (role === 'member') {
-      // Check if member already has booking
       const memberHasBooking = Object.values(bookedChairs).some(
         (chair) => chair?.memberName === memberDetails?.memberName
       );
@@ -267,17 +289,9 @@ export default function FloorLayout() {
         return;
       }
 
-      // Check if this seat is already booked
       if (bookedChairs[chairId]) {
-        // UNBOOKING LOGIC
         if (bookedChairs[chairId].memberName === memberDetails?.memberName) {
           const dateToUse = bookingInfo.date;
-          
-          console.log("🔍 Unbooking with date:", {
-            bookingInfoDate: bookingInfo.date,
-            dateToUse: dateToUse,
-            unbookingURL: `http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`
-          });
           
           fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
             method: 'DELETE',
@@ -285,28 +299,22 @@ export default function FloorLayout() {
             .then((response) => {
               if (!response.ok) {
                 return response.json().then((errorData) => {
-                  console.error('❌ Unbooking failed:', errorData);
                   throw new Error(errorData.error || 'Unbooking failed');
                 });
               }
               return response.json();
             })
             .then(() => {
-              console.log("✅ Unbooking successful");
               setUserBooking(null);
-              // Remove success message for seat click unbooking
-              // Refresh bookings after unbooking
               refreshBookings();
             })
             .catch((err) => {
-              console.error('❌ Unbooking error:', err);
               showMessage('Failed to unbook seat: ' + err.message);
             });
         } else {
           showMessage('This seat is booked by another user.');
         }
       } else {
-        // BOOKING LOGIC
         if (!memberDetails.memberName) {
           showMessage('Member details incomplete.');
           return;
@@ -338,17 +346,13 @@ export default function FloorLayout() {
           })
           .then(() => {
             setUserBooking({ chairId, tableId });
-            // Remove success message for seat click booking
-            // Refresh bookings after successful booking
             refreshBookings();
           })
           .catch((err) => {
-            console.error('Booking error:', err);
             showMessage(`Booking error: ${err.message}`);
           });
       }
     } else if (role === 'leader') {
-      // Leader booking logic
       if (!selectedMember) {
         showMessage('Please select a team member to book for.');
         return;
@@ -364,7 +368,6 @@ export default function FloorLayout() {
       }
 
       if (bookedChairs[chairId]) {
-        // UNBOOKING LOGIC FOR LEADER
         if (bookedChairs[chairId].memberName === selectedMember) {
           const dateToUse = bookingInfo.date;
           
@@ -374,7 +377,6 @@ export default function FloorLayout() {
             .then((response) => {
               if (!response.ok) {
                 return response.json().then((errorData) => {
-                  console.error('Leader unbooking failed:', errorData);
                   throw new Error(errorData.error || 'Unbooking failed');
                 });
               }
@@ -382,19 +384,15 @@ export default function FloorLayout() {
             })
             .then(() => {
               if (selectedMember === memberDetails?.memberName) setUserBooking(null);
-              // Remove success message for seat click unbooking
-              // Refresh bookings after unbooking
               refreshBookings();
             })
             .catch((err) => {
-              console.error('Unbooking error:', err);
               showMessage('Failed to unbook seat: ' + err.message);
             });
         } else {
           showMessage('This seat is booked by another user.');
         }
       } else {
-        // BOOKING LOGIC FOR LEADER
         const bookingDetails = {
           roomId: tableId,
           teamName,
@@ -421,19 +419,16 @@ export default function FloorLayout() {
           })
           .then(() => {
             if (selectedMember === memberDetails?.memberName) setUserBooking({ chairId, tableId });
-            // Remove success message for seat click booking
-            // Refresh bookings after successful booking
             refreshBookings();
           })
           .catch((err) => {
-            console.error('Booking error:', err);
             showMessage(`Booking error: ${err.message}`);
           });
       }
     }
   };
 
-  // Other handlers
+  // Handler functions
   const handleUnbook = () => {
     const targetMember = role === 'leader' ? selectedMember : memberDetails?.memberName;
     if (!targetMember) {
@@ -459,7 +454,6 @@ export default function FloorLayout() {
       .then((response) => {
         if (!response.ok) {
           return response.json().then((errorData) => {
-            console.error('Unbook button failed:', errorData);
             throw new Error(errorData.error || 'Unbooking failed');
           });
         }
@@ -469,12 +463,9 @@ export default function FloorLayout() {
         if (role === 'member' || (role === 'leader' && selectedMember === memberDetails?.memberName)) {
           setUserBooking(null);
         }
-        // Remove success message for unbook button
-        // Refresh bookings after unbooking
         refreshBookings();
       })
       .catch((err) => {
-        console.error('Unbooking error:', err);
         showMessage(`Unbooking error: ${err.message}`);
       });
   };
@@ -495,31 +486,31 @@ export default function FloorLayout() {
       return;
     }
 
-    // Show success message only when Submit button is clicked
+    // Set booking as submitted and persist to localStorage
+    setBookingSubmitted(true);
+    const submissionKey = `booking_submitted_${bookingInfo.date}_${bookingInfo.floor}`;
+    localStorage.setItem(submissionKey, 'true');
+    
     showMessage('Seat booking submitted successfully!');
 
-    if (role === 'member') {
-      setEntered(false);
-      setMemberId('');
-      setTeamName('');
-      setTeamColor('#808080');
-      setRole('member');
-      setUserBooking(null);
-      setMemberDetails(null);
-      setTeamMembers([]);
-      setAllTeamMembers([]);
-      setSelectedMember('');
-    } else if (role === 'leader') {
+    if (role === 'leader') {
       setSelectedMember('');
       setShowAddMemberPrompt(true);
     }
   };
 
   const handleCancel = () => {
+    if (bookingSubmitted) {
+      return;
+    }
+    
+    // Clear the submission state from localStorage when canceling
+    const submissionKey = `booking_submitted_${bookingInfo.date}_${bookingInfo.floor}`;
+    localStorage.removeItem(submissionKey);
+    
     setEntered(false);
     setMemberId('');
     setTeamName('');
-    setTeamColor('#808080');
     setRole('member');
     setUserBooking(null);
     setTeamMembers([]);
@@ -546,24 +537,29 @@ export default function FloorLayout() {
 
   const handleAddMemberPromptNo = () => {
     setShowAddMemberPrompt(false);
-    setEntered(false);
-    setMemberId('');
-    setTeamName('');
-    setTeamColor('#808080');
-    setRole('member');
-    setTeamMembers([]);
-    setAllTeamMembers([]);
-    setSelectedMember('');
-    setUserBooking(null);
-    setMemberDetails(null);
-    setMessage(null);
-    navigate('/datebooking');
+    
+    if (!bookingSubmitted) {
+      // Clear the submission state from localStorage when navigating away
+      const submissionKey = `booking_submitted_${bookingInfo.date}_${bookingInfo.floor}`;
+      localStorage.removeItem(submissionKey);
+      
+      setEntered(false);
+      setMemberId('');
+      setTeamName('');
+      setRole('member');
+      setTeamMembers([]);
+      setAllTeamMembers([]);
+      setSelectedMember('');
+      setUserBooking(null);
+      setMemberDetails(null);
+      setMessage(null);
+      navigate('/datebooking');
+    }
   };
 
   const handleAddMemberIdSubmit = async () => {
     if (newMemberId.trim()) {
       try {
-        // Check if user exists and is in the same team
         const userRes = await fetch(`http://localhost:5004/api/bookings/users/${newMemberId}`);
         if (!userRes.ok) {
           setMessage('User not found with this username.');
@@ -587,7 +583,6 @@ export default function FloorLayout() {
           return;
         }
         
-        // Add member to team list
         setTeamMembers((prev) => [...prev, userData.username]);
         setSelectedMember(userData.username);
         setNewMemberId('');
@@ -618,23 +613,41 @@ export default function FloorLayout() {
 
   if (isLoading) {
     return (
-      <div className="floor-layout">
-        <p className="loading-text">Loading...</p>
+      <div className="w-full h-screen bg-green-50 flex items-center justify-center overflow-hidden">
+        <p className="text-gray-800 text-lg font-semibold">Loading...</p>
       </div>
     );
   }
 
+  if (!entered && !isLoading && !bookingSubmitted) {
+    return (
+      <div className="w-full h-screen bg-green-50 flex items-center justify-center overflow-hidden">
+        <div className="flex flex-col items-center justify-center gap-4 text-center">
+          <p className="text-gray-800 text-lg font-semibold">Please complete your booking information</p>
+          <button 
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg"
+            onClick={() => navigate('/datebooking')}
+          >
+            Go to Booking
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const shouldShowLayout = entered || bookingSubmitted;
+
   return (
-    <LeftSidebar>
-      <div className="floor-layout">
-        <div className="layout-container">
-          {/* Removed welcome message and booking status display */}
-          {entered && role === 'leader' && (
-            <div className="header-container">
-              <div>
-                <label className="header-label">Book a seat for:</label>
+    <div className="w-full h-screen bg-green-50 flex items-center justify-center overflow-hidden relative">
+      {shouldShowLayout ? (
+        <div className="flex flex-col items-center justify-center gap-4 w-full h-full p-4 max-h-screen overflow-hidden">
+        
+          {entered && role === 'leader' && !bookingSubmitted && (
+            <div className="bg-white rounded-lg shadow-md p-2 flex flex-row items-center gap-3 border border-gray-300 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-gray-700">Book a seat for:</label>
                 <select
-                  className="header-select"
+                  className="px-2 py-1 border border-gray-300 rounded-lg text-xs bg-white focus:border-green-500 focus:outline-none"
                   value={selectedMember}
                   onChange={(e) => setSelectedMember(e.target.value)}
                 >
@@ -646,16 +659,22 @@ export default function FloorLayout() {
                   ))}
                 </select>
               </div>
-              <button className="green-button" onClick={addTeamMember}>
+              <button 
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-lg text-xs"
+                onClick={addTeamMember}
+              >
                 Add Team Member
               </button>
             </div>
           )}
-          <div className="seat-layout">
-            <div className="left-containers">
+
+          <div className="flex items-center justify-center gap-6 flex-shrink-0 mx-auto">
+            
+            <div className="flex flex-col gap-2">
               {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
-                <div key={tableId} className="table-container">
-                  <div className="seat-row top-row">
+                <div key={tableId} className="bg-white rounded-lg border border-gray-300 shadow-sm p-3">
+                  
+                  <div className="flex justify-center gap-2 mb-2">
                     {Array.from({ length: 4 }, (_, i) => {
                       const chairId = `${tableId}-chair${i + 1}`;
                       return (
@@ -664,15 +683,19 @@ export default function FloorLayout() {
                           chairId={chairId}
                           tableId={tableId}
                           bookedChairs={bookedChairs}
-                          onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
+                          onClick={!bookingSubmitted ? () => handleChairClick(chairId, tableId) : () => {}}
                           label={`Seat-${i + 1}`}
-                          isUserBooked={userBooking?.chairId === chairId}
+                          isUserBooked={!bookingSubmitted && userBooking?.chairId === chairId}
                         />
                       );
                     })}
                   </div>
-                  <div className="table-label">Table {index + 1}</div>
-                  <div className="seat-row bottom-row">
+                  
+                  <div className="bg-green-50 text-center py-1 text-sm font-semibold text-gray-700 rounded mb-2">
+                    Table {index + 1}
+                  </div>
+                  
+                  <div className="flex justify-center gap-2">
                     {Array.from({ length: 4 }, (_, i) => {
                       const chairId = `${tableId}-chair${i + 5}`;
                       return (
@@ -681,9 +704,9 @@ export default function FloorLayout() {
                           chairId={chairId}
                           tableId={tableId}
                           bookedChairs={bookedChairs}
-                          onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
+                          onClick={!bookingSubmitted ? () => handleChairClick(chairId, tableId) : () => {}}
                           label={`Seat-${i + 5}`}
-                          isUserBooked={userBooking?.chairId === chairId}
+                          isUserBooked={!bookingSubmitted && userBooking?.chairId === chairId}
                         />
                       );
                     })}
@@ -692,14 +715,17 @@ export default function FloorLayout() {
               ))}
             </div>
 
-            <div className="lobby-container">
-              <span className="lobby-text">Lobby</span>
+            <div className="bg-green-50 border-2 border-green-400 rounded-xl flex items-center justify-center" style={{width: '200px', height: '530px'}}>
+              <span className="text-gray-800 font-bold text-lg text-center">
+                Lobby
+              </span>
             </div>
 
-            <div className="right-containers">
+            <div className="flex flex-col gap-2">
               {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
-                <div key={tableId} className="table-container">
-                  <div className="seat-row top-row">
+                <div key={tableId} className="bg-white rounded-lg border border-gray-300 shadow-sm p-3">
+                  
+                  <div className="flex justify-center gap-2 mb-2">
                     {Array.from({ length: 4 }, (_, i) => {
                       const chairId = `${tableId}-chair${i + 1}`;
                       return (
@@ -708,15 +734,19 @@ export default function FloorLayout() {
                           chairId={chairId}
                           tableId={tableId}
                           bookedChairs={bookedChairs}
-                          onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
+                          onClick={!bookingSubmitted ? () => handleChairClick(chairId, tableId) : () => {}}
                           label={`Seat-${i + 1}`}
-                          isUserBooked={userBooking?.chairId === chairId}
+                          isUserBooked={!bookingSubmitted && userBooking?.chairId === chairId}
                         />
                       );
                     })}
                   </div>
-                  <div className="table-label">Table {index + 5}</div>
-                  <div className="seat-row bottom-row">
+                  
+                  <div className="bg-green-50 text-center py-1 text-sm font-semibold text-gray-700 rounded mb-2">
+                    Table {index + 5}
+                  </div>
+                  
+                  <div className="flex justify-center gap-2">
                     {Array.from({ length: 4 }, (_, i) => {
                       const chairId = `${tableId}-chair${i + 5}`;
                       return (
@@ -725,9 +755,9 @@ export default function FloorLayout() {
                           chairId={chairId}
                           tableId={tableId}
                           bookedChairs={bookedChairs}
-                          onClick={entered ? () => handleChairClick(chairId, tableId) : () => {}}
+                          onClick={!bookingSubmitted ? () => handleChairClick(chairId, tableId) : () => {}}
                           label={`Seat-${i + 5}`}
-                          isUserBooked={userBooking?.chairId === chairId}
+                          isUserBooked={!bookingSubmitted && userBooking?.chairId === chairId}
                         />
                       );
                     })}
@@ -736,47 +766,81 @@ export default function FloorLayout() {
               ))}
             </div>
           </div>
-          {entered && (
-            <div className="control-panel">
-              <button className="red-button" onClick={handleUnbook}>
+
+          {shouldShowLayout && !bookingSubmitted && (
+            <div className="bg-white rounded-lg shadow-md p-3 flex flex-row gap-4 border border-gray-300 flex-shrink-0">
+              <button 
+                className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg text-sm"
+                onClick={handleUnbook}
+              >
                 Unbook
               </button>
               <button
-                className="green-button"
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg text-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
                 onClick={handleSubmit}
                 disabled={!hasBookedSeat()}
-                style={{ opacity: hasBookedSeat() ? 1 : 0.5 }}
               >
                 Submit
               </button>
-              <button className="gray-button" onClick={handleCancel}>
+              <button 
+                className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg text-sm"
+                onClick={handleCancel}
+              >
                 Cancel
               </button>
             </div>
           )}
         </div>
-        {message && <PopUp message={message} onClose={closeMessage} />}
-        {showAddMemberPrompt && (
-          <PopUp message="Do you want to book for another member?">
-            <div className="popup-buttons">
-              <button className="popup-button green" onClick={handleAddMemberPromptYes}>
-                Yes
-              </button>
-              <button className="popup-button red" onClick={handleAddMemberPromptNo}>
-                No
-              </button>
-            </div>
-          </PopUp>
-        )}
-        {showAddMemberIdPopUp && (
-          <AddMemberIdPopUp
-            value={newMemberId}
-            onChange={(e) => setNewMemberId(e.target.value)}
-            onSubmit={handleAddMemberIdSubmit}
-            onCancel={handleAddMemberIdCancel}
-          />
-        )}
-      </div>
-    </LeftSidebar>
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-4 text-center">
+          <p className="text-gray-800 text-lg font-semibold">Loading your session...</p>
+        </div>
+      )}
+
+      {message && <PopUp message={message} onClose={closeMessage} />}
+      {showAddMemberPrompt && (
+        <PopUp message="Do you want to book for another member?">
+          <div className="flex gap-4">
+            <button 
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg"
+              onClick={handleAddMemberPromptYes}
+            >
+              Yes
+            </button>
+            <button 
+              className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg"
+              onClick={handleAddMemberPromptNo}
+            >
+              No
+            </button>
+          </div>
+        </PopUp>
+      )}
+      {showAddMemberIdPopUp && (
+        <AddMemberIdPopUp
+          value={newMemberId}
+          onChange={(e) => setNewMemberId(e.target.value)}
+          onSubmit={handleAddMemberIdSubmit}
+          onCancel={handleAddMemberIdCancel}
+        />
+      )}
+
+      <style jsx="true">{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes pop-in {
+          from { transform: scale(0.8); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-in-out;
+        }
+        .animate-pop-in {
+          animation: pop-in 0.3s ease-out;
+        }
+      `}</style>
+    </div>
   );
 }

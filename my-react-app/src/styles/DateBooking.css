@@ -1,178 +1,26 @@
-.booking-page-layout {
-  min-height: 100vh;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 1rem 0;
-  background-color: #f0f2f5;
-  box-sizing: border-box;
-}
+/* Only essential React Calendar overrides that can't be done with Tailwind */
 
-.booking-middle-section {
-  width: 50%;
-  max-width: 700px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.booking-title {
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 0.4rem;
-  color: #000;
-  text-align: center;
-}
-
-.sub-title {
-  font-size: 14px;
-  margin-bottom: 0.8rem;
-  text-align: center;
-}
-
-.booking-boxes {
-  display: flex;
-  gap: 2rem;
-  justify-content: center;
-}
-
-.booking-card {
-  background: #ffffff;
-  padding: 1.5rem;
-  border-radius: 10px;
-  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 320px;
-}
-
-.selected-date-display {
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-  font-size: 14px;
-  text-align: center;
-}
-
-.time-label {
-  display: block;
-  margin-bottom: 0.2rem;
-  font-weight: 600;
-  font-size: 11px;
-  color: #003c2f;
-  letter-spacing: 0.05em;
-  text-align: center;
-}
-
-.time-picker-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 2rem;
-  width: 100%;
-  margin-bottom: 1.5rem;
-}
-
-.time-picker {
-  width: 120px;
-  display: flex;
-  flex-direction: column;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.time-control {
-  display: flex;
-  justify-content: space-around;
-}
-
-.time-unit {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-}
-
-.arrow-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #333;
-  font-size: 14px;
-  padding: 0;
-  margin: 2px 0;
-  user-select: none;
-  transition: color 0.2s ease;
-}
-
-.arrow-btn:hover {
-  color: #003c2f;
-}
-
-.time-value {
-  background-color: #003c2f;
-  color: #fff;
-  font-weight: 600;
-  font-size: 14px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  text-align: center;
-  min-width: 32px;
-}
-
-.time-unit-label {
-  font-size: 10px;
-  color: #888;
-  margin-top: 2px;
-  user-select: none;
-}
-
-.time-small {
-  font-size: 9px;
-  color: #999;
-  margin-top: 4px;
-  user-select: none;
-  text-align: center;
-}
-
-.booking-input {
-  width: 100%;
-  padding: 0.5rem;
-  margin-top: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.submit-button {
-  background-color: #003c2f;
-  color: white;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
-  margin-top: 2rem;
-  cursor: pointer;
-  font-size: 14px;
-}
+/* Remove all custom styling and let Tailwind handle responsiveness */
+/* Keep only calendar-specific styles that are necessary */
 
 .react-calendar {
   width: 100% !important;
-  height: auto !important;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: white;
-  padding: 1rem;
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  font-family: inherit !important;
+  background: white !important;
+  padding: 1rem !important;
 }
 
-/* Selected date styling - when user clicks a date (highest priority) */
+/* Selected date styling */
 .react-calendar__tile--active {
-  background-color: #003c2f !important;  
+  background-color: #065f46 !important;  
   color: white !important;               
   border-radius: 50% !important;        
 }
 
-/* Remove default "today" styling - no special appearance for today's date when NOT selected */
+/* Remove default "today" styling */
 .react-calendar__tile--now {
   background-color: transparent !important;  
   color: inherit !important;                  
@@ -181,28 +29,28 @@
   border: none !important;
 }
 
-/* When today is selected, show the selected styling (overrides the --now class) */
+/* When today is selected */
 .react-calendar__tile--now.react-calendar__tile--active {
-  background-color: #003c2f !important;
+  background-color: #065f46 !important;
   color: white !important;
   border-radius: 50% !important;
 }
 
-/* Clean hover effect - simple background color change only */
+/* Hover effect */
 .react-calendar__tile:hover {
-  background-color: #e8f5e8 !important;
-  color: #003c2f !important;
+  background-color: #ecfdf5 !important;
+  color: #065f46 !important;
   border-radius: 4px !important;
 }
 
-/* Ensure active state takes priority over hover */
+/* Active state takes priority over hover */
 .react-calendar__tile--active:hover {
-  background-color: #003c2f !important;
+  background-color: #065f46 !important;
   color: white !important;
   border-radius: 50% !important;
 }
 
-/* Remove any conflicting styles for better performance */
+/* Clean tile styling */
 .react-calendar__tile {
   transition: none !important;
   border: none !important;
@@ -210,4 +58,21 @@
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
+}
+
+/* Mobile responsiveness for calendar */
+@media (max-width: 640px) {
+  .react-calendar {
+    padding: 0.75rem !important;
+  }
+  
+  .react-calendar__tile {
+    padding: 8px !important;
+    font-size: 14px !important;
+  }
+  
+  .react-calendar__navigation__label,
+  .react-calendar__navigation__arrow {
+    font-size: 14px !important;
+  }
 }

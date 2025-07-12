@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import "../styles/DateBooking.css";
-import LeftSidebar from './LeftSidebar';
 import Popup from "./Popup";
 import { FaChevronUp, FaChevronDown } from "react-icons/fa";
 import { useNavigate } from "react-router-dom"; 
@@ -11,17 +9,31 @@ import { jwtDecode } from "jwt-decode";
 export default function DateBooking() {
   const navigate = useNavigate();
 
+  // Prevent scrolling when component mounts
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalDocumentOverflow = document.documentElement.style.overflow;
+    
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.documentElement.style.overflow = originalDocumentOverflow;
+    };
+  }, []);
+
   // States used for date/time/floor selection and popup messages
-  const [date, setDate] = useState(new Date());// Selected booking date
-  const [entryHour, setEntryHour] = useState(9);// Entry time hour (0-23)
-  const [entryMinute, setEntryMinute] = useState(0);// Entry time minute (0-59)
-  const [exitHour, setExitHour] = useState(10);// Exit time hour (0-23)
-  const [exitMinute, setExitMinute] = useState(0);// Exit time minute (0-59)
-  const [floor, setFloor] = useState("");// Selected floor number
-  const [showPopup, setShowPopup] = useState(false);// Popup visibility for messages
-  const [message, setMessage] = useState("");// Popup message content
-  const [popupType, setPopupType] = useState("error"); // Popup type: "error" or "success"
-  const [user, setUser] = useState(''); // Store decoded username from JWT
+  const [date, setDate] = useState(new Date());
+  const [entryHour, setEntryHour] = useState(9);
+  const [entryMinute, setEntryMinute] = useState(0);
+  const [exitHour, setExitHour] = useState(10);
+  const [exitMinute, setExitMinute] = useState(0);
+  const [floor, setFloor] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
+  const [message, setMessage] = useState("");
+  const [popupType, setPopupType] = useState("error");
+  const [user, setUser] = useState('');
 
   // Decode JWT to get the logged-in user's username
   useEffect(() => {
@@ -59,9 +71,8 @@ export default function DateBooking() {
 
     // Format date consistently - use local date string in YYYY-MM-DD format
     const selectedDate = new Date(date);
-    selectedDate.setHours(0, 0, 0, 0); // Set to start of day
+    selectedDate.setHours(0, 0, 0, 0);
     
-    // Convert to YYYY-MM-DD format (avoids timezone issues)
     const year = selectedDate.getFullYear();
     const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
     const day = String(selectedDate.getDate()).padStart(2, '0');
@@ -76,7 +87,7 @@ export default function DateBooking() {
     // Navigate to FloorLayout with booking info + user
     navigate("/floorlayout", {
       state: {
-        date: formattedDate, // Send YYYY-MM-DD format instead of ISO string
+        date: formattedDate,
         entryTime: `${pad(entryHour)}:${pad(entryMinute)}`,
         exitTime: `${pad(exitHour)}:${pad(exitMinute)}`,
         floor,
@@ -98,27 +109,52 @@ export default function DateBooking() {
     const decMinute = () => setMinute(minute === 0 ? 59 : minute - 1);
 
     return (
-      <div className="time-picker">
-        <div className="time-label">{label}</div>
-        <div className="time-control">
-          <div className="time-unit">
-            <button onClick={incHour} className="arrow-btn" type="button">
-              <FaChevronUp />
+      <div className="flex flex-col items-center space-y-2">
+        <div className="text-sm font-semibold text-gray-700 tracking-wider uppercase">
+          {label}
+        </div>
+        <div className="flex items-center space-x-2">
+          {/* Hour Control */}
+          <div className="flex flex-col items-center">
+            <button 
+              onClick={incHour} 
+              className="p-1 hover:text-green-800 transition-colors"
+              type="button"
+            >
+              <FaChevronUp className="w-3 h-3" />
             </button>
-            <div className="time-value">{pad(hour)}</div>
-            <div className="time-unit-label">h</div>
-            <button onClick={decHour} className="arrow-btn" type="button">
-              <FaChevronDown />
+            <div className="bg-green-800 text-white font-semibold text-sm px-2.5 py-1.5 rounded min-w-[32px] text-center">
+              {pad(hour)}
+            </div>
+            <div className="text-sm text-gray-500 mt-1">h</div>
+            <button 
+              onClick={decHour} 
+              className="p-1 hover:text-green-800 transition-colors"
+              type="button"
+            >
+              <FaChevronDown className="w-3 h-3" />
             </button>
           </div>
-          <div className="time-unit">
-            <button onClick={incMinute} className="arrow-btn" type="button">
-              <FaChevronUp />
+          
+          {/* Minute Control */}
+          <div className="flex flex-col items-center">
+            <button 
+              onClick={incMinute} 
+              className="p-1 hover:text-green-800 transition-colors"
+              type="button"
+            >
+              <FaChevronUp className="w-3 h-3" />
             </button>
-            <div className="time-value">{pad(minute)}</div>
-            <div className="time-unit-label">m</div>
-            <button onClick={decMinute} className="arrow-btn" type="button">
-              <FaChevronDown />
+            <div className="bg-green-800 text-white font-semibold text-sm px-2.5 py-1.5 rounded min-w-[32px] text-center">
+              {pad(minute)}
+            </div>
+            <div className="text-sm text-gray-500 mt-1">m</div>
+            <button 
+              onClick={decMinute} 
+              className="p-1 hover:text-green-800 transition-colors"
+              type="button"
+            >
+              <FaChevronDown className="w-3 h-3" />
             </button>
           </div>
         </div>
@@ -126,70 +162,182 @@ export default function DateBooking() {
     );
   };
 
-  // Main component JSX rendering
+  // Main component JSX rendering with no scroll and proper viewport fitting
   return (
-    <LeftSidebar>
-      <div className="booking-page-layout">
-        <div className="booking-middle-section">
-          <h2 className="booking-title">Book your Seat</h2>
-          <p className="sub-title">Choose Date and Time</p>
+    <div className="w-full h-screen bg-gray-50 flex items-center justify-center overflow-hidden p-6">
+      <div className="w-full max-w-md mx-auto flex flex-col max-h-screen overflow-hidden">
+        {/* Title Section */}
+        <div className="text-center mb-6 flex-shrink-0">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-3">
+            Book your Seat
+          </h2>
+          <p className="text-base text-gray-600">
+            Choose Date and Time
+          </p>
+        </div>
 
-          <div className="booking-boxes">
-            <div className="booking-card">
-              <div className="selected-date-display">
-                Selected Date: <strong>{date.toDateString()}</strong>
-              </div>
+        {/* Main Booking Card - optimized for no scroll */}
+        <div className="bg-white rounded-lg shadow-md p-6 flex flex-col space-y-4 flex-1 min-h-0 overflow-hidden">
+          {/* Selected Date Display */}
+          <div className="text-center text-sm font-medium text-gray-700 bg-gray-50 rounded-lg py-3 px-4 flex-shrink-0">
+            Selected Date: <span className="font-semibold text-gray-900">{date.toDateString()}</span>
+          </div>
 
-              <Calendar onChange={setDate} value={date} />
+          {/* Calendar Section - brought closer to selected date */}
+          <div className="calendar-container flex-shrink-0 -mt-2">
+            <style jsx="true">{`
+              .calendar-container .react-calendar {
+                width: 100% !important;
+                max-width: 320px !important;
+                margin: 0 auto !important;
+                border: none !important;
+                border-radius: 8px !important;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+                font-family: inherit !important;
+                background: white !important;
+                padding: 0.75rem !important;
+                font-size: 13px !important;
+                height: auto !important;
+                max-height: 260px !important;
+                overflow: hidden !important;
+              }
+              
+              .calendar-container .react-calendar__navigation {
+                margin-bottom: 0.5rem !important;
+                height: 32px !important;
+              }
+              
+              .calendar-container .react-calendar__navigation button {
+                font-size: 13px !important;
+                padding: 0.25rem !important;
+                min-width: 28px !important;
+                height: 28px !important;
+              }
+              
+              .calendar-container .react-calendar__month-view__weekdays {
+                font-size: 11px !important;
+                font-weight: 600 !important;
+                margin-bottom: 0.5rem !important;
+              }
+              
+              .calendar-container .react-calendar__month-view__weekdays__weekday {
+                padding: 0.25rem !important;
+              }
+              
+              .calendar-container .react-calendar__tile--active {
+                background-color: #065f46 !important;  
+                color: white !important;               
+                border-radius: 50% !important;        
+              }
+              
+              .calendar-container .react-calendar__tile--now {
+                background-color: transparent !important;  
+                color: inherit !important;                  
+                font-weight: normal !important;
+                background: none !important;
+                border: none !important;
+              }
+              
+              .calendar-container .react-calendar__tile--now.react-calendar__tile--active {
+                background-color: #065f46 !important;
+                color: white !important;
+                border-radius: 50% !important;
+              }
+              
+              .calendar-container .react-calendar__tile:hover {
+                background-color: #ecfdf5 !important;
+                color: #065f46 !important;
+                border-radius: 4px !important;
+              }
+              
+              .calendar-container .react-calendar__tile--active:hover {
+                background-color: #065f46 !important;
+                color: white !important;
+                border-radius: 50% !important;
+              }
+              
+              .calendar-container .react-calendar__tile {
+                transition: none !important;
+                border: none !important;
+                padding: 0.25rem !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                font-size: 12px !important;
+                height: 28px !important;
+                max-width: 28px !important;
+                margin: 1px !important;
+              }
+              
+              .calendar-container .react-calendar__month-view__days {
+                gap: 2px !important;
+              }
+            `}</style>
+            <Calendar onChange={setDate} value={date} />
+          </div>
 
-              <div className="time-picker-row" style={{ marginTop: "1rem" }}>
-                <TimePicker
-                  label="ENTRY TIME"
-                  hour={entryHour}
-                  minute={entryMinute}
-                  setHour={setEntryHour}
-                  setMinute={setEntryMinute}
-                />
-                <TimePicker
-                  label="EXIT TIME"
-                  hour={exitHour}
-                  minute={exitMinute}
-                  setHour={setExitHour}
-                  setMinute={setExitMinute}
-                />
-              </div>
-
-              <label className="time-label" htmlFor="floor-select">Choose Floor</label>
-              <select
-                id="floor-select"
-                value={floor}
-                onChange={(e) => setFloor(e.target.value)}
-                className="booking-input"
-              >
-                <option value="">Choose floor</option>
-                {[...Array(32)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    Floor {i + 1}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                className="submit-button"
-                onClick={handleSubmit}
-                style={{ marginTop: "1.5rem" }}
-                type="button"
-              >
-                DONE
-              </button>
+          {/* Time Picker Section - reduced spacing */}
+          <div className="flex-shrink-0">
+            <div className="grid grid-cols-2 gap-6">
+              <TimePicker
+                label="ENTRY TIME"
+                hour={entryHour}
+                minute={entryMinute}
+                setHour={setEntryHour}
+                setMinute={setEntryMinute}
+              />
+              <TimePicker
+                label="EXIT TIME"
+                hour={exitHour}
+                minute={exitMinute}
+                setHour={setExitHour}
+                setMinute={setExitMinute}
+              />
             </div>
           </div>
 
-          {showPopup && (
-            <Popup message={message} onClose={handleClosePopup} type={popupType} />
-          )}
+          {/* Floor Selection - reduced spacing */}
+          <div className="flex-shrink-0">
+            <label 
+              className="block text-sm font-semibold text-gray-700 tracking-wider uppercase text-center mb-3"
+              htmlFor="floor-select"
+            >
+              Choose Floor
+            </label>
+            <select
+              id="floor-select"
+              value={floor}
+              onChange={(e) => setFloor(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+            >
+              <option value="">Choose floor</option>
+              {[...Array(32)].map((_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  Floor {i + 1}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Submit Button - moved higher */}
+          <div className="flex-shrink-0">
+            <button
+              className="w-full bg-green-800 hover:bg-green-900 text-white font-semibold py-3 px-4 rounded-md transition-colors text-sm focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              onClick={handleSubmit}
+              type="button"
+            >
+              DONE
+            </button>
+          </div>
         </div>
+
+        {/* Popup with backdrop blur */}
+        {showPopup && (
+          <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm z-50">
+            <Popup message={message} onClose={handleClosePopup} type={popupType} />
+          </div>
+        )}
       </div>
-    </LeftSidebar>
+    </div>
   );
 }
