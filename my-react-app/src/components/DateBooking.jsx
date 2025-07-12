@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import Popup from "./Popup";
 import { FaChevronUp, FaChevronDown } from "react-icons/fa";
 import { useNavigate } from "react-router-dom"; 
 import { jwtDecode } from "jwt-decode";
@@ -32,7 +31,6 @@ export default function DateBooking() {
   const [floor, setFloor] = useState("");
   const [showPopup, setShowPopup] = useState(false);
   const [message, setMessage] = useState("");
-  const [popupType, setPopupType] = useState("error");
   const [user, setUser] = useState('');
 
   // Decode JWT to get the logged-in user's username
@@ -51,25 +49,83 @@ export default function DateBooking() {
   // Helper to pad numbers <10 with a leading zero for display
   const pad = (num) => (num < 10 ? "0" + num : num);
 
+  // NEW: Validate booking date and time
+  const validateBookingDateTime = () => {
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Check if date is in the past
+    if (selectedDate < today) {
+      return {
+        isValid: false,
+        message: "Can't Book for past dates"
+      };
+    }
+    
+    // Check if booking time is too close (for today's bookings)
+    if (selectedDate.getTime() === today.getTime()) {
+      const selectedDateTime = new Date(`${selectedDate.toISOString().split('T')[0]}T${pad(entryHour)}:${pad(entryMinute)}:00`);
+      const now = new Date();
+      const oneHourFromNow = new Date(now.getTime() + (60 * 60 * 1000)); // 1 hour from now
+      
+      if (selectedDateTime < oneHourFromNow) {
+        return {
+          isValid: false,
+          message: "Bookings must be made at least 1 hour in advance"
+        };
+      }
+    }
+    
+    // Check business hours (optional)
+    if (entryHour < 6 || entryHour >= 22) {
+      return {
+        isValid: false,
+        message: "Bookings are only allowed between 6:00 AM and 10:00 PM"
+      };
+    }
+    
+    // Check weekend (optional - uncomment if needed)
+    // const dayOfWeek = selectedDate.getDay();
+    // if (dayOfWeek === 0 || dayOfWeek === 6) {
+    //   return {
+    //     isValid: false,
+    //     message: "Weekend bookings are not allowed"
+    //   };
+    // }
+    
+    return { isValid: true };
+  };
+
   // Validate inputs and navigate to FloorLayout page with booking params
   const handleSubmit = () => {
+    // Basic field validation first
     if (!date || floor === "") {
       setMessage("Please select a date and floor.");
-      setPopupType("error");
       setShowPopup(true);
       return;
     }
 
+    // Time logic validation
     const entryTotal = entryHour * 60 + entryMinute;
     const exitTotal = exitHour * 60 + exitMinute;
     if (exitTotal <= entryTotal) {
       setMessage("Exit time must be after entry time.");
-      setPopupType("error");
       setShowPopup(true);
       return;
     }
 
-    // Format date consistently - use local date string in YYYY-MM-DD format
+    // NEW: Date and time validation
+    const dateTimeValidation = validateBookingDateTime();
+    if (!dateTimeValidation.isValid) {
+      setMessage(dateTimeValidation.message);
+      setShowPopup(true);
+      return; // Stop here - don't proceed to FloorLayout
+    }
+
+    // All validations passed - format date and navigate
     const selectedDate = new Date(date);
     selectedDate.setHours(0, 0, 0, 0);
     
@@ -78,7 +134,7 @@ export default function DateBooking() {
     const day = String(selectedDate.getDate()).padStart(2, '0');
     const formattedDate = `${year}-${month}-${day}`;
     
-    console.log("📅 DateBooking - Sending date:", {
+    console.log("📅 DateBooking - Validation passed, sending date:", {
       originalDate: date,
       formattedDate: formattedDate,
       selectedDate: selectedDate
@@ -331,10 +387,39 @@ export default function DateBooking() {
           </div>
         </div>
 
-        {/* Popup with backdrop blur */}
+        {/* Updated Popup with better styling */}
         {showPopup && (
-          <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm z-50">
-            <Popup message={message} onClose={handleClosePopup} type={popupType} />
+          <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 transform transition-all">
+              {/* Icon and Title */}
+              <div className="text-center mb-4">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-3">
+                  <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Booking Error
+                </h3>
+              </div>
+              
+              {/* Message */}
+              <div className="text-center mb-6">
+                <p className="text-sm text-gray-600">
+                  {message}
+                </p>
+              </div>
+              
+              {/* Button */}
+              <div className="flex justify-center">
+                <button
+                  onClick={handleClosePopup}
+                  className="w-full bg-green-800 hover:bg-green-900 text-white font-semibold py-2 px-4 rounded-md transition-colors text-sm focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
