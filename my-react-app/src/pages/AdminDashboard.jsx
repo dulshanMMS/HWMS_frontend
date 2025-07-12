@@ -222,7 +222,7 @@ const AdminDashboard = () => {
               setAnnouncement={setAnnouncement}
               onSend={handleSendAnnouncement}
             />
-            <TodayTeamStats topTeams={teamBookings} teamColors={teamColors} />
+            <TodayTeamStats topTeams={teamBookings} />
           </div>
 
           <div className="space-y-4">
