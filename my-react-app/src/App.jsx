@@ -5,24 +5,32 @@ import 'react-toastify/dist/ReactToastify.css';
 
 // Component imports
 import ParkingHistory from "./pages/ParkingHistory";
-import AdminDashboard from './pages/AdminDashboard';
-import AdminNotification from './pages/AdminNotification';
-import AdminParking from './pages/AdminParking';
-import AdminViewReports from './pages/AdminViewReports';
-import BookingHistory from './pages/BookingHistory';
-import Login from './pages/Login';
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminNotification from "./pages/AdminNotification";
+import AdminParking from "./pages/AdminParking";
+import AdminViewReports from "./pages/AdminViewReports";
+
+import AboutUsPage from "./pages/AboutUsPage";
+import BookingHistory from "./pages/BookingHistory";
+import Login from "./pages/Login";
 import BookingPage from './pages/DateBooking';
 import FloorLayout from './pages/FloorLayout';
 import ErrorBoundary from './components/ErrorBoundary';
-import ParkingBooking from './pages/ParkingBooking';
-import ResetPassword from './pages/ResetPassword';
-import UserDashboard from './pages/UserDashboard';
-import UserNotification from './pages/UserNotification';
+import ParkingBooking from "./pages/ParkingBooking";
+import ResetPassword from "./pages/ResetPassword";
+import UserDashboard from "./pages/UserDashboard";
+import UserNotification from "./pages/UserNotification";
+
+import Profile from "./pages/Profile";
 
 const App = () => {
   const location = useLocation();
 
-  const greenPages = ["/user/parking-booking", "/history"];
+  // List of routes that need simple green background (without center)
+  const greenPages = ["/user/parking-booking", "/history", "/user/AboutUsPage"]; //  "/history"
+
+  // Check if current page matches
+
   const isSimpleGreenPage = greenPages.includes(location.pathname);
 
   const containerClass = isSimpleGreenPage
@@ -44,7 +52,8 @@ const App = () => {
         <Route path="/admin/adminparking" element={<AdminParking />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/user/notifications" element={<UserNotification />} />
-        <Route path="/booking-history" element={<BookingHistory />} />
+        <Route path="/user/AboutUsPage" element={<AboutUsPage />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
 
       {/* Toast Container for notifications */}

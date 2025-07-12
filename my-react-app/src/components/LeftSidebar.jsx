@@ -113,10 +113,10 @@ const LeftSidebar = ({ children }) => {
           <h3 className="text-gray-400 text-sm uppercase mb-3">Account</h3>
           <ul>
             <SidebarLink
-              to="/AdminNotification"
+              to="/user/notifications"
               icon={<FaBell />}
               label="Notifications"
-              active={isActive("/AdminNotification")}
+              active={isActive("/user/notificationsn")}
             />
 
             <SidebarLink to="/profile" icon={<FaUser />} label="Profile" />

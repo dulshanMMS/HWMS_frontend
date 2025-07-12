@@ -37,10 +37,13 @@ const AdminParking = () => {
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       {/* Left Side Navigation - AdminSidebar */}
-      <div className="w-64 h-full bg-green-800 text-white">
+
+      {/*<div className="w-64 h-full bg-green-800 text-white">
         <AdminSidebar />
-      </div>
+      </div>*/}
       
+      <AdminSidebar />
+
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto bg-gray-100">
         <div className="p-6 md:p-10">
