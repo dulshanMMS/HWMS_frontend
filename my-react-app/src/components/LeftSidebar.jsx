@@ -61,9 +61,10 @@ const LeftSidebar = ({ children }) => {
           <ul>
             <SidebarLink to="/user" icon={<FaHome />} label="Dashboard" />
             <SidebarLink
-              to="/seat-booking"
+              to="/datebooking"
               icon={<FaExchangeAlt />}
               label="Seat Booking"
+              //active={isActive("/datebooking")}
             />
             <SidebarLink
               to="/user/parking-booking"
@@ -73,7 +74,7 @@ const LeftSidebar = ({ children }) => {
 
             {/* Seat Booking History with layered icons */}
             <SidebarLink
-              to="/seat-booking"
+              to="/seat-booking-history"
               icon={
                 <div className="relative w-4 h-4">
                   {/* Larger faded undo icon */}
@@ -87,7 +88,7 @@ const LeftSidebar = ({ children }) => {
 
             {/* Parking Booking History with layered icons */}
             <SidebarLink
-              to="/parking-booking"
+              to="/parking-booking-history"
               icon={
                 <div className="relative w-4 h-4">
                   <FaUndo className="absolute opacity-30 text-3xl -left-2 -top-2" />

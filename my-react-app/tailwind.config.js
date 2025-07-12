@@ -5,6 +5,26 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   safelist: [
+    'bg-red-500',
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-yellow-500',
+    'bg-purple-500',
+    'bg-pink-500',
+    'bg-indigo-500',
+    'bg-teal-500',
+    'bg-orange-500',
+    'bg-cyan-500',
+    'bg-lime-500',
+    'bg-emerald-500',
+    'bg-rose-500',
+    'bg-violet-500',
+    'bg-amber-500',
+    'bg-stone-500',
+    'bg-gray-300', // for fallback/default
+  ],
+
+  safelist: [
     {
       pattern: /bg-(red|blue|green|yellow|purple|pink|indigo|teal|orange|cyan|lime|emerald|rose|violet|amber|stone|gray|slate|neutral|zinc|sky|fuchsia|brown|maroon|coffee|wine|darkorange|cream|ivory)-(100|200|300|400|500|600|700|800|900)/,
     },
@@ -15,6 +35,16 @@ export default {
   ],
   theme: {
     extend: {
+      animation: {
+        'pulse-scale': 'pulse-scale 0.3s ease-in-out',
+      },
+      keyframes: {
+        'pulse-scale': {
+          '0%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.1)' },
+          '100%': { transform: 'scale(1)' },
+        },
+      },
       colors: {
         brown: {
           100: '#f3e5e1',
@@ -74,6 +104,7 @@ export default {
         '18': '4.5rem',
         '88': '22rem',
       },
+
     },
   },
   plugins: [],
