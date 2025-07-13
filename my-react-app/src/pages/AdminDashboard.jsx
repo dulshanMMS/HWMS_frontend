@@ -9,7 +9,7 @@ import AnnouncementBox from "../components/AdminDashboard/AnnouncementBox";
 import BookingChart from "../components/AdminDashboard/BookingChart";
 import EventCalendar from "../components/AdminDashboard/EventCalendar";
 import EventModal from "../components/AdminDashboard/EventModal";
-import ProfileSummary from "../components/AdminDashboard/ProfileSummary";
+import ProfileGreeting from "../components/profilesidebar/ProfileGreeting";
 import QuickStats from "../components/AdminDashboard/QuickStats";
 import TodayTeamStats from "../components/AdminDashboard/TodayTeamStats";
 import TeamColorPalette from "../components/shared/TeamColorPalette";
@@ -36,19 +36,19 @@ const AdminDashboard = () => {
   const [teamColors, setTeamColors] = useState({});
   const [parkingStats, setParkingStats] = useState([]);
   const [seatingStats, setSeatingStats] = useState([]);
-  const [avatar, setAvatar] = useState("https://i.pravatar.cc/150?img=13");
+  const [userProfile, setUserProfile] = useState(null);
 
   const handleSendAnnouncement = async () => {
     if (!announcement.trim()) return alert("Please enter an announcement.");
 
-    const token = localStorage.getItem("token"); // Get the token
+    const token = localStorage.getItem("token");
 
     try {
       const res = await fetch("/api/notifications/send-bulk", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`, // Send token to backend
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({ message: announcement }),
       });
@@ -57,7 +57,7 @@ const AdminDashboard = () => {
 
       if (res.ok) {
         toast.success("Announcement sent to all users!");
-        setAnnouncement(""); // Clear the text area
+        setAnnouncement("");
       } else {
         toast.error(data?.message || "Failed to send announcement.");
       }
@@ -139,8 +139,8 @@ const AdminDashboard = () => {
         alert("Event added!");
         setShowEventModal(false);
         setNewEvent({ title: "", description: "", time: "" });
-        fetchAllEvents();
-        fetchEventsForDate(date);
+        await fetchAllEvents();
+        await fetchEventsForDate(date);
       }
     } catch (err) {
       console.error("Error adding event:", err);
@@ -155,8 +155,8 @@ const AdminDashboard = () => {
       const res = await axios.delete(`/api/events/${eventId}`);
       if (res.data.success) {
         alert("Event deleted");
-        fetchAllEvents();
-        fetchEventsForDate(date);
+        await fetchAllEvents();
+        await fetchEventsForDate(date);
       } else {
         alert("Failed to delete event");
       }
@@ -191,19 +191,48 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch("http://localhost:5000/api/user/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Profile fetch failed:", data);
+        return;
+      }
+
+      setUserProfile({
+        firstName: data.firstName || "User",
+        profilePhoto: data.profileImage || null,
+      });
+
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+    }
+  };
+
   useEffect(() => {
     const fetchCoreData = async () => {
       await fetchTeamBookings();
       await fetchBookingCount();
       await fetchEventsForDate(date);
       await fetchTodayEvents();
+      await fetchAllEvents(); 
     };
 
     fetchCoreData();
-    fetchFloorBookingStats(); 
-    fetchTeamColors();        
+    fetchFloorBookingStats();
+    fetchTeamColors();
+    fetchUserProfile();
 
-    const interval = setInterval(fetchCoreData, 10000);
+    const interval = setInterval(fetchCoreData, 30000); // Refresh every 30s
     return () => clearInterval(interval);
   }, [date]);
 
@@ -241,7 +270,7 @@ const AdminDashboard = () => {
           </div>
 
           <div className="space-y-4">
-            <ProfileSummary avatar={avatar} />
+            <ProfileGreeting userProfile={userProfile} />
             <QuickStats todayBookingCount={todayBookingCount} />
             <BookingChart parkingData={parkingStats} seatingData={seatingStats} />
           </div>
