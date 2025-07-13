@@ -13,6 +13,7 @@ import AdminViewReports from "./pages/AdminViewReports";
 import AboutUsPage from "./pages/AboutUsPage";
 import BookingHistory from "./pages/BookingHistory";
 import Login from "./pages/Login";
+import SeatHistory from "./pages/SeatHistory";
 import BookingPage from './pages/DateBooking';
 import FloorLayout from './pages/FloorLayout';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -48,6 +49,7 @@ const App = () => {
         <Route path="/AdminNotification" element={<AdminNotification />} />
         <Route path="/admin-reports" element={<AdminViewReports />} />
         <Route path="/parkinghistory" element={<ParkingHistory />} />
+        <Route path="/seathistory" element={<SeatHistory />} />
         <Route path="/user/parking-booking" element={<ParkingBooking />} />
         <Route path="/admin/adminparking" element={<AdminParking />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />

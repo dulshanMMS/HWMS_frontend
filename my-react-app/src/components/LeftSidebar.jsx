@@ -59,22 +59,28 @@ const LeftSidebar = ({ children }) => {
         <div className="mb-6">
           <h3 className="text-gray-400 text-sm uppercase mb-3">Quick Access</h3>
           <ul>
-            <SidebarLink to="/user" icon={<FaHome />} label="Dashboard" />
+            <SidebarLink 
+              to="/user" 
+              icon={<FaHome />} 
+              label="Dashboard" 
+              active={isActive("/user")}
+            />
             <SidebarLink
               to="/datebooking"
               icon={<FaExchangeAlt />}
               label="Seat Booking"
-              //active={isActive("/datebooking")}
+              active={isActive("/datebooking")}
             />
             <SidebarLink
               to="/user/parking-booking"
               icon={<FaCar />}
               label="Parking Booking"
+              active={isActive("/user/parking-booking")}
             />
 
-            {/* Seat Booking History with layered icons */}
+            {/* Seat Booking History with layered icons - UPDATED ROUTE */}
             <SidebarLink
-              to="/seat-booking-history"
+              to="/seathistory"
               icon={
                 <div className="relative w-4 h-4">
                   {/* Larger faded undo icon */}
@@ -84,11 +90,12 @@ const LeftSidebar = ({ children }) => {
                 </div>
               }
               label="Seat Booking History"
+              active={isActive("/seathistory")}
             />
 
-            {/* Parking Booking History with layered icons */}
+            {/* Parking Booking History with layered icons - UPDATED ROUTE */}
             <SidebarLink
-              to="/parking-booking-history"
+              to="/parkinghistory"
               icon={
                 <div className="relative w-4 h-4">
                   <FaUndo className="absolute opacity-30 text-3xl -left-2 -top-2" />
@@ -96,12 +103,14 @@ const LeftSidebar = ({ children }) => {
                 </div>
               }
               label="Parking Booking History"
+              active={isActive("/parkinghistory")}
             />
 
             <SidebarLink
               to="/help"
               icon={<FaQuestionCircle />}
               label="Help Section"
+              active={isActive("/help")}
             />
             {/* Commented out Booking History for potential future use */}
             {/* <SidebarLink to="/booking-history" icon={<FaHistory />} label="Booking History" /> */}
@@ -116,10 +125,15 @@ const LeftSidebar = ({ children }) => {
               to="/user/notifications"
               icon={<FaBell />}
               label="Notifications"
-              active={isActive("/user/notificationsn")}
+              active={isActive("/user/notifications")}
             />
 
-            <SidebarLink to="/profile" icon={<FaUser />} label="Profile" />
+            <SidebarLink 
+              to="/profile" 
+              icon={<FaUser />} 
+              label="Profile" 
+              active={isActive("/profile")}
+            />
           </ul>
         </div>
 
