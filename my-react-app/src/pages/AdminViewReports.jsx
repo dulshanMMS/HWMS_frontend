@@ -12,6 +12,8 @@ import DailyTrendsChart from '../components/Reports/DailyTrendsChart';
 import FloorUsageChart from '../components/Reports/FloorUsageChart';
 import MonthlyStatsChart from '../components/Reports/MonthlyStatsChart';
 import RecentBookingsTable from '../components/Reports/RecentBookingsTable';
+import UserBookingTable from '../components/Reports/UserBookingTable';
+import TeamLookupTable from '../components/Reports/TeamLookupTable';
 
 import TeamColorPalette from '../components/shared/TeamColorPalette';
 import api from '../config/api';
@@ -175,25 +177,119 @@ const handleSearch = async () => {
     });
   };
   
-  //Creates and downloads an Excel file with summary analytics data
+  
   const downloadExcel = () => {
     const workbook = XLSX.utils.book_new();
-    const worksheetData = [
+    const now = new Date();
+  
+    // 1. Info Sheet (Download timestamp + Applied date range)
+    const [appliedStart, appliedEnd] = appliedDateRange;
+  
+    const infoSheetData = [
+      ['Downloaded At', now.toLocaleString()],
+      ['Date Range Applied', appliedStart && appliedEnd
+        ? `${appliedStart.toLocaleDateString()} to ${appliedEnd.toLocaleDateString()}`
+        : 'No date range applied'],
+    ];
+    const infoSheet = XLSX.utils.aoa_to_sheet(infoSheetData);
+    XLSX.utils.book_append_sheet(workbook, infoSheet, 'Info');
+  
+    // 2. Summary Stats Sheet
+    const summarySheetData = [
       ['Total Bookings', analyticsData?.overallStats?.totalBookings || 0],
       ['Parking Bookings', analyticsData?.overallStats?.totalParking || 0],
       ['Seat Bookings', analyticsData?.overallStats?.totalSeats || 0],
-      //
-      //
-      //
-      // Add more data as needed
     ];
-    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+    const summarySheet = XLSX.utils.aoa_to_sheet(summarySheetData);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+  
+    // 3. Daily Trends Sheet
+    const dailyTrendsSheetData = [
+      ['Date', 'Seat Bookings', 'Parking Bookings'],
+      ...(analyticsData?.dailyTrends || []).map(d => [
+        new Date(d._id.date).toLocaleDateString(),
+        d.seatsCount,
+        d.parkingCount
+      ])
+    ];
+    const dailySheet = XLSX.utils.aoa_to_sheet(dailyTrendsSheetData);
+    XLSX.utils.book_append_sheet(workbook, dailySheet, 'Daily Trends');
+  
+    // 4. Monthly Stats Sheet
+    const monthlyStatsSheetData = [
+      ['Month', 'Seat Bookings', 'Parking Bookings'],
+      ...(analyticsData?.monthlyStats || []).map(m => [
+        m._id.month,
+        m.seatsCount,
+        m.parkingCount
+      ])
+    ];
+    const monthlySheet = XLSX.utils.aoa_to_sheet(monthlyStatsSheetData);
+    XLSX.utils.book_append_sheet(workbook, monthlySheet, 'Monthly Stats');
+  
+    // 5. All/Filtered Bookings Sheet
+    const filteredBookings = getFloorUsageBookings();
+    const bookingsSheetData = [
+      [
+        'Username',
+        'Full Name',
+        'Team',
+        'Booking Type',
+        'Date',
+        'Entry Time',
+        'Exit Time',
+        'Slot Number',
+        'Floor'
+      ],
+      ...filteredBookings.map(b => [
+        b.user?.username || 'N/A',
+        b.user?.fullName || 'N/A',
+        b.team || 'No Team',
+        b.type,
+        new Date(b.date).toLocaleDateString(),
+        b.entryTime,
+        b.exitTime,
+        b.slot?.slotNumber || '',
+        b.slot?.floor || ''
+      ])
+    ];
+    const bookingsSheet = XLSX.utils.aoa_to_sheet(bookingsSheetData);
+    XLSX.utils.book_append_sheet(workbook, bookingsSheet, 'Bookings');
+  
+    // 6. Booking Lookup (if admin searched by user or team)
+    if (userBookings) {
+      const lookupSheetData = [
+        ['Username', userBookings.user?.username || ''],
+        ['Full Name', userBookings.user?.name || ''],
+        ['Team', userBookings.user?.team || ''],
+        ['Total Seat Bookings', userBookings.seatCount || 0],
+        ['Total Parking Bookings', userBookings.parkingCount || 0],
+        ['Total Bookings', (userBookings.seatCount || 0) + (userBookings.parkingCount || 0)],
+        [],
+        ['Date', 'Entry Time', 'Exit Time', 'Type', 'Slot Number', 'Floor']
+      ];
+  
+      (userBookings.bookings || []).forEach(b => {
+        lookupSheetData.push([
+          new Date(b.date).toLocaleDateString(),
+          b.entryTime,
+          b.exitTime,
+          b.type,
+          b.slotNumber,
+          b.floor
+        ]);
+      });
+  
+      const lookupSheet = XLSX.utils.aoa_to_sheet(lookupSheetData);
+      XLSX.utils.book_append_sheet(workbook, lookupSheet, 'Booking Lookup');
+    }
+  
+    // 7. Export the Excel file
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(data, 'AdminViewReports.xlsx');
+    saveAs(data, `AdminViewReports_${now.toISOString().slice(0, 10)}.xlsx`);
   };
-    
+  
     //Loading & Error States
   const renderContent = () => {
     if (loading) {
@@ -330,38 +426,28 @@ const handleSearch = async () => {
               {teamStatsError}
             </div>
           )}
-          {teamStats && (
-            <div className="mt-6">
-              <h3 className="font-bold mb-2">Team Stats for "{searchQuery}" (Previous Month)</h3>
-              <table className="min-w-full bg-white border rounded shadow">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-2 border">Team Members</th>
-                    <th className="px-4 py-2 border">Total Seat Bookings</th>
-                    <th className="px-4 py-2 border">Total Parking Bookings</th>
-                    <th className="px-4 py-2 border">Total Team Bookings</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="px-4 py-2 border">
-                      {teamStats.members && teamStats.members.length > 0
-                        ? teamStats.members.join(', ')
-                        : 'No members found'}
-                    </td>
-                    <td className="px-4 py-2 border">{teamStats.seatBookings}</td>
-                    <td className="px-4 py-2 border">{teamStats.parkingBookings}</td>
-                    <td className="px-4 py-2 border">{teamStats.totalBookings}</td>
-                  </tr>
-                </tbody>
-              </table>
+          
+
+          {teamStats && searchType === 'team' && (
+            <div className="mt-6 mb-10">
+              <TeamLookupTable
+                teamData={teamStats}
+                onMemberClick={(member) => {
+                  setSearchType('username');
+                  setSearchQuery(member.username);
+                  fetchUserBookings();
+                }}
+              />
             </div>
           )}
-          {userBookings && userBookings.length > 0 && (
-            <UserBookingTable bookings={userBookings} />
+
+          {userBookings && (
+            <div className="mb-10">
+              <UserBookingTable userBookings={userBookings} />
+            </div>
           )}
-        </div>
-        <RecentBookingsTable bookings={allBookings} />
+           <RecentBookingsTable bookings={allBookings} />
+
         
 
       
@@ -372,6 +458,7 @@ const handleSearch = async () => {
           Download Excel
         </button>
       </div>
+     </div> 
     );
   };
 

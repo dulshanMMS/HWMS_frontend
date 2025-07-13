@@ -59,3 +59,77 @@ const BookingLookup = ({
 };
 
 export default BookingLookup; 
+
+// import React, { useState, useEffect, useRef } from 'react';
+// import { FaSearch, FaTimes } from 'react-icons/fa';
+
+// const BookingLookup = ({
+//   searchType,
+//   setSearchType,
+//   searchQuery,
+//   setSearchQuery,
+//   onSearch,
+//   error
+// }) => {
+//   const [suggestions, setSuggestions] = useState([]);
+//   const [showSuggestions, setShowSuggestions] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const [selectedIndex, setSelectedIndex] = useState(-1);
+//   const inputRef = useRef(null);
+//   const suggestionRefs = useRef([]);
+
+//   // Debounce function
+//   const useDebounce = (value, delay) => {
+//     const [debouncedValue, setDebouncedValue] = useState(value);
+    
+//     useEffect(() => {
+//       const handler = setTimeout(() => {
+//         setDebouncedValue(value);
+//       }, delay);
+      
+//       return () => {
+//         clearTimeout(handler);
+//       };
+//     }, [value, delay]);
+    
+//     return debouncedValue;
+//   };
+
+//   const debouncedQuery = useDebounce(searchQuery, 300);
+
+//   // Fetch suggestions
+//   useEffect(() => {
+//     const fetchSuggestions = async () => {
+//       if (!debouncedQuery || debouncedQuery.length < 1) {
+//         setSuggestions([]);
+//         setShowSuggestions(false);
+//         return;
+//       }
+
+//       setLoading(true);
+//       try {
+//         const endpoint = searchType === 'team' ? 'team-suggestions' : 'user-suggestions';
+//         const response = await fetch(`/api/reports/${endpoint}?query=${encodeURIComponent(debouncedQuery)}`);
+        
+//         if (response.ok) {
+//           const data = await response.json();
+//           setSuggestions(data);
+//           setShowSuggestions(data.length > 0);
+//         } else {
+//           setSuggestions([]);
+//           setShowSuggestions(false);
+//         }
+//       } catch (error) {
+//         console.error('Error fetching suggestions:', error);
+//         setSuggestions([]);
+//         setShowSuggestions(false);
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+//     fetchSuggestions();
+//   }, [debouncedQuery, searchType]);
+
+//   // Handle input change
+//   const handleInputChange
