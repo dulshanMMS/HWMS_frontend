@@ -27,7 +27,7 @@ export default function BookingHistory() {
   
   //profile_side bar wdeta
   //const [sidebarOpen, setSidebarOpen] = useState(true); // or false based on what you want  // * *methn 2
-  // 
+  
   const [deleteForm, setDeleteForm] = useState({
     slotNumber: '',
     date: '',
@@ -215,9 +215,9 @@ export default function BookingHistory() {
 
       {/*<div className="w-64 h-full bg-green-800 text-white">
         <LeftSidebar />
-      </div> */}       {/*_me widiht _demmam kola pata theeruw nethi unt responsive ek nethi wnw */}
+      </div>  */}      {/*_me widiht _demmam kola pata theeruw nethi unt responsive ek nethi wnw */}
 
-      <LeftSidebar />
+       <LeftSidebar />     
 
       <div className="flex-1 overflow-y-auto bg-green-50">
         <div className="flex justify-center py-6 px-4">

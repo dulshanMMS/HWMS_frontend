@@ -7,7 +7,7 @@ const BookingDetailsPopup = ({ selectedBooking, bookingDetails, loading, onClose
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
         <h2 className="text-xl font-bold mb-4">Booking Details for {selectedBooking.date}</h2>
-        
+       <div className="overflow-y-auto max-h-[50vh] space-y-4 pr-1">    {/* scrool krn dapu div ek*/}
         {loading ? (
           <div className="text-center py-4">Loading booking details...</div>
         ) : bookingDetails.length > 0 ? (
@@ -34,7 +34,7 @@ const BookingDetailsPopup = ({ selectedBooking, bookingDetails, loading, onClose
         ) : (
           <div className="text-center py-4 text-gray-500">No booking details found</div>
         )}
-
+       </div> 
         <div className="flex justify-end mt-4 space-x-2">
           {bookingDetails.length > 0 && (
             <button

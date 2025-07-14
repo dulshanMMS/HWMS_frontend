@@ -63,7 +63,7 @@ const AdminSidebar = ({ children }) => {
               label="Seat Booking"
             />
             <SidebarLink
-              to="/parking-booking"
+              to="/admin/adminparking"
               icon={<FaCar />}
               label="Parking Booking"
             />
@@ -120,7 +120,8 @@ const AdminSidebar = ({ children }) => {
       )}
 
       {/* Main Content Area */}
-      <div className="flex flex-col lg:ml-72 p-8 bg-gray-100 min-h-screen">
+      {/*<div className="flex flex-col lg:ml-72 p-8 bg-gray-100 min-h-screen">*/}  
+      <div className="lg:ml-72 bg-gray-100 min-h-screen">
         {children}
       </div>
     </>

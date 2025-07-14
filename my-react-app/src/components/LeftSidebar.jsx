@@ -87,7 +87,7 @@ const LeftSidebar = ({ children }) => {
 
             {/* Parking Booking History with layered icons */}
             <SidebarLink
-              to="/parking-booking"
+              to="/parkinghistory"
               icon={
                 <div className="relative w-4 h-4">
                   <FaUndo className="absolute opacity-30 text-3xl -left-2 -top-2" />
@@ -146,7 +146,8 @@ const LeftSidebar = ({ children }) => {
       )}
 
       {/* Main content area with left margin on large screens */}
-      <div className="flex flex-col lg:ml-72 p-8 bg-gray-100 min-h-screen">
+      {/*<div className="flex flex-col lg:ml-72 p-8 bg-gray-100 min-h-screen">*/}
+      <div className="lg:ml-72 bg-gray-100 min-h-screen">  
         {children}
       </div>
     </>
