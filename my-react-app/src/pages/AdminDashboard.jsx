@@ -10,6 +10,7 @@ import BookingChart from "../components/AdminDashboard/BookingChart";
 import EventCalendar from "../components/AdminDashboard/EventCalendar";
 import EventModal from "../components/AdminDashboard/EventModal";
 import ProfileGreeting from "../components/profilesidebar/ProfileGreeting";
+import { getProfile } from "../api/userApi";
 import QuickStats from "../components/AdminDashboard/QuickStats";
 import TodayTeamStats from "../components/AdminDashboard/TodayTeamStats";
 import TeamColorPalette from "../components/shared/TeamColorPalette";
@@ -192,31 +193,21 @@ const AdminDashboard = () => {
   };
 
   const fetchUserProfile = async () => {
-    try {
-      const token = localStorage.getItem("token");
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-      const res = await fetch("http://localhost:5000/api/user/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const data = await getProfile(token);
 
-      const data = await res.json();
+    setUserProfile({
+      firstName: data.firstName || "User", 
+      profilePhoto: data.profileImage || null,
+    });
+  } catch (err) {
+    console.error("Error fetching user profile:", err);
+  }
+};
 
-      if (!res.ok) {
-        console.error("Profile fetch failed:", data);
-        return;
-      }
-
-      setUserProfile({
-        firstName: data.firstName || "User",
-        profilePhoto: data.profileImage || null,
-      });
-
-    } catch (err) {
-      console.error("Error fetching user profile:", err);
-    }
-  };
 
   useEffect(() => {
     const fetchCoreData = async () => {
@@ -225,12 +216,12 @@ const AdminDashboard = () => {
       await fetchEventsForDate(date);
       await fetchTodayEvents();
       await fetchAllEvents(); 
+      await fetchUserProfile();
     };
 
     fetchCoreData();
     fetchFloorBookingStats();
     fetchTeamColors();
-    fetchUserProfile();
 
     const interval = setInterval(fetchCoreData, 30000); // Refresh every 30s
     return () => clearInterval(interval);
