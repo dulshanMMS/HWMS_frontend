@@ -39,7 +39,7 @@ const AdminDashboard = () => {
   const [userProfile, setUserProfile] = useState(null);
 
   const handleSendAnnouncement = async () => {
-    if (!announcement.trim()) return alert("Please enter an announcement.");
+    if (!announcement.trim()) return toast.warning("Please enter an announcement.");
 
     const token = localStorage.getItem("token");
 
@@ -48,7 +48,7 @@ const AdminDashboard = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ message: announcement }),
       });
@@ -56,14 +56,14 @@ const AdminDashboard = () => {
       const data = await res.json();
 
       if (res.ok) {
-        toast.success("Announcement sent to all users!");
+        toast.success("📢 Announcement sent!");
         setAnnouncement("");
       } else {
         toast.error(data?.message || "Failed to send announcement.");
       }
     } catch (error) {
       console.error("Error sending announcement:", error);
-      alert("Something went wrong!");
+      toast.error("Something went wrong!");
     }
   };
 
@@ -80,10 +80,7 @@ const AdminDashboard = () => {
   };
 
   const addEvent = async () => {
-    if (!newEvent.title.trim()) {
-      toast.error("Please enter a title");
-      return;
-    }
+    if (!newEvent.title.trim()) return toast.warning("Please enter a title");
 
     try {
       const formattedDate = formatDateToYMD(date);
@@ -118,9 +115,8 @@ const AdminDashboard = () => {
     try {
       const res = await axios.delete(`/api/events/${eventId}`);
       if (res.data.success) {
-        toast.success("🗑️ Event deleted successfully");
+        toast.success("🗑️ Event deleted");
 
-        // Refresh events
         const updated = await axios.get("/api/events");
         if (updated.data.success) {
           const updatedEvents = updated.data.events;
@@ -139,76 +135,63 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-  const fetchCoreData = async () => {
-    try {
-      const [
-        teamBookingRes,
-        bookingCountRes,
-        allEventRes,
-        floorStatsRes,
-        teamColorsRes
-      ] = await Promise.all([
-        axios.get("/api/bookings/count-by-team/today"),
-        axios.get("/api/bookings/count/today"),
-        axios.get("/api/events"),
-        axios.get("/api/bookings/count-by-floor"),
-        axios.get("/api/teams"),
-      ]);
+    const fetchCoreData = async () => {
+      try {
+        const [
+          teamBookingRes,
+          bookingCountRes,
+          allEventRes,
+          floorStatsRes,
+          teamColorsRes
+        ] = await Promise.all([
+          axios.get("/api/bookings/count-by-team/today"),
+          axios.get("/api/bookings/count/today"),
+          axios.get("/api/events"),
+          axios.get("/api/bookings/count-by-floor"),
+          axios.get("/api/teams"),
+        ]);
 
-      // Team Bookings
-      if (teamBookingRes.data.success) setTeamBookings(teamBookingRes.data.teams);
+        if (teamBookingRes.data.success) setTeamBookings(teamBookingRes.data.teams);
+        if (bookingCountRes.data.success) setTodayBookingCount(bookingCountRes.data.count);
 
-      // Booking Count
-      if (bookingCountRes.data.success) setTodayBookingCount(bookingCountRes.data.count);
+        if (allEventRes.data.success) {
+          const allEvents = allEventRes.data.events;
+          setAllEvents(allEvents);
+          setEventDates(allEvents.map(e => e.date));
 
-      // Events
-      if (allEventRes.data.success) {
-        const allEvents = allEventRes.data.events;
-        setAllEvents(allEvents);
-        setEventDates(allEvents.map(event => event.date));
+          const todayStr = formatDateToYMD(new Date());
+          setTodayEvents(allEvents.filter(e => e.date === todayStr));
+          setEvents(allEvents.filter(e => e.date === formatDateToYMD(date)));
+        }
 
-        // Today's events extracted from all
-        const todayStr = formatDateToYMD(new Date());
-        const todays = allEvents.filter(e => e.date === todayStr);
-        setTodayEvents(todays);
+        if (floorStatsRes.data.success) {
+          setParkingStats(floorStatsRes.data.parking);
+          setSeatingStats(floorStatsRes.data.seating);
+        }
 
-        // Events of selected date
-        const selectedStr = formatDateToYMD(date);
-        setEvents(allEvents.filter(e => e.date === selectedStr));
-      }
-
-      // Floor Stats
-      if (floorStatsRes.data.success) {
-        setParkingStats(floorStatsRes.data.parking);
-        setSeatingStats(floorStatsRes.data.seating);
-      }
-
-      // Team Colors
-      const colorMap = {};
-      teamColorsRes.data.forEach(team => {
-        colorMap[team.teamName] = team.teamColor;
-      });
-      setTeamColors(colorMap);
-
-      // User profile
-      const token = localStorage.getItem("token");
-      if (token) {
-        const profile = await getProfile(token);
-        setUserProfile({
-          firstName: profile.firstName || "User",
-          profilePhoto: profile.profileImage || null,
+        const colorMap = {};
+        teamColorsRes.data.forEach(team => {
+          colorMap[team.teamName] = team.teamColor;
         });
+        setTeamColors(colorMap);
+
+        const token = localStorage.getItem("token");
+        if (token) {
+          const profile = await getProfile(token);
+          setUserProfile({
+            firstName: profile.firstName || "User",
+            profilePhoto: profile.profileImage || null,
+          });
+        }
+      } catch (err) {
+        console.error("❌ Error fetching dashboard data:", err);
       }
-    } catch (err) {
-      console.error("❌ Error fetching dashboard data:", err);
-    }
-  };
+    };
 
-  fetchCoreData();
-
-  const interval = setInterval(fetchCoreData, 30000);
-  return () => clearInterval(interval);
-}, [date]);
+    fetchCoreData();
+    const interval = setInterval(fetchCoreData, 30000);
+    return () => clearInterval(interval);
+  }, [date]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
@@ -244,7 +227,9 @@ const AdminDashboard = () => {
           </div>
 
           <div className="space-y-4">
-            <ProfileGreeting userProfile={userProfile} />
+            <div className="relative bg-white rounded-xl shadow-md p-6 w-full lg:w-[380px]">
+              <ProfileGreeting userProfile={userProfile} />
+            </div>
             <QuickStats todayBookingCount={todayBookingCount} />
             <BookingChart parkingData={parkingStats} seatingData={seatingStats} />
           </div>
