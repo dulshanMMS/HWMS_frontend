@@ -11,7 +11,16 @@ const EventModal = ({ date, events, newEvent, setNewEvent, onClose, onAdd, onDel
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg w-96 space-y-4">
-        <h2 className="text-lg font-bold mb-2">Events on {date.toDateString()}</h2>
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-lg font-bold">Events on {date.toDateString()}</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl font-bold leading-none"
+            aria-label="Close"
+          >
+            &times;
+          </button>
+        </div>
 
         {/* Show existing events */}
         {events.length > 0 ? (
@@ -61,10 +70,7 @@ const EventModal = ({ date, events, newEvent, setNewEvent, onClose, onAdd, onDel
           </>
         )}
 
-        <div className="flex justify-between mt-4">
-          <button onClick={onClose} className="bg-gray-500 text-white px-4 py-2 rounded">
-            Cancel
-          </button>
+        <div className="flex justify-end mt-4">
           <button
             onClick={onAdd}
             disabled={isPastDate}
