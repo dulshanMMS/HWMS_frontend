@@ -21,6 +21,21 @@ const getColorFromTailwind = (tailwindClass) => {
   return colorMap[tailwindClass] || '#808080';
 };
 
+// Helper function to check if times overlap
+const timesOverlap = (start1, end1, start2, end2) => {
+  const parseTime = (timeStr) => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+  
+  const start1Min = parseTime(start1);
+  const end1Min = parseTime(end1);
+  const start2Min = parseTime(start2);
+  const end2Min = parseTime(end2);
+  
+  return start1Min < end2Min && start2Min < end1Min;
+};
+
 export default function FloorLayout() {
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -65,25 +80,41 @@ export default function FloorLayout() {
   const [memberDetails, setMemberDetails] = useState(null);
   const [bookingSubmitted, setBookingSubmitted] = useState(false);
 
-  // Check for persisted booking submission state on component mount (USER-SPECIFIC)
+  // DEBUG: Add debug logging
+  console.log('🔍 DEBUG STATE:', {
+    entered,
+    bookingSubmitted,
+    isLoading,
+    memberDetails: !!memberDetails,
+    shouldShowLayout: entered || bookingSubmitted,
+    bookingInfo
+  });
+
+  // CLEAR localStorage on component mount to reset booking state
   useEffect(() => {
-    if (!memberId) return; // Wait for memberId to be available
-    
-    const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
-    const isSubmitted = localStorage.getItem(submissionKey) === 'true';
-    if (isSubmitted) {
-      setBookingSubmitted(true);
-    } else {
-      setBookingSubmitted(false); // Reset for different users
+    // Clear any previous booking submission states
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('booking_submitted_')) {
+        keysToRemove.push(key);
+      }
     }
-  }, [memberId, bookingInfo.date, bookingInfo.floor]);
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    console.log('🧹 Cleared localStorage booking states:', keysToRemove);
+    
+    // Reset booking submitted state
+    setBookingSubmitted(false);
+  }, []);
 
   // Get JWT token and decode username
   useEffect(() => {
+    console.log('🔑 JWT Token check...');
     const token = localStorage.getItem("token");
     if (token) {
       try {
         const decoded = jwtDecode(token);
+        console.log('🔓 Token decoded:', decoded.username);
         setMemberId(decoded.username);
       } catch (e) {
         console.error("Invalid token", e);
@@ -96,8 +127,9 @@ export default function FloorLayout() {
     }
   }, [navigate]);
 
-  // Validate booking info and fetch bookings
+  // Validate booking info and fetch bookings with TIME FILTERING
   useEffect(() => {
+    console.log('📅 Booking info validation:', bookingInfo);
     if (!bookingInfo.floor || !bookingInfo.date || !bookingInfo.entryTime || !bookingInfo.exitTime) {
       setMessage('Please select a floor, date, entry time, and exit time.');
       setIsLoading(false);
@@ -114,11 +146,38 @@ export default function FloorLayout() {
           floor: bookingInfo.floor
         });
         
-        const response = await fetch(`http://localhost:5004/api/bookings/filtered?${queryParams}`);
+        const response = await fetch(`http://localhost:6001/api/bookings/filtered?${queryParams}`);
         if (!response.ok) throw new Error('Failed to fetch bookings');
         
         const data = await response.json();
-        setBookedChairs(data.chairs || {});
+        console.log('📊 All fetched bookings:', data);
+        
+        // FILTER BOOKINGS BY TIME OVERLAP
+        const filteredChairs = {};
+        
+        if (data.chairs) {
+          Object.keys(data.chairs).forEach(chairId => {
+            const booking = data.chairs[chairId];
+            
+            // Check if this booking overlaps with the requested time
+            const overlaps = timesOverlap(
+              booking.entryTime, 
+              booking.exitTime, 
+              bookingInfo.entryTime, 
+              bookingInfo.exitTime
+            );
+            
+            if (overlaps) {
+              filteredChairs[chairId] = booking;
+              console.log(`💺 Showing conflicting booking: ${chairId} (${booking.entryTime}-${booking.exitTime})`);
+            } else {
+              console.log(`⏭️ Hiding non-conflicting booking: ${chairId} (${booking.entryTime}-${booking.exitTime})`);
+            }
+          });
+        }
+        
+        console.log('📊 Filtered bookings for time period:', filteredChairs);
+        setBookedChairs(filteredChairs);
         setIsLoading(false);
       } catch (err) {
         console.error("Failed to fetch bookings:", err);
@@ -133,21 +192,24 @@ export default function FloorLayout() {
 
   // Fetch user and team data when memberId is available
   useEffect(() => {
+    console.log('👤 User and team fetch for:', memberId);
     if (!memberId) return;
 
     const fetchUserAndTeam = async () => {
       try {
-        const userRes = await fetch(`http://localhost:5004/api/bookings/users/${memberId}`);
+        const userRes = await fetch(`http://localhost:6001/api/bookings/users/${memberId}`);
         if (!userRes.ok) throw new Error('User not found');
         const user = await userRes.json();
+        console.log('👤 User data:', user);
         
         if (!user.username || !user.teamId) {
           throw new Error('User data incomplete - missing username or teamId');
         }
 
-        const teamRes = await fetch(`http://localhost:5004/api/teams/${user.teamId}`);
+        const teamRes = await fetch(`http://localhost:6001/api/teams/${user.teamId}`);
         if (!teamRes.ok) throw new Error('Team not found');
         const team = await teamRes.json();
+        console.log('🏢 Team data:', team);
         
         const colorValue = team.color || '#808080';
         let actualColor = '#808080';
@@ -163,14 +225,15 @@ export default function FloorLayout() {
         const memberDetailsWithColor = {
           ...user,
           teamColor: actualColor,
-          userName: user.username  // ✅ CHANGED: memberName → userName
+          userName: user.username
         };
 
+        console.log('📊 Setting member details:', memberDetailsWithColor);
         setMemberDetails(memberDetailsWithColor);
         setTeamName(team.teamName);
         setRole(user.role);
 
-        const teamUsersRes = await fetch(`http://localhost:5004/api/bookings/users/team/${user.teamId}`);
+        const teamUsersRes = await fetch(`http://localhost:6001/api/bookings/users/team/${user.teamId}`);
         if (teamUsersRes.ok) {
           const teamUsers = await teamUsersRes.json();
           setAllTeamMembers(teamUsers.map(u => u.username));
@@ -180,9 +243,11 @@ export default function FloorLayout() {
         }
         
         setTeamMembers([user.username]);
+        
+        console.log('✅ Setting entered = true');
         setEntered(true);
       } catch (error) {
-        console.error('Error fetching user/team data:', error);
+        console.error('❌ Error fetching user/team data:', error);
         setMessage('Failed to load user/team info: ' + error.message);
         setEntered(false);
         setIsLoading(false);
@@ -201,7 +266,7 @@ export default function FloorLayout() {
     setMessage(null);
   };
 
-  // Function to refresh bookings
+  // Function to refresh bookings with TIME FILTERING
   const refreshBookings = async () => {
     try {
       const queryParams = new URLSearchParams({
@@ -209,11 +274,33 @@ export default function FloorLayout() {
         floor: bookingInfo.floor
       });
       
-      const response = await fetch(`http://localhost:5004/api/bookings/filtered?${queryParams}`);
+      const response = await fetch(`http://localhost:6001/api/bookings/filtered?${queryParams}`);
       if (!response.ok) throw new Error('Failed to fetch bookings');
       
       const data = await response.json();
-      setBookedChairs(data.chairs || {});
+      
+      // FILTER BOOKINGS BY TIME OVERLAP
+      const filteredChairs = {};
+      
+      if (data.chairs) {
+        Object.keys(data.chairs).forEach(chairId => {
+          const booking = data.chairs[chairId];
+          
+          // Check if this booking overlaps with the requested time
+          const overlaps = timesOverlap(
+            booking.entryTime, 
+            booking.exitTime, 
+            bookingInfo.entryTime, 
+            bookingInfo.exitTime
+          );
+          
+          if (overlaps) {
+            filteredChairs[chairId] = booking;
+          }
+        });
+      }
+      
+      setBookedChairs(filteredChairs);
     } catch (err) {
       console.error("Failed to refresh bookings:", err);
     }
@@ -272,32 +359,32 @@ export default function FloorLayout() {
     </div>
   );
 
-  // Chair click handler
+  // Chair click handler with debug
   const handleChairClick = (chairId, tableId) => {
+    console.log('🖱️ Chair clicked:', { chairId, tableId, bookingSubmitted, entered, memberDetails: !!memberDetails });
+    
     if (bookingSubmitted) {
+      console.log('❌ Booking already submitted');
       return;
     }
-
+  
     if (!entered || !memberDetails) {
+      console.log('❌ Not entered or no member details');
       showMessage('Please ensure you are logged in and have valid team data.');
       return;
     }
-
+  
     if (role === 'member') {
-      const memberHasBooking = Object.values(bookedChairs).some(
-        (chair) => chair?.userName === memberDetails?.userName  // ✅ CHANGED: memberName → userName
-      );
+      console.log('👤 Processing member booking...');
       
-      if (memberHasBooking && !bookedChairs[chairId]) {
-        showMessage('You already have a booked seat.');
-        return;
-      }
-
       if (bookedChairs[chairId]) {
-        if (bookedChairs[chairId].userName === memberDetails?.userName) {  // ✅ CHANGED: memberName → userName
+        console.log('💺 Chair already booked by:', bookedChairs[chairId].userName);
+        
+        if (bookedChairs[chairId].userName === memberDetails?.userName) {
+          console.log('🔄 Unbooking own seat...');
           const dateToUse = bookingInfo.date;
           
-          fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
+          fetch(`http://localhost:6001/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
             method: 'DELETE',
           })
             .then((response) => {
@@ -316,10 +403,14 @@ export default function FloorLayout() {
               showMessage('Failed to unbook seat: ' + err.message);
             });
         } else {
+          console.log('❌ Seat booked by another user');
           showMessage('This seat is booked by another user.');
         }
       } else {
-        if (!memberDetails.userName) {  // ✅ CHANGED: memberName → userName
+        console.log('✅ Chair available, attempting to book...');
+        
+        if (!memberDetails.userName) {
+          console.log('❌ No userName in member details');
           showMessage('Member details incomplete.');
           return;
         }
@@ -328,120 +419,54 @@ export default function FloorLayout() {
           roomId: tableId,
           teamName,
           teamColor: memberDetails.teamColor,
-          userName: memberDetails.userName,  // ✅ CHANGED: memberName → userName
+          userName: memberDetails.userName,
           floor: bookingInfo.floor,
           date: bookingInfo.date,
           entryTime: bookingInfo.entryTime,
           exitTime: bookingInfo.exitTime,
         };
         
-        fetch(`http://localhost:5004/api/bookings/member/${memberDetails.userName}/seat/${chairId}`, {  // ✅ CHANGED: memberName → userName
+        console.log('📋 Booking details:', bookingDetails);
+        console.log('🌐 API URL:', `http://localhost:6001/api/bookings/member/${memberDetails.userName}/seat/${chairId}`);
+        
+        fetch(`http://localhost:6001/api/bookings/member/${memberDetails.userName}/seat/${chairId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bookingDetails),
         })
           .then((response) => {
+            console.log('📡 Response status:', response.status);
+            
             if (!response.ok) {
               return response.json().then((data) => {
+                console.log('❌ Error response:', data);
                 throw new Error(data.message || 'Booking failed');
               });
             }
             return response.json();
           })
-          .then(() => {
+          .then((data) => {
+            console.log('✅ Booking success:', data);
             setUserBooking({ chairId, tableId });
             refreshBookings();
           })
           .catch((err) => {
-            showMessage(`Booking error: ${err.message}`);
-          });
-      }
-    } else if (role === 'leader') {
-      if (!selectedMember) {
-        showMessage('Please select a team member to book for.');
-        return;
-      }
-
-      const memberHasBooking = Object.values(bookedChairs).some(
-        (chair) => chair?.userName === selectedMember  // ✅ CHANGED: memberName → userName
-      );
-      
-      if (memberHasBooking && !bookedChairs[chairId]) {
-        showMessage(`${selectedMember} already has a booked seat.`);
-        return;
-      }
-
-      if (bookedChairs[chairId]) {
-        if (bookedChairs[chairId].userName === selectedMember) {  // ✅ CHANGED: memberName → userName
-          const dateToUse = bookingInfo.date;
-          
-          fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
-            method: 'DELETE',
-          })
-            .then((response) => {
-              if (!response.ok) {
-                return response.json().then((errorData) => {
-                  throw new Error(errorData.error || 'Unbooking failed');
-                });
-              }
-              return response.json();
-            })
-            .then(() => {
-              if (selectedMember === memberDetails?.userName) setUserBooking(null);  // ✅ CHANGED: memberName → userName
-              refreshBookings();
-            })
-            .catch((err) => {
-              showMessage('Failed to unbook seat: ' + err.message);
-            });
-        } else {
-          showMessage('This seat is booked by another user.');
-        }
-      } else {
-        const bookingDetails = {
-          roomId: tableId,
-          teamName,
-          teamColor: memberDetails.teamColor,
-          userName: selectedMember,  // ✅ CHANGED: memberName → userName
-          floor: bookingInfo.floor,
-          date: bookingInfo.date,
-          entryTime: bookingInfo.entryTime,
-          exitTime: bookingInfo.exitTime,
-        };
-        
-        fetch(`http://localhost:5004/api/bookings/leader/${memberDetails.userName}/member/${selectedMember}/seat/${chairId}`, {  // ✅ CHANGED: memberName → userName
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(bookingDetails),
-        })
-          .then((response) => {
-            if (!response.ok) {
-              return response.json().then((data) => {
-                throw new Error(data.message || 'Booking failed');
-              });
-            }
-            return response.json();
-          })
-          .then(() => {
-            if (selectedMember === memberDetails?.userName) setUserBooking({ chairId, tableId });  // ✅ CHANGED: memberName → userName
-            refreshBookings();
-          })
-          .catch((err) => {
+            console.log('❌ Booking error:', err);
             showMessage(`Booking error: ${err.message}`);
           });
       }
     }
   };
-
   // Handler functions
   const handleUnbook = () => {
-    const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;  // ✅ CHANGED: memberName → userName
+    const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;
     if (!targetMember) {
       showMessage('No member selected.');
       return;
     }
 
     const chairId = Object.keys(bookedChairs).find(
-      (id) => bookedChairs[id]?.userName === targetMember  // ✅ CHANGED: memberName → userName
+      (id) => bookedChairs[id]?.userName === targetMember
     );
 
     if (!chairId) {
@@ -452,7 +477,7 @@ export default function FloorLayout() {
     const tableId = chairId.split('-')[0];
     const dateToUse = bookingInfo.date;
     
-    fetch(`http://localhost:5004/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
+    fetch(`http://localhost:6001/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
       method: 'DELETE',
     })
       .then((response) => {
@@ -464,7 +489,7 @@ export default function FloorLayout() {
         return response.json();
       })
       .then(() => {
-        if (role === 'member' || (role === 'leader' && selectedMember === memberDetails?.userName)) {  // ✅ CHANGED: memberName → userName
+        if (role === 'member' || (role === 'leader' && selectedMember === memberDetails?.userName)) {
           setUserBooking(null);
         }
         refreshBookings();
@@ -475,14 +500,14 @@ export default function FloorLayout() {
   };
 
   const handleSubmit = () => {
-    const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;  // ✅ CHANGED: memberName → userName
+    const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;
     if (!targetMember) {
       showMessage('No member selected for submission.');
       return;
     }
 
     const bookedSeat = userBooking?.chairId || Object.keys(bookedChairs).find(
-      (chairId) => bookedChairs[chairId]?.userName === targetMember  // ✅ CHANGED: memberName → userName
+      (chairId) => bookedChairs[chairId]?.userName === targetMember
     );
 
     if (!bookedSeat) {
@@ -490,7 +515,6 @@ export default function FloorLayout() {
       return;
     }
 
-    // Set booking as submitted and persist to localStorage with user-specific key
     setBookingSubmitted(true);
     const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
     localStorage.setItem(submissionKey, 'true');
@@ -508,7 +532,6 @@ export default function FloorLayout() {
       return;
     }
     
-    // Clear the submission state from localStorage when canceling (user-specific)
     const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
     localStorage.removeItem(submissionKey);
     
@@ -526,9 +549,9 @@ export default function FloorLayout() {
   };
 
   const hasBookedSeat = () => {
-    const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;  // ✅ CHANGED: memberName → userName
+    const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;
     return Object.keys(bookedChairs).some(
-      (chairId) => bookedChairs[chairId]?.userName === targetMember  // ✅ CHANGED: memberName → userName
+      (chairId) => bookedChairs[chairId]?.userName === targetMember
     );
   };
 
@@ -543,7 +566,6 @@ export default function FloorLayout() {
     setShowAddMemberPrompt(false);
     
     if (!bookingSubmitted) {
-      // Clear the submission state from localStorage when navigating away (user-specific)
       const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
       localStorage.removeItem(submissionKey);
       
@@ -564,7 +586,7 @@ export default function FloorLayout() {
   const handleAddMemberIdSubmit = async () => {
     if (newMemberId.trim()) {
       try {
-        const userRes = await fetch(`http://localhost:5004/api/bookings/users/${newMemberId}`);
+        const userRes = await fetch(`http://localhost:6001/api/bookings/users/${newMemberId}`);
         if (!userRes.ok) {
           setMessage('User not found with this username.');
           setNewMemberId('');
@@ -616,6 +638,7 @@ export default function FloorLayout() {
   };
 
   if (isLoading) {
+    console.log('⏳ Showing loading screen');
     return (
       <div className="w-full h-screen bg-green-50 flex items-center justify-center overflow-hidden">
         <p className="text-gray-800 text-lg font-semibold">Loading...</p>
@@ -624,6 +647,7 @@ export default function FloorLayout() {
   }
 
   if (!entered && !isLoading && !bookingSubmitted) {
+    console.log('🚫 Showing "complete booking info" screen');
     return (
       <div className="w-full h-screen bg-green-50 flex items-center justify-center overflow-hidden">
         <div className="flex flex-col items-center justify-center gap-4 text-center">
@@ -640,11 +664,19 @@ export default function FloorLayout() {
   }
 
   const shouldShowLayout = entered || bookingSubmitted;
+  console.log('🔘 Final render - shouldShowLayout:', shouldShowLayout, 'bookingSubmitted:', bookingSubmitted);
 
   return (
     <div className="w-full h-screen bg-green-50 flex items-center justify-center overflow-hidden relative">
       {shouldShowLayout ? (
         <div className="flex flex-col items-center justify-center gap-4 w-full h-full p-4 max-h-screen overflow-hidden">
+          
+          {/* Show current booking time period */}
+          <div className="bg-blue-100 border border-blue-300 rounded-lg p-2 text-center">
+            <p className="text-sm font-semibold text-blue-800">
+              📅 Booking for: {bookingInfo.date} | 🕐 Time: {bookingInfo.entryTime} - {bookingInfo.exitTime} | 🏢 Floor {bookingInfo.floor}
+            </p>
+          </div>
         
           {entered && role === 'leader' && !bookingSubmitted && (
             <div className="bg-white rounded-lg shadow-md p-2 flex flex-row items-center gap-3 border border-gray-300 flex-shrink-0">
@@ -771,7 +803,8 @@ export default function FloorLayout() {
             </div>
           </div>
 
-          {shouldShowLayout && !bookingSubmitted && (
+          {/* CONTROL BUTTONS - Always visible */}
+          {!bookingSubmitted && (
             <div className="bg-white rounded-lg shadow-md p-3 flex flex-row gap-4 border border-gray-300 flex-shrink-0">
               <button 
                 className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg text-sm"
@@ -791,6 +824,19 @@ export default function FloorLayout() {
                 onClick={handleCancel}
               >
                 Cancel
+              </button>
+            </div>
+          )}
+
+          {/* Show message when booking is submitted */}
+          {bookingSubmitted && (
+            <div className="bg-green-100 border border-green-300 rounded-lg p-4 text-center">
+              <p className="text-green-800 font-semibold">✅ Booking Submitted Successfully!</p>
+              <button 
+                className="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm"
+                onClick={() => navigate('/datebooking')}
+              >
+                Make Another Booking
               </button>
             </div>
           )}

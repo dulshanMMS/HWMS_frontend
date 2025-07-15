@@ -3,8 +3,13 @@ import React from 'react';
 const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked }) => {
   const booking = bookedChairs[chairId];
   const isBooked = !!booking;
-  const userName = booking?.userName || '';  // ✅ CHANGED: memberName → userName
+  const userName = booking?.userName || '';
   const teamColor = booking?.teamColor || '#808080';
+  
+  // NEW: Extract time information from booking
+  const entryTime = booking?.entryTime || '';
+  const exitTime = booking?.exitTime || '';
+  const timeSlot = booking?.timeSlot || ''; // This might come from API in format "HH:MM - HH:MM"
 
   const getSeatClasses = () => {
     const baseClasses = `
@@ -32,15 +37,39 @@ const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked }) => {
     return {};
   };
 
+  // NEW: Enhanced tooltip function
+  const getTooltipText = () => {
+    if (isBooked) {
+      // Try to get time info in different formats
+      let timeInfo = '';
+      
+      if (timeSlot) {
+        // If timeSlot exists (format: "09:00 - 11:00")
+        timeInfo = timeSlot;
+      } else if (entryTime && exitTime) {
+        // If separate entry/exit times exist
+        timeInfo = `${entryTime} - ${exitTime}`;
+      }
+      
+      if (timeInfo) {
+        return `Booked by: ${userName}\nTime: ${timeInfo}`;
+      } else {
+        return `Booked by: ${userName}`;
+      }
+    } else {
+      return `Available seat: ${label}`;
+    }
+  };
+
   return (
     <div
       className={getSeatClasses()}
       style={getSeatStyle()}
       onClick={onClick}
-      title={isBooked ? `Booked by: ${userName}` : `Available seat: ${label}`}  // ✅ CHANGED: memberName → userName
+      title={getTooltipText()}
     >
       <span className="truncate px-1 text-center leading-tight">
-        {isBooked ? userName : label}  {/* ✅ CHANGED: memberName → userName */}
+        {isBooked ? userName : label}
       </span>
     </div>
   );

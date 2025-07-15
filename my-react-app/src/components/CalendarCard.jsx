@@ -35,7 +35,7 @@ const CalendarCard = () => {
   // Load public events/holidays only once when component mounts
   useEffect(() => {
     axios
-      .get("http://localhost:5004/api/calendar/events")
+      .get("http://localhost:6001/api/calendar/events")
       .then((res) => setEvents(res.data || []))
       .catch((err) => console.error("Failed to load events:", err));
   }, []);
@@ -46,7 +46,7 @@ const CalendarCard = () => {
     if (!token) return;
 
     axios
-      .get("http://localhost:5004/api/calendar/user-view", {
+      .get("http://localhost:6001/api/calendar/user-view", {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setBookings(res.data || []))

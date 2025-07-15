@@ -72,8 +72,8 @@ const Login = () => {
     setMessageType('');
 
     const endpoint = currentState === 'Sign In'
-      ? 'http://localhost:5004/api/auth/signin'
-      : 'http://localhost:5004/api/auth/signup';
+      ? 'http://localhost:6001/api/auth/signin'
+      : 'http://localhost:6001/api/auth/signup';
 
     // Prepare request data based on current state
     const requestData = currentState === 'Sign In'

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API = "http://localhost:5004/api/user";
+const API = "http://localhost:6001/api/user";
 
 export const getProfile = async (token) => {
   const res = await axios.get(`${API}/profile`, {
