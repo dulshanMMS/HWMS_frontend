@@ -1,10 +1,8 @@
-import React from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-
-// Component imports
+import { Route, Routes, useLocation } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import ParkingHistory from "./pages/ParkingHistory";
+
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminNotification from "./pages/AdminNotification";
 import AdminParking from "./pages/AdminParking";
@@ -54,6 +52,8 @@ const App = () => {
         <Route path="/admin/adminparking" element={<AdminParking />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/user/notifications" element={<UserNotification />} />
+        <Route path="/user/AboutUsPage" element={<AboutUsPage />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/user/AboutUsPage" element={<AboutUsPage />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>

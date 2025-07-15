@@ -9,7 +9,8 @@ import AnnouncementBox from "../components/AdminDashboard/AnnouncementBox";
 import BookingChart from "../components/AdminDashboard/BookingChart";
 import EventCalendar from "../components/AdminDashboard/EventCalendar";
 import EventModal from "../components/AdminDashboard/EventModal";
-import ProfileSummary from "../components/AdminDashboard/ProfileSummary";
+import ProfileGreeting from "../components/profilesidebar/ProfileGreeting";
+import { getProfile } from "../api/userApi";
 import QuickStats from "../components/AdminDashboard/QuickStats";
 import TodayTeamStats from "../components/AdminDashboard/TodayTeamStats";
 import TeamColorPalette from "../components/shared/TeamColorPalette";
@@ -27,7 +28,6 @@ const AdminDashboard = () => {
   const [events, setEvents] = useState([]);
   const [announcement, setAnnouncement] = useState("");
   const [teamBookings, setTeamBookings] = useState([]);
-  const [floorStats, setFloorStats] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
   const [showEventModal, setShowEventModal] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: "", description: "", time: "" });
@@ -36,19 +36,19 @@ const AdminDashboard = () => {
   const [teamColors, setTeamColors] = useState({});
   const [parkingStats, setParkingStats] = useState([]);
   const [seatingStats, setSeatingStats] = useState([]);
-  const [avatar, setAvatar] = useState("https://i.pravatar.cc/150?img=13");
+  const [userProfile, setUserProfile] = useState(null);
 
   const handleSendAnnouncement = async () => {
-    if (!announcement.trim()) return alert("Please enter an announcement.");
+    if (!announcement.trim()) return toast.warning("Please enter an announcement.");
 
-    const token = localStorage.getItem("token"); // Get the token
+    const token = localStorage.getItem("token");
 
     try {
       const res = await fetch("/api/notifications/send-bulk", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`, // Send token to backend
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ message: announcement }),
       });
@@ -56,14 +56,14 @@ const AdminDashboard = () => {
       const data = await res.json();
 
       if (res.ok) {
-        toast.success("Announcement sent to all users!");
-        setAnnouncement(""); // Clear the text area
+        toast.success("📢 Announcement sent!");
+        setAnnouncement("");
       } else {
         toast.error(data?.message || "Failed to send announcement.");
       }
     } catch (error) {
       console.error("Error sending announcement:", error);
-      alert("Something went wrong!");
+      toast.error("Something went wrong!");
     }
   };
 
@@ -79,72 +79,33 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchBookingCount = async () => {
-    try {
-      const res = await axios.get("/api/bookings/count/today");
-      if (res.data.success) {
-        setTodayBookingCount(res.data.count);
-      }
-    } catch (err) {
-      console.error("Error fetching today's booking count:", err);
-    }
-  };
-
-  const fetchTeamBookings = async () => {
-    try {
-      const res = await axios.get("/api/bookings/count-by-team/today");
-      if (res.data.success) {
-        setTeamBookings(res.data.teams);
-      }
-    } catch (err) {
-      console.error("Error fetching team-wise booking count:", err);
-    }
-  };
-
-  const topTeams = [...teamBookings].sort((a, b) => b.count - a.count).slice(0, 3);
-
-  const fetchAllEvents = async () => {
-    try {
-      const res = await axios.get("/api/events");
-      if (res.data.success) {
-        setAllEvents(res.data.events);
-        const dates = res.data.events.map((event) => event.date);
-        setEventDates(dates);
-      }
-    } catch (err) {
-      console.error("Error fetching all events:", err);
-    }
-  };
-
-  const fetchTodayEvents = async () => {
-    const today = formatDateToYMD(new Date());
-    try {
-      const res = await axios.get(`/api/events/${today}`);
-      if (res.data.success) {
-        setTodayEvents(res.data.events);
-      }
-    } catch (err) {
-      console.error("Error fetching today's events:", err);
-    }
-  };
-
   const addEvent = async () => {
-    if (!newEvent.title.trim()) return alert("Please enter a title");
+    if (!newEvent.title.trim()) return toast.warning("Please enter a title");
 
     try {
       const formattedDate = formatDateToYMD(date);
       const res = await axios.post("/api/events", { ...newEvent, date: formattedDate });
 
       if (res.data.success) {
-        alert("Event added!");
+        toast.success("✅ Event added!");
         setShowEventModal(false);
         setNewEvent({ title: "", description: "", time: "" });
-        fetchAllEvents();
-        fetchEventsForDate(date);
+
+        // Refresh events
+        const updated = await axios.get("/api/events");
+        if (updated.data.success) {
+          const updatedEvents = updated.data.events;
+          setAllEvents(updatedEvents);
+          setEventDates(updatedEvents.map(e => e.date));
+          setEvents(updatedEvents.filter(e => e.date === formattedDate));
+          setTodayEvents(updatedEvents.filter(e => e.date === formatDateToYMD(new Date())));
+        }
+      } else {
+        toast.error("❌ Failed to add event.");
       }
     } catch (err) {
       console.error("Error adding event:", err);
-      alert("Something went wrong");
+      toast.error("Something went wrong while adding event.");
     }
   };
 
@@ -154,56 +115,81 @@ const AdminDashboard = () => {
     try {
       const res = await axios.delete(`/api/events/${eventId}`);
       if (res.data.success) {
-        alert("Event deleted");
-        fetchAllEvents();
-        fetchEventsForDate(date);
+        toast.success("🗑️ Event deleted");
+
+        const updated = await axios.get("/api/events");
+        if (updated.data.success) {
+          const updatedEvents = updated.data.events;
+          setAllEvents(updatedEvents);
+          setEventDates(updatedEvents.map(e => e.date));
+          setEvents(updatedEvents.filter(e => e.date === formatDateToYMD(date)));
+          setTodayEvents(updatedEvents.filter(e => e.date === formatDateToYMD(new Date())));
+        }
       } else {
-        alert("Failed to delete event");
+        toast.error("❌ Failed to delete event.");
       }
     } catch (err) {
       console.error("Error deleting event:", err);
-      alert("Something went wrong");
-    }
-  };
-
-  const fetchFloorBookingStats = async () => {
-    try {
-      const res = await axios.get("/api/bookings/count-by-floor");
-      if (res.data.success) {
-        setParkingStats(res.data.parking);
-        setSeatingStats(res.data.seating);
-      }
-    } catch (err) {
-      console.error("Error fetching floor booking stats:", err);
-    }
-  };
-
-  const fetchTeamColors = async () => {
-    try {
-      const res = await axios.get("/api/teams");
-      const colorMap = {};
-      res.data.forEach((team) => {
-        colorMap[team.teamName] = team.teamColor;
-      });
-      setTeamColors(colorMap);
-    } catch (err) {
-      console.error("Failed to load team colors", err);
+      toast.error("Something went wrong while deleting event.");
     }
   };
 
   useEffect(() => {
     const fetchCoreData = async () => {
-      await fetchTeamBookings();
-      await fetchBookingCount();
-      await fetchEventsForDate(date);
-      await fetchTodayEvents();
+      try {
+        const [
+          teamBookingRes,
+          bookingCountRes,
+          allEventRes,
+          floorStatsRes,
+          teamColorsRes
+        ] = await Promise.all([
+          axios.get("/api/bookings/count-by-team/today"),
+          axios.get("/api/bookings/count/today"),
+          axios.get("/api/events"),
+          axios.get("/api/bookings/count-by-floor"),
+          axios.get("/api/teams"),
+        ]);
+
+        if (teamBookingRes.data.success) setTeamBookings(teamBookingRes.data.teams);
+        if (bookingCountRes.data.success) setTodayBookingCount(bookingCountRes.data.count);
+
+        if (allEventRes.data.success) {
+          const allEvents = allEventRes.data.events;
+          setAllEvents(allEvents);
+          setEventDates(allEvents.map(e => e.date));
+
+          const todayStr = formatDateToYMD(new Date());
+          setTodayEvents(allEvents.filter(e => e.date === todayStr));
+          setEvents(allEvents.filter(e => e.date === formatDateToYMD(date)));
+        }
+
+        if (floorStatsRes.data.success) {
+          setParkingStats(floorStatsRes.data.parking);
+          setSeatingStats(floorStatsRes.data.seating);
+        }
+
+        const colorMap = {};
+        teamColorsRes.data.forEach(team => {
+          colorMap[team.teamName] = team.teamColor;
+        });
+        setTeamColors(colorMap);
+
+        const token = localStorage.getItem("token");
+        if (token) {
+          const profile = await getProfile(token);
+          setUserProfile({
+            firstName: profile.firstName || "User",
+            profilePhoto: profile.profileImage || null,
+          });
+        }
+      } catch (err) {
+        console.error("❌ Error fetching dashboard data:", err);
+      }
     };
 
     fetchCoreData();
-    fetchFloorBookingStats(); 
-    fetchTeamColors();        
-
-    const interval = setInterval(fetchCoreData, 10000);
+    const interval = setInterval(fetchCoreData, 30000);
     return () => clearInterval(interval);
   }, [date]);
 
@@ -241,7 +227,9 @@ const AdminDashboard = () => {
           </div>
 
           <div className="space-y-4">
-            <ProfileSummary avatar={avatar} />
+            <div className="relative bg-white rounded-xl shadow-md p-6 w-full lg:w-[380px]">
+              <ProfileGreeting userProfile={userProfile} />
+            </div>
             <QuickStats todayBookingCount={todayBookingCount} />
             <BookingChart parkingData={parkingStats} seatingData={seatingStats} />
           </div>

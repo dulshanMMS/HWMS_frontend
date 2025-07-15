@@ -13,13 +13,13 @@ import React from 'react';
  import parkinig_photo from '../assets/parking.jpeg';
  import mission from '../assets/mission.png';
  import Footer from '../components/AboutUs/footer';
-
+ import Header from '../components/Login/Navbar';
 const AboutUsPage = () => {
   return (
     <div className="min-h-screen bg-white"> {/* You can change this background color if content ekk danwnm , ar kola pata enne app.jsx eken Nemei dn meke indepency weda _he_he*/}
       
       {/* TODO: Add Header component when ready */}
-      {/* <Header /> */}
+      <Header /> 
       
       {/* Temporary content to test the page */}
     

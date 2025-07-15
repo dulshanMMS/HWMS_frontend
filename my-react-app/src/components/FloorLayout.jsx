@@ -129,7 +129,7 @@ export default function FloorLayout() {
           floor: bookingInfo.floor
         });
         
-        const response = await fetch(`http://localhost:6001/api/bookings/filtered?${queryParams}`);
+        const response = await fetch(`http://localhost:5000/api/bookings/filtered?${queryParams}`);
         if (!response.ok) throw new Error('Failed to fetch bookings');
         
         const data = await response.json();
@@ -172,7 +172,7 @@ export default function FloorLayout() {
 
     const fetchUserAndTeam = async () => {
       try {
-        const userRes = await fetch(`http://localhost:6001/api/bookings/users/${memberId}`);
+        const userRes = await fetch(`http://localhost:5000/api/bookings/users/${memberId}`);
         if (!userRes.ok) throw new Error('User not found');
         const user = await userRes.json();
         
@@ -180,7 +180,7 @@ export default function FloorLayout() {
           throw new Error('User data incomplete - missing username or teamId');
         }
 
-        const teamRes = await fetch(`http://localhost:6001/api/teams/${user.teamId}`);
+        const teamRes = await fetch(`http://localhost:5000/api/teams/${user.teamId}`);
         if (!teamRes.ok) throw new Error('Team not found');
         const team = await teamRes.json();
         
@@ -205,7 +205,7 @@ export default function FloorLayout() {
         setTeamName(team.teamName);
         setRole(user.role);
 
-        const teamUsersRes = await fetch(`http://localhost:6001/api/bookings/users/team/${user.teamId}`);
+        const teamUsersRes = await fetch(`http://localhost:5000/api/bookings/users/team/${user.teamId}`);
         if (teamUsersRes.ok) {
           const teamUsers = await teamUsersRes.json();
           setAllTeamMembers(teamUsers.map(u => u.username));
@@ -243,7 +243,7 @@ export default function FloorLayout() {
         floor: bookingInfo.floor
       });
       
-      const response = await fetch(`http://localhost:6001/api/bookings/filtered?${queryParams}`);
+      const response = await fetch(`http://localhost:5000/api/bookings/filtered?${queryParams}`);
       if (!response.ok) throw new Error('Failed to fetch bookings');
       
       const data = await response.json();
@@ -275,8 +275,8 @@ export default function FloorLayout() {
 
   // Popup components
   const PopUp = ({ message, onClose, children }) => (
-    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50 animate-fade-in p-4">
-      <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8 w-full max-w-sm sm:max-w-md lg:max-w-lg flex flex-col justify-center items-center border-2 border-green-400 animate-pop-in">
+    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50 animate-fade-in p-4">
+      <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-auto flex flex-col justify-center items-center border-2 border-green-400 animate-pop-in">
         <p className="mb-4 text-gray-800 text-sm sm:text-lg lg:text-xl font-semibold text-center">
           {message}
         </p>
@@ -424,7 +424,7 @@ export default function FloorLayout() {
         if (bookedChairs[chairId].userName === memberDetails?.userName) {
           const dateToUse = bookingInfo.date;
           
-          fetch(`http://localhost:6001/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
+          fetch(`http://localhost:5000/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
             method: 'DELETE',
           })
             .then((response) => {
@@ -462,7 +462,7 @@ export default function FloorLayout() {
           exitTime: bookingInfo.exitTime,
         };
         
-        fetch(`http://localhost:6001/api/bookings/member/${memberDetails.userName}/seat/${chairId}`, {
+        fetch(`http://localhost:5000/api/bookings/member/${memberDetails.userName}/seat/${chairId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bookingDetails),
@@ -506,7 +506,7 @@ export default function FloorLayout() {
     const tableId = chairId.split('-')[0];
     const dateToUse = bookingInfo.date;
     
-    fetch(`http://localhost:6001/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
+    fetch(`http://localhost:5000/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
       method: 'DELETE',
     })
       .then((response) => {
@@ -613,7 +613,7 @@ export default function FloorLayout() {
   const handleAddMemberIdSubmit = async () => {
     if (newMemberId.trim()) {
       try {
-        const userRes = await fetch(`http://localhost:6001/api/bookings/users/${newMemberId}`);
+        const userRes = await fetch(`http://localhost:5000/api/bookings/users/${newMemberId}`);
         if (!userRes.ok) {
           setMessage('User not found with this username.');
           setNewMemberId('');
@@ -693,23 +693,23 @@ export default function FloorLayout() {
   return (
     <div className="w-full h-screen bg-green-50 overflow-auto relative m-0 p-0">
       {shouldShowLayout ? (
-        <div className="flex flex-col items-center justify-start gap-4 w-full pt-4 min-h-screen m-0">
+        <div className="flex flex-col items-center justify-center gap-6 w-full min-h-screen py-8">
           
-          {/* Booking Information Header - Better Centered with More Margin */}
-          <div className="bg-blue-100 border border-blue-300 rounded-lg p-3 text-center w-full max-w-xl mb-6 mx-4">
+          {/* Booking Information Header - Perfectly Centered */}
+          <div className="bg-blue-100 border border-blue-300 rounded-xl p-4 text-center w-full max-w-2xl mx-auto shadow-sm">
             <p className="text-sm md:text-base font-semibold text-blue-800">
               📅 Booking for: {bookingInfo.date} | 🕐 Time: {bookingInfo.entryTime} - {bookingInfo.exitTime} | 🏢 Floor {bookingInfo.floor}
             </p>
           </div>
         
-          {/* Leader Controls - Better Centered */}
+          {/* Leader Controls - Centered */}
           {entered && role === 'leader' && !bookingSubmitted && (
-            <div className="bg-white rounded-lg shadow-md p-3 border border-gray-300 w-full max-w-2xl mb-6 mx-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-center">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="bg-white rounded-xl shadow-md p-4 border border-gray-300 w-full max-w-2xl mx-auto">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-center">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Book for:</label>
                   <select
-                    className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:border-green-500 focus:outline-none"
+                    className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:border-green-500 focus:outline-none min-w-48"
                     value={selectedMember}
                     onChange={(e) => setSelectedMember(e.target.value)}
                   >
@@ -722,7 +722,7 @@ export default function FloorLayout() {
                   </select>
                 </div>
                 <button 
-                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm whitespace-nowrap w-full sm:w-auto"
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm whitespace-nowrap"
                   onClick={addTeamMember}
                 >
                   Add Member
@@ -731,126 +731,132 @@ export default function FloorLayout() {
             </div>
           )}
 
-          {/* Main Floor Layout - Better Centered with More Margins */}
-          <div className="w-full flex justify-center mb-8">
+          {/* Main Floor Layout - Perfectly Centered */}
+          <div className="w-full flex justify-center items-center">
             {/* Mobile Layout (320-768px): Single column with stacked tables */}
-            <div className="block md:hidden w-full max-w-sm">
-              <div className="flex flex-col gap-3 mb-6">
-                {/* First 4 tables with more spacing */}
+            <div className="block md:hidden w-full max-w-sm px-4">
+              <div className="flex flex-col gap-4 mb-8">
+                {/* First 4 tables */}
                 {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
-                  <TableComponent 
-                    key={tableId} 
-                    tableId={tableId} 
-                    index={index} 
-                    seatSize="small"
-                  />
+                  <div key={tableId} className="flex justify-center">
+                    <TableComponent 
+                      tableId={tableId} 
+                      index={index} 
+                      seatSize="small"
+                    />
+                  </div>
                 ))}
               </div>
               
-              {/* Mobile Lobby with More Margin */}
-              <div className="bg-green-50 border-2 border-green-400 rounded-lg flex items-center justify-center h-16 mb-6 mx-4">
-                <span className="text-gray-800 font-bold text-sm text-center">Lobby</span>
+              {/* Mobile Lobby - Centered */}
+              <div className="bg-green-50 border-2 border-green-400 rounded-xl flex items-center justify-center h-20 mb-8 mx-auto max-w-xs shadow-sm">
+                <span className="text-gray-800 font-bold text-base text-center">Lobby</span>
               </div>
               
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 {/* Last 4 tables */}
                 {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
-                  <TableComponent 
-                    key={tableId} 
-                    tableId={tableId} 
-                    index={index + 4} 
-                    seatSize="small"
-                  />
+                  <div key={tableId} className="flex justify-center">
+                    <TableComponent 
+                      tableId={tableId} 
+                      index={index + 4} 
+                      seatSize="small"
+                    />
+                  </div>
                 ))}
               </div>
             </div>
 
-            {/* Tablet Layout (768-1024px): Two-column layout (2x4 arrangement) */}
-            <div className="hidden md:block lg:hidden w-full max-w-3xl">
-              <div className="flex flex-col items-center gap-6">
-                <div className="grid grid-cols-2 gap-4 w-full">
-                  {/* Tables T1-T4 with Better Spacing */}
+            {/* Tablet Layout (768-1024px): Two-column layout */}
+            <div className="hidden md:block lg:hidden w-full max-w-4xl px-6">
+              <div className="flex flex-col items-center gap-8">
+                <div className="grid grid-cols-2 gap-6 w-full max-w-3xl">
+                  {/* Tables T1-T4 */}
+                  {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
+                    <div key={tableId} className="flex justify-center">
+                      <TableComponent 
+                        tableId={tableId} 
+                        index={index} 
+                        seatSize="medium"
+                      />
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Tablet Lobby - Centered */}
+                <div className="bg-green-50 border-2 border-green-400 rounded-xl flex items-center justify-center w-80 h-32 shadow-sm">
+                  <span className="text-gray-800 font-bold text-xl text-center">Lobby</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-6 w-full max-w-3xl">
+                  {/* Tables T5-T8 */}
+                  {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
+                    <div key={tableId} className="flex justify-center">
+                      <TableComponent 
+                        tableId={tableId} 
+                        index={index + 4} 
+                        seatSize="medium"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Layout (1024px+): Three-column layout - Better Centered */}
+            <div className="hidden lg:flex lg:items-center lg:justify-center w-full max-w-7xl px-8">
+              <div className="flex items-center justify-center gap-12">
+                {/* Left Tables */}
+                <div className="flex flex-col gap-5">
                   {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
                     <TableComponent 
                       key={tableId} 
                       tableId={tableId} 
                       index={index} 
-                      seatSize="medium"
+                      seatSize="normal"
                     />
                   ))}
                 </div>
-                
-                {/* Tablet Lobby with More Margin */}
-                <div className="bg-green-50 border-2 border-green-400 rounded-lg flex items-center justify-center w-64 h-28 my-4">
-                  <span className="text-gray-800 font-bold text-lg text-center">Lobby</span>
+
+                {/* Desktop Lobby - Perfectly Centered */}
+                <div className="bg-green-50 border-2 border-green-400 rounded-xl flex items-center justify-center w-56 h-[520px] shadow-lg">
+                  <span className="text-gray-800 font-bold text-2xl text-center">Lobby</span>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4 w-full">
-                  {/* Tables T5-T8 */}
+
+                {/* Right Tables */}
+                <div className="flex flex-col gap-5">
                   {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
                     <TableComponent 
                       key={tableId} 
                       tableId={tableId} 
                       index={index + 4} 
-                      seatSize="medium"
+                      seatSize="normal"
                     />
                   ))}
                 </div>
               </div>
             </div>
-
-            {/* Desktop Layout (1024px+): Original three-column layout - Better Centered */}
-            <div className="hidden lg:flex lg:items-center lg:justify-center lg:gap-8 w-full max-w-6xl">
-              {/* Left Tables */}
-              <div className="flex flex-col gap-4">
-                {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
-                  <TableComponent 
-                    key={tableId} 
-                    tableId={tableId} 
-                    index={index} 
-                    seatSize="normal"
-                  />
-                ))}
-              </div>
-
-              {/* Desktop Lobby - Better Centered */}
-              <div className="bg-green-50 border-2 border-green-400 rounded-lg flex items-center justify-center w-48 h-[500px] mx-6">
-                <span className="text-gray-800 font-bold text-xl text-center">Lobby</span>
-              </div>
-
-              {/* Right Tables */}
-              <div className="flex flex-col gap-4">
-                {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
-                  <TableComponent 
-                    key={tableId} 
-                    tableId={tableId} 
-                    index={index + 4} 
-                    seatSize="normal"
-                  />
-                ))}
-              </div>
-            </div>
           </div>
 
-          {/* Control Buttons - Better Centered */}
+          {/* Control Buttons - Perfectly Centered */}
           {!bookingSubmitted && (
-            <div className="bg-white rounded-lg shadow-md p-3 border border-gray-300 w-full max-w-sm mt-6 mx-4">
+            <div className="bg-green-100 border border-green-300 rounded-xl p-6 text-center w-full max-w-md mx-auto mt-6 shadow-sm">
               <div className="flex gap-3 justify-center">
                 <button 
-                  className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg text-sm"
+                  className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 px-6 rounded-lg text-sm transition-colors"
                   onClick={handleUnbook}
                 >
                   Unbook
                 </button>
                 <button
-                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg text-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-6 rounded-lg text-sm disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                   onClick={handleSubmit}
                   disabled={!hasBookedSeat()}
                 >
                   Submit
                 </button>
                 <button 
-                  className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg text-sm"
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2.5 px-6 rounded-lg text-sm transition-colors"
                   onClick={handleCancel}
                 >
                   Cancel
@@ -859,12 +865,12 @@ export default function FloorLayout() {
             </div>
           )}
 
-          {/* Success Message - Better Centered */}
+          {/* Success Message - Perfectly Centered */}
           {bookingSubmitted && (
-            <div className="bg-green-100 border border-green-300 rounded-lg p-4 text-center w-full max-w-xl mt-6 mx-4 mb-4">
-              <p className="text-green-800 font-semibold text-base mb-3">✅ Booking Submitted Successfully!</p>
+            <div className="bg-green-100 border border-green-300 rounded-xl p-6 text-center w-full max-w-xl mx-auto mt-6 shadow-sm">
+              <p className="text-green-800 font-semibold text-lg mb-4">✅ Booking Submitted Successfully!</p>
               <button 
-                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-6 rounded-lg text-sm"
+                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg text-sm transition-colors"
                 onClick={() => navigate('/datebooking')}
               >
                 Make Another Booking
@@ -873,7 +879,7 @@ export default function FloorLayout() {
           )}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center gap-4 text-center h-screen p-4 m-0">
+        <div className="flex flex-col items-center justify-center gap-4 text-center h-screen">
           <p className="text-gray-800 text-base sm:text-lg font-semibold">Loading your session...</p>
         </div>
       )}

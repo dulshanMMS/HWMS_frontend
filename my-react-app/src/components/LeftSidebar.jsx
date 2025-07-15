@@ -161,7 +161,8 @@ const LeftSidebar = ({ children }) => {
       )}
 
       {/* Main content area with left margin on large screens */}
-      <div className="flex flex-col lg:ml-72 p-8 bg-gray-100 min-h-screen">
+      {/*<div className="flex flex-col lg:ml-72 p-8 bg-gray-100 min-h-screen">*/}
+      <div className="lg:ml-72 bg-gray-100 min-h-screen">  
         {children}
       </div>
     </>

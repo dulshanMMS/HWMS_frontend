@@ -209,10 +209,11 @@ export default function DateBooking() {
     );
   };
 
-  // FIXED: Main component JSX rendering - REMOVED p-6 padding that caused gray margins
+  // FIXED: Main component JSX rendering - Light green background for component and outer area
   return (
-    <div className="w-full h-full bg-green-50 flex items-center justify-center overflow-hidden m-0">
-      <div className="w-full max-w-md mx-auto flex flex-col max-h-full overflow-hidden px-4">
+    <div className="w-full h-screen bg-green-100 flex items-center justify-center overflow-hidden m-0 p-0">
+      <div className="w-full max-w-md mx-auto flex flex-col justify-center items-center h-[90%] overflow-hidden px-4 bg-green-100 rounded-xl shadow-md">
+
         {/* Title Section */}
         <div className="text-center mb-6 flex-shrink-0">
           <h2 className="text-2xl font-semibold text-gray-900 mb-3">
@@ -223,30 +224,27 @@ export default function DateBooking() {
           </p>
         </div>
 
-        {/* Main Booking Card - optimized for no scroll */}
-        <div className="bg-white rounded-lg shadow-md p-6 flex flex-col space-y-4 flex-1 min-h-0 overflow-hidden">
+        {/* Main Booking Card - with curved borders and white background */}
+        <div className="bg-white rounded-xl shadow-md p-6 flex flex-col space-y-4 flex-1 min-h-0 overflow-hidden border border-gray-200">
           {/* Selected Date Display */}
-          <div className="text-center text-sm font-medium text-gray-700 bg-gray-50 rounded-lg py-3 px-4 flex-shrink-0">
+          <div className="text-center text-sm font-medium text-gray-700 bg-green-50 rounded-xl py-3 px-4 flex-shrink-0">
             Selected Date: <span className="font-semibold text-gray-900">{date.toDateString()}</span>
           </div>
 
-          {/* Calendar Section - brought closer to selected date */}
-          <div className="calendar-container flex-shrink-0 -mt-2">
+          {/* Calendar Section */}
+          <div className="calendar-container">
             <style jsx="true">{`
               .calendar-container .react-calendar {
                 width: 100% !important;
-                max-width: 320px !important;
+                max-width: 100% !important;
                 margin: 0 auto !important;
                 border: none !important;
-                border-radius: 8px !important;
+                border-radius: 12px !important;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
                 font-family: inherit !important;
                 background: white !important;
                 padding: 0.75rem !important;
                 font-size: 13px !important;
-                height: auto !important;
-                max-height: 260px !important;
-                overflow: hidden !important;
               }
               
               .calendar-container .react-calendar__navigation {
@@ -265,10 +263,23 @@ export default function DateBooking() {
                 font-size: 11px !important;
                 font-weight: 600 !important;
                 margin-bottom: 0.5rem !important;
+                display: grid !important;
+                grid-template-columns: repeat(7, 1fr) !important;
+                gap: 1px !important;
               }
               
               .calendar-container .react-calendar__month-view__weekdays__weekday {
                 padding: 0.25rem !important;
+                text-align: center !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                min-height: 28px !important;
+              }
+              
+              .calendar-container .react-calendar__month-view__weekdays__weekday abbr {
+                text-decoration: none !important;
+                font-weight: 600 !important;
               }
               
               .calendar-container .react-calendar__tile--active {
@@ -303,6 +314,12 @@ export default function DateBooking() {
                 border-radius: 50% !important;
               }
               
+              .calendar-container .react-calendar__month-view__days {
+                display: grid !important;
+                grid-template-columns: repeat(7, 1fr) !important;
+                gap: 1px !important;
+              }
+              
               .calendar-container .react-calendar__tile {
                 transition: none !important;
                 border: none !important;
@@ -312,19 +329,16 @@ export default function DateBooking() {
                 align-items: center !important;
                 font-size: 12px !important;
                 height: 28px !important;
-                max-width: 28px !important;
-                margin: 1px !important;
-              }
-              
-              .calendar-container .react-calendar__month-view__days {
-                gap: 2px !important;
+                width: 100% !important;
+                margin: 0 !important;
+                min-width: 28px !important;
               }
             `}</style>
             <Calendar onChange={setDate} value={date} />
           </div>
 
-          {/* Time Picker Section - reduced spacing */}
-          <div className="flex-shrink-0">
+          {/* Time Picker Section */}
+          <div>
             <div className="grid grid-cols-2 gap-6">
               <TimePicker
                 label="ENTRY TIME"
@@ -343,8 +357,8 @@ export default function DateBooking() {
             </div>
           </div>
 
-          {/* Floor Selection - reduced spacing */}
-          <div className="flex-shrink-0">
+          {/* Floor Selection */}
+          <div>
             <label 
               className="block text-sm font-semibold text-gray-700 tracking-wider uppercase text-center mb-3"
               htmlFor="floor-select"
@@ -355,7 +369,7 @@ export default function DateBooking() {
               id="floor-select"
               value={floor}
               onChange={(e) => setFloor(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
             >
               <option value="">Choose floor</option>
               {[...Array(32)].map((_, i) => (
@@ -366,10 +380,10 @@ export default function DateBooking() {
             </select>
           </div>
 
-          {/* Submit Button - moved higher */}
-          <div className="flex-shrink-0">
+          {/* Submit Button */}
+          <div>
             <button
-              className="w-full bg-green-800 hover:bg-green-900 text-white font-semibold py-3 px-4 rounded-md transition-colors text-sm focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="w-full bg-green-800 hover:bg-green-900 text-white font-semibold py-3 px-4 rounded-xl transition-colors text-sm focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
               onClick={handleSubmit}
               type="button"
             >
