@@ -1,0 +1,78 @@
+/* Only essential React Calendar overrides that can't be done with Tailwind */
+
+/* Remove all custom styling and let Tailwind handle responsiveness */
+/* Keep only calendar-specific styles that are necessary */
+
+.react-calendar {
+  width: 100% !important;
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  font-family: inherit !important;
+  background: white !important;
+  padding: 1rem !important;
+}
+
+/* Selected date styling */
+.react-calendar__tile--active {
+  background-color: #065f46 !important;  
+  color: white !important;               
+  border-radius: 50% !important;        
+}
+
+/* Remove default "today" styling */
+.react-calendar__tile--now {
+  background-color: transparent !important;  
+  color: inherit !important;                  
+  font-weight: normal !important;
+  background: none !important;
+  border: none !important;
+}
+
+/* When today is selected */
+.react-calendar__tile--now.react-calendar__tile--active {
+  background-color: #065f46 !important;
+  color: white !important;
+  border-radius: 50% !important;
+}
+
+/* Hover effect */
+.react-calendar__tile:hover {
+  background-color: #ecfdf5 !important;
+  color: #065f46 !important;
+  border-radius: 4px !important;
+}
+
+/* Active state takes priority over hover */
+.react-calendar__tile--active:hover {
+  background-color: #065f46 !important;
+  color: white !important;
+  border-radius: 50% !important;
+}
+
+/* Clean tile styling */
+.react-calendar__tile {
+  transition: none !important;
+  border: none !important;
+  padding: 10px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* Mobile responsiveness for calendar */
+@media (max-width: 640px) {
+  .react-calendar {
+    padding: 0.75rem !important;
+  }
+  
+  .react-calendar__tile {
+    padding: 8px !important;
+    font-size: 14px !important;
+  }
+  
+  .react-calendar__navigation__label,
+  .react-calendar__navigation__arrow {
+    font-size: 14px !important;
+  }
+}
