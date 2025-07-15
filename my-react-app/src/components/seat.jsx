@@ -1,28 +1,45 @@
 import React from 'react';
 
-const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked }) => {
+const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked, seatSize = "normal" }) => {
   const booking = bookedChairs[chairId];
   const isBooked = !!booking;
   const userName = booking?.userName || '';
   const teamColor = booking?.teamColor || '#808080';
   
-  // NEW: Extract time information from booking
+  // Extract time information from booking
   const entryTime = booking?.entryTime || '';
   const exitTime = booking?.exitTime || '';
-  const timeSlot = booking?.timeSlot || ''; // This might come from API in format "HH:MM - HH:MM"
+  const timeSlot = booking?.timeSlot || '';
 
   const getSeatClasses = () => {
+    // Fully responsive sizes for all screen sizes
+    let sizeClasses = '';
+    let textClasses = '';
+    
+    switch (seatSize) {
+      case 'small':
+        sizeClasses = 'w-11 h-5'; // Mobile and small tablets
+        textClasses = 'text-xs';
+        break;
+      case 'medium':
+        sizeClasses = 'w-14 h-6'; // Medium tablets
+        textClasses = 'text-xs';
+        break;
+      default: // normal
+        sizeClasses = 'w-16 h-7'; // Desktop and large screens
+        textClasses = 'text-xs';
+    }
+
     const baseClasses = `
-      w-16 h-8 flex items-center justify-center cursor-pointer
-      rounded-md transition-all duration-200 ease-in-out
-      text-xs font-semibold border border-gray-300 bg-white
-      hover:shadow-sm
+      ${sizeClasses} flex items-center justify-center cursor-pointer
+      rounded-lg transition-all duration-200 ease-in-out
+      ${textClasses} font-medium border-2 shadow-sm
     `;
 
     if (isBooked) {
-      return `${baseClasses} text-white`;
+      return `${baseClasses} text-white border-gray-400`;
     } else {
-      return `${baseClasses} text-gray-700 hover:bg-gray-50`;
+      return `${baseClasses} text-gray-700 bg-white border-gray-300 hover:bg-gray-50 hover:border-gray-400`;
     }
   };
 
@@ -37,17 +54,14 @@ const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked }) => {
     return {};
   };
 
-  // NEW: Enhanced tooltip function
+  // Enhanced tooltip function
   const getTooltipText = () => {
     if (isBooked) {
-      // Try to get time info in different formats
       let timeInfo = '';
       
       if (timeSlot) {
-        // If timeSlot exists (format: "09:00 - 11:00")
         timeInfo = timeSlot;
       } else if (entryTime && exitTime) {
-        // If separate entry/exit times exist
         timeInfo = `${entryTime} - ${exitTime}`;
       }
       
@@ -61,6 +75,30 @@ const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked }) => {
     }
   };
 
+  // Fully responsive label display
+  const getDisplayLabel = () => {
+    if (isBooked) {
+      // Show username with appropriate truncation for all screen sizes
+      if (seatSize === 'small') {
+        const firstName = userName.split(' ')[0];
+        return firstName.length > 4 ? firstName.substring(0, 3) + '..' : firstName;
+      } else if (seatSize === 'medium') {
+        return userName.length > 6 ? userName.substring(0, 5) + '..' : userName;
+      } else {
+        return userName.length > 8 ? userName.substring(0, 7) + '..' : userName;
+      }
+    } else {
+      // Show appropriate labels for each screen size
+      if (seatSize === 'small') {
+        return label.replace('Seat-', 'S');
+      } else if (seatSize === 'medium') {
+        return label.replace('Seat-', 'S-');
+      } else {
+        return label; // Full "Seat-X" for desktop
+      }
+    }
+  };
+
   return (
     <div
       className={getSeatClasses()}
@@ -69,7 +107,7 @@ const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked }) => {
       title={getTooltipText()}
     >
       <span className="truncate px-1 text-center leading-tight">
-        {isBooked ? userName : label}
+        {getDisplayLabel()}
       </span>
     </div>
   );

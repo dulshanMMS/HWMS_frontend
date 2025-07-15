@@ -4,9 +4,11 @@ import FloorLayoutComponent from "../components/FloorLayout";
 
 const FloorLayout = () => {
   return (
-    <LeftSidebar>
-      <FloorLayoutComponent />
-    </LeftSidebar>
+    <div className="w-full h-screen m-0 p-0 bg-green-50">
+      <LeftSidebar>
+        <FloorLayoutComponent />
+      </LeftSidebar>
+    </div>
   );
 };
 

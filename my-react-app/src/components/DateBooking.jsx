@@ -49,7 +49,7 @@ export default function DateBooking() {
   // Helper to pad numbers <10 with a leading zero for display
   const pad = (num) => (num < 10 ? "0" + num : num);
 
-  // NEW: Validate booking date and time
+  // UPDATED: Validate booking date and time - REMOVED ALL TIME RESTRICTIONS
   const validateBookingDateTime = () => {
     const selectedDate = new Date(date);
     selectedDate.setHours(0, 0, 0, 0);
@@ -57,7 +57,7 @@ export default function DateBooking() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Check if date is in the past
+    // Only check if date is in the past (not today, only past dates like yesterday)
     if (selectedDate < today) {
       return {
         isValid: false,
@@ -65,27 +65,18 @@ export default function DateBooking() {
       };
     }
     
-    // Check if booking time is too close (for today's bookings)
-    if (selectedDate.getTime() === today.getTime()) {
-      const selectedDateTime = new Date(`${selectedDate.toISOString().split('T')[0]}T${pad(entryHour)}:${pad(entryMinute)}:00`);
-      const now = new Date();
-      const oneHourFromNow = new Date(now.getTime() + (60 * 60 * 1000)); // 1 hour from now
-      
-      if (selectedDateTime < oneHourFromNow) {
-        return {
-          isValid: false,
-          message: "Bookings must be made at least 1 hour in advance"
-        };
-      }
-    }
+    // REMOVED: ALL time-based validations for today's bookings
+    // Users can now book any time slot for today or future dates
     
-    // Check business hours (optional)
+    // REMOVED: Business hours restriction - uncomment if you want to keep it
+    /*
     if (entryHour < 6 || entryHour >= 22) {
       return {
         isValid: false,
         message: "Bookings are only allowed between 6:00 AM and 10:00 PM"
       };
     }
+    */
     
     // Check weekend (optional - uncomment if needed)
     // const dayOfWeek = selectedDate.getDay();
@@ -117,7 +108,7 @@ export default function DateBooking() {
       return;
     }
 
-    // NEW: Date and time validation
+    // UPDATED: Date and time validation (now without 1-hour restriction)
     const dateTimeValidation = validateBookingDateTime();
     if (!dateTimeValidation.isValid) {
       setMessage(dateTimeValidation.message);
@@ -218,10 +209,10 @@ export default function DateBooking() {
     );
   };
 
-  // Main component JSX rendering with no scroll and proper viewport fitting
+  // FIXED: Main component JSX rendering - REMOVED p-6 padding that caused gray margins
   return (
-    <div className="w-full h-screen bg-gray-50 flex items-center justify-center overflow-hidden p-6">
-      <div className="w-full max-w-md mx-auto flex flex-col max-h-screen overflow-hidden">
+    <div className="w-full h-full bg-green-50 flex items-center justify-center overflow-hidden m-0">
+      <div className="w-full max-w-md mx-auto flex flex-col max-h-full overflow-hidden px-4">
         {/* Title Section */}
         <div className="text-center mb-6 flex-shrink-0">
           <h2 className="text-2xl font-semibold text-gray-900 mb-3">

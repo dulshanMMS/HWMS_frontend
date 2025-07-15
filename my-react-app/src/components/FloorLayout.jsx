@@ -80,19 +80,8 @@ export default function FloorLayout() {
   const [memberDetails, setMemberDetails] = useState(null);
   const [bookingSubmitted, setBookingSubmitted] = useState(false);
 
-  // DEBUG: Add debug logging
-  console.log('🔍 DEBUG STATE:', {
-    entered,
-    bookingSubmitted,
-    isLoading,
-    memberDetails: !!memberDetails,
-    shouldShowLayout: entered || bookingSubmitted,
-    bookingInfo
-  });
-
   // CLEAR localStorage on component mount to reset booking state
   useEffect(() => {
-    // Clear any previous booking submission states
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -101,20 +90,15 @@ export default function FloorLayout() {
       }
     }
     keysToRemove.forEach(key => localStorage.removeItem(key));
-    console.log('🧹 Cleared localStorage booking states:', keysToRemove);
-    
-    // Reset booking submitted state
     setBookingSubmitted(false);
   }, []);
 
   // Get JWT token and decode username
   useEffect(() => {
-    console.log('🔑 JWT Token check...');
     const token = localStorage.getItem("token");
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        console.log('🔓 Token decoded:', decoded.username);
         setMemberId(decoded.username);
       } catch (e) {
         console.error("Invalid token", e);
@@ -129,7 +113,6 @@ export default function FloorLayout() {
 
   // Validate booking info and fetch bookings with TIME FILTERING
   useEffect(() => {
-    console.log('📅 Booking info validation:', bookingInfo);
     if (!bookingInfo.floor || !bookingInfo.date || !bookingInfo.entryTime || !bookingInfo.exitTime) {
       setMessage('Please select a floor, date, entry time, and exit time.');
       setIsLoading(false);
@@ -150,16 +133,13 @@ export default function FloorLayout() {
         if (!response.ok) throw new Error('Failed to fetch bookings');
         
         const data = await response.json();
-        console.log('📊 All fetched bookings:', data);
         
-        // FILTER BOOKINGS BY TIME OVERLAP
         const filteredChairs = {};
         
         if (data.chairs) {
           Object.keys(data.chairs).forEach(chairId => {
             const booking = data.chairs[chairId];
             
-            // Check if this booking overlaps with the requested time
             const overlaps = timesOverlap(
               booking.entryTime, 
               booking.exitTime, 
@@ -169,14 +149,10 @@ export default function FloorLayout() {
             
             if (overlaps) {
               filteredChairs[chairId] = booking;
-              console.log(`💺 Showing conflicting booking: ${chairId} (${booking.entryTime}-${booking.exitTime})`);
-            } else {
-              console.log(`⏭️ Hiding non-conflicting booking: ${chairId} (${booking.entryTime}-${booking.exitTime})`);
             }
           });
         }
         
-        console.log('📊 Filtered bookings for time period:', filteredChairs);
         setBookedChairs(filteredChairs);
         setIsLoading(false);
       } catch (err) {
@@ -192,7 +168,6 @@ export default function FloorLayout() {
 
   // Fetch user and team data when memberId is available
   useEffect(() => {
-    console.log('👤 User and team fetch for:', memberId);
     if (!memberId) return;
 
     const fetchUserAndTeam = async () => {
@@ -200,7 +175,6 @@ export default function FloorLayout() {
         const userRes = await fetch(`http://localhost:6001/api/bookings/users/${memberId}`);
         if (!userRes.ok) throw new Error('User not found');
         const user = await userRes.json();
-        console.log('👤 User data:', user);
         
         if (!user.username || !user.teamId) {
           throw new Error('User data incomplete - missing username or teamId');
@@ -209,7 +183,6 @@ export default function FloorLayout() {
         const teamRes = await fetch(`http://localhost:6001/api/teams/${user.teamId}`);
         if (!teamRes.ok) throw new Error('Team not found');
         const team = await teamRes.json();
-        console.log('🏢 Team data:', team);
         
         const colorValue = team.color || '#808080';
         let actualColor = '#808080';
@@ -228,7 +201,6 @@ export default function FloorLayout() {
           userName: user.username
         };
 
-        console.log('📊 Setting member details:', memberDetailsWithColor);
         setMemberDetails(memberDetailsWithColor);
         setTeamName(team.teamName);
         setRole(user.role);
@@ -238,16 +210,13 @@ export default function FloorLayout() {
           const teamUsers = await teamUsersRes.json();
           setAllTeamMembers(teamUsers.map(u => u.username));
         } else {
-          console.warn('Could not fetch team members, using current user only');
           setAllTeamMembers([user.username]);
         }
         
         setTeamMembers([user.username]);
-        
-        console.log('✅ Setting entered = true');
         setEntered(true);
       } catch (error) {
-        console.error('❌ Error fetching user/team data:', error);
+        console.error('Error fetching user/team data:', error);
         setMessage('Failed to load user/team info: ' + error.message);
         setEntered(false);
         setIsLoading(false);
@@ -279,14 +248,12 @@ export default function FloorLayout() {
       
       const data = await response.json();
       
-      // FILTER BOOKINGS BY TIME OVERLAP
       const filteredChairs = {};
       
       if (data.chairs) {
         Object.keys(data.chairs).forEach(chairId => {
           const booking = data.chairs[chairId];
           
-          // Check if this booking overlaps with the requested time
           const overlaps = timesOverlap(
             booking.entryTime, 
             booking.exitTime, 
@@ -308,14 +275,14 @@ export default function FloorLayout() {
 
   // Popup components
   const PopUp = ({ message, onClose, children }) => (
-    <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm z-50 animate-fade-in">
-      <div className="bg-white rounded-xl shadow-2xl p-8 min-w-96 min-h-48 flex flex-col justify-center items-center border-2 border-green-400 animate-pop-in">
-        <p className="mb-4 text-gray-800 text-xl font-semibold text-center">
+    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50 animate-fade-in p-4">
+      <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8 w-full max-w-sm sm:max-w-md lg:max-w-lg flex flex-col justify-center items-center border-2 border-green-400 animate-pop-in">
+        <p className="mb-4 text-gray-800 text-sm sm:text-lg lg:text-xl font-semibold text-center">
           {message}
         </p>
         {children || (
           <button 
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg"
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 sm:px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg text-sm sm:text-base"
             onClick={onClose}
           >
             Close
@@ -326,13 +293,13 @@ export default function FloorLayout() {
   );
 
   const AddMemberIdPopUp = ({ onSubmit, onCancel, onChange, value }) => (
-    <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm z-50">
-      <div className="bg-white rounded-xl shadow-2xl p-8 min-w-96 flex flex-col justify-center items-center border-2 border-green-400">
-        <p className="mb-6 text-gray-800 text-xl font-semibold text-center">
+    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8 w-full max-w-sm sm:max-w-md flex flex-col justify-center items-center border-2 border-green-400">
+        <p className="mb-4 sm:mb-6 text-gray-800 text-sm sm:text-lg lg:text-xl font-semibold text-center">
           Enter the member ID of the new team member:
         </p>
         <input
-          className="w-full max-w-xs px-4 py-2 border-2 border-green-300 rounded-lg text-base mb-6 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 transition-all duration-300"
+          className="w-full px-3 sm:px-4 py-2 border-2 border-green-300 rounded-lg text-sm sm:text-base mb-4 sm:mb-6 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 transition-all duration-300"
           placeholder="Enter member ID (e.g., user123)"
           value={value}
           onChange={onChange}
@@ -341,15 +308,15 @@ export default function FloorLayout() {
           }}
           autoFocus
         />
-        <div className="flex gap-4">
+        <div className="flex gap-3 sm:gap-4 w-full sm:w-auto">
           <button 
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg"
+            className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 sm:px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg text-sm sm:text-base"
             onClick={onSubmit}
           >
             Enter
           </button>
           <button 
-            className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg"
+            className="flex-1 sm:flex-none bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 sm:px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg text-sm sm:text-base"
             onClick={onCancel}
           >
             Cancel
@@ -359,29 +326,102 @@ export default function FloorLayout() {
     </div>
   );
 
-  // Chair click handler with debug
+  // Responsive Table Component with your specified strategy
+  const TableComponent = ({ tableId, index, seatSize = "normal" }) => {
+    const getSeatClasses = () => {
+      switch (seatSize) {
+        case "small":
+          return "w-12 h-6"; // Mobile: 12x6 as specified
+        case "medium": 
+          return "w-14 h-7"; // Tablet: medium-sized
+        default:
+          return "w-16 h-8"; // Desktop: full-sized
+      }
+    };
+
+    // Minimal padding and compact spacing
+    const getTableClasses = () => {
+      if (seatSize === "small") {
+        return "bg-white rounded-lg border border-gray-300 shadow-sm p-1"; // Minimal padding
+      } else if (seatSize === "medium") {
+        return "bg-white rounded-lg border border-gray-300 shadow-sm p-1"; // Minimal padding
+      } else {
+        return "bg-white rounded-lg border border-gray-300 shadow-sm p-2"; // Slightly more for desktop
+      }
+    };
+
+    const getGapClasses = () => {
+      if (seatSize === "small") {
+        return "gap-1";
+      } else if (seatSize === "medium") {
+        return "gap-1";
+      } else {
+        return "gap-2";
+      }
+    };
+
+    const getMarginClasses = () => {
+      return "mb-1"; // Minimal margin for all sizes
+    };
+
+    return (
+      <div className={getTableClasses()}>
+        <div className={`flex justify-center ${getGapClasses()} ${getMarginClasses()}`}>
+          {Array.from({ length: 4 }, (_, i) => {
+            const chairId = `${tableId}-chair${i + 1}`;
+            return (
+              <div key={i} className={getSeatClasses()}>
+                <Seat
+                  chairId={chairId}
+                  tableId={tableId}
+                  bookedChairs={bookedChairs}
+                  onClick={!bookingSubmitted ? () => handleChairClick(chairId, tableId) : () => {}}
+                  label={`Seat-${i + 1}`}
+                  isUserBooked={!bookingSubmitted && userBooking?.chairId === chairId}
+                  seatSize={seatSize}
+                />
+              </div>
+            );
+          })}
+        </div>
+        
+        <div className={`bg-green-50 text-center py-1 text-xs font-semibold text-gray-700 rounded ${getMarginClasses()}`}>
+          Table {index + 1}
+        </div>
+        
+        <div className={`flex justify-center ${getGapClasses()}`}>
+          {Array.from({ length: 4 }, (_, i) => {
+            const chairId = `${tableId}-chair${i + 5}`;
+            return (
+              <div key={i + 4} className={getSeatClasses()}>
+                <Seat
+                  chairId={chairId}
+                  tableId={tableId}
+                  bookedChairs={bookedChairs}
+                  onClick={!bookingSubmitted ? () => handleChairClick(chairId, tableId) : () => {}}
+                  label={`Seat-${i + 5}`}
+                  isUserBooked={!bookingSubmitted && userBooking?.chairId === chairId}
+                  seatSize={seatSize}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // Chair click handler
   const handleChairClick = (chairId, tableId) => {
-    console.log('🖱️ Chair clicked:', { chairId, tableId, bookingSubmitted, entered, memberDetails: !!memberDetails });
-    
-    if (bookingSubmitted) {
-      console.log('❌ Booking already submitted');
-      return;
-    }
-  
+    if (bookingSubmitted) return;
     if (!entered || !memberDetails) {
-      console.log('❌ Not entered or no member details');
       showMessage('Please ensure you are logged in and have valid team data.');
       return;
     }
   
     if (role === 'member') {
-      console.log('👤 Processing member booking...');
-      
       if (bookedChairs[chairId]) {
-        console.log('💺 Chair already booked by:', bookedChairs[chairId].userName);
-        
         if (bookedChairs[chairId].userName === memberDetails?.userName) {
-          console.log('🔄 Unbooking own seat...');
           const dateToUse = bookingInfo.date;
           
           fetch(`http://localhost:6001/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
@@ -403,14 +443,10 @@ export default function FloorLayout() {
               showMessage('Failed to unbook seat: ' + err.message);
             });
         } else {
-          console.log('❌ Seat booked by another user');
           showMessage('This seat is booked by another user.');
         }
       } else {
-        console.log('✅ Chair available, attempting to book...');
-        
         if (!memberDetails.userName) {
-          console.log('❌ No userName in member details');
           showMessage('Member details incomplete.');
           return;
         }
@@ -426,37 +462,30 @@ export default function FloorLayout() {
           exitTime: bookingInfo.exitTime,
         };
         
-        console.log('📋 Booking details:', bookingDetails);
-        console.log('🌐 API URL:', `http://localhost:6001/api/bookings/member/${memberDetails.userName}/seat/${chairId}`);
-        
         fetch(`http://localhost:6001/api/bookings/member/${memberDetails.userName}/seat/${chairId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bookingDetails),
         })
           .then((response) => {
-            console.log('📡 Response status:', response.status);
-            
             if (!response.ok) {
               return response.json().then((data) => {
-                console.log('❌ Error response:', data);
                 throw new Error(data.message || 'Booking failed');
               });
             }
             return response.json();
           })
-          .then((data) => {
-            console.log('✅ Booking success:', data);
+          .then(() => {
             setUserBooking({ chairId, tableId });
             refreshBookings();
           })
           .catch((err) => {
-            console.log('❌ Booking error:', err);
             showMessage(`Booking error: ${err.message}`);
           });
       }
     }
   };
+
   // Handler functions
   const handleUnbook = () => {
     const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;
@@ -528,9 +557,7 @@ export default function FloorLayout() {
   };
 
   const handleCancel = () => {
-    if (bookingSubmitted) {
-      return;
-    }
+    if (bookingSubmitted) return;
     
     const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
     localStorage.removeItem(submissionKey);
@@ -638,22 +665,20 @@ export default function FloorLayout() {
   };
 
   if (isLoading) {
-    console.log('⏳ Showing loading screen');
     return (
-      <div className="w-full h-screen bg-green-50 flex items-center justify-center overflow-hidden">
-        <p className="text-gray-800 text-lg font-semibold">Loading...</p>
+      <div className="w-full h-screen bg-green-50 flex items-center justify-center overflow-hidden m-0 p-0">
+        <p className="text-gray-800 text-base sm:text-lg font-semibold">Loading...</p>
       </div>
     );
   }
 
   if (!entered && !isLoading && !bookingSubmitted) {
-    console.log('🚫 Showing "complete booking info" screen');
     return (
-      <div className="w-full h-screen bg-green-50 flex items-center justify-center overflow-hidden">
+      <div className="w-full h-screen bg-green-50 flex items-center justify-center overflow-hidden p-4 m-0">
         <div className="flex flex-col items-center justify-center gap-4 text-center">
-          <p className="text-gray-800 text-lg font-semibold">Please complete your booking information</p>
+          <p className="text-gray-800 text-base sm:text-lg font-semibold">Please complete your booking information</p>
           <button 
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg"
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 sm:px-6 rounded-lg text-sm sm:text-base"
             onClick={() => navigate('/datebooking')}
           >
             Go to Booking
@@ -664,176 +689,182 @@ export default function FloorLayout() {
   }
 
   const shouldShowLayout = entered || bookingSubmitted;
-  console.log('🔘 Final render - shouldShowLayout:', shouldShowLayout, 'bookingSubmitted:', bookingSubmitted);
 
   return (
-    <div className="w-full h-screen bg-green-50 flex items-center justify-center overflow-hidden relative">
+    <div className="w-full h-screen bg-green-50 overflow-auto relative m-0 p-0">
       {shouldShowLayout ? (
-        <div className="flex flex-col items-center justify-center gap-4 w-full h-full p-4 max-h-screen overflow-hidden">
+        <div className="flex flex-col items-center justify-start gap-4 w-full pt-4 min-h-screen m-0">
           
-          {/* Show current booking time period */}
-          <div className="bg-blue-100 border border-blue-300 rounded-lg p-2 text-center">
-            <p className="text-sm font-semibold text-blue-800">
+          {/* Booking Information Header - Better Centered with More Margin */}
+          <div className="bg-blue-100 border border-blue-300 rounded-lg p-3 text-center w-full max-w-xl mb-6 mx-4">
+            <p className="text-sm md:text-base font-semibold text-blue-800">
               📅 Booking for: {bookingInfo.date} | 🕐 Time: {bookingInfo.entryTime} - {bookingInfo.exitTime} | 🏢 Floor {bookingInfo.floor}
             </p>
           </div>
         
+          {/* Leader Controls - Better Centered */}
           {entered && role === 'leader' && !bookingSubmitted && (
-            <div className="bg-white rounded-lg shadow-md p-2 flex flex-row items-center gap-3 border border-gray-300 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold text-gray-700">Book a seat for:</label>
-                <select
-                  className="px-2 py-1 border border-gray-300 rounded-lg text-xs bg-white focus:border-green-500 focus:outline-none"
-                  value={selectedMember}
-                  onChange={(e) => setSelectedMember(e.target.value)}
+            <div className="bg-white rounded-lg shadow-md p-3 border border-gray-300 w-full max-w-2xl mb-6 mx-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-center">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Book for:</label>
+                  <select
+                    className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:border-green-500 focus:outline-none"
+                    value={selectedMember}
+                    onChange={(e) => setSelectedMember(e.target.value)}
+                  >
+                    <option value="">Select a member</option>
+                    {allTeamMembers.map((member) => (
+                      <option key={member} value={member}>
+                        {member}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button 
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg text-sm whitespace-nowrap w-full sm:w-auto"
+                  onClick={addTeamMember}
                 >
-                  <option value="">Select a member</option>
-                  {allTeamMembers.map((member) => (
-                    <option key={member} value={member}>
-                      {member}
-                    </option>
-                  ))}
-                </select>
+                  Add Member
+                </button>
               </div>
-              <button 
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-1 px-3 rounded-lg text-xs"
-                onClick={addTeamMember}
-              >
-                Add Team Member
-              </button>
             </div>
           )}
 
-          <div className="flex items-center justify-center gap-6 flex-shrink-0 mx-auto">
-            
-            <div className="flex flex-col gap-2">
-              {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
-                <div key={tableId} className="bg-white rounded-lg border border-gray-300 shadow-sm p-3">
-                  
-                  <div className="flex justify-center gap-2 mb-2">
-                    {Array.from({ length: 4 }, (_, i) => {
-                      const chairId = `${tableId}-chair${i + 1}`;
-                      return (
-                        <Seat
-                          key={i}
-                          chairId={chairId}
-                          tableId={tableId}
-                          bookedChairs={bookedChairs}
-                          onClick={!bookingSubmitted ? () => handleChairClick(chairId, tableId) : () => {}}
-                          label={`Seat-${i + 1}`}
-                          isUserBooked={!bookingSubmitted && userBooking?.chairId === chairId}
-                        />
-                      );
-                    })}
-                  </div>
-                  
-                  <div className="bg-green-50 text-center py-1 text-sm font-semibold text-gray-700 rounded mb-2">
-                    Table {index + 1}
-                  </div>
-                  
-                  <div className="flex justify-center gap-2">
-                    {Array.from({ length: 4 }, (_, i) => {
-                      const chairId = `${tableId}-chair${i + 5}`;
-                      return (
-                        <Seat
-                          key={i + 4}
-                          chairId={chairId}
-                          tableId={tableId}
-                          bookedChairs={bookedChairs}
-                          onClick={!bookingSubmitted ? () => handleChairClick(chairId, tableId) : () => {}}
-                          label={`Seat-${i + 5}`}
-                          isUserBooked={!bookingSubmitted && userBooking?.chairId === chairId}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+          {/* Main Floor Layout - Better Centered with More Margins */}
+          <div className="w-full flex justify-center mb-8">
+            {/* Mobile Layout (320-768px): Single column with stacked tables */}
+            <div className="block md:hidden w-full max-w-sm">
+              <div className="flex flex-col gap-3 mb-6">
+                {/* First 4 tables with more spacing */}
+                {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
+                  <TableComponent 
+                    key={tableId} 
+                    tableId={tableId} 
+                    index={index} 
+                    seatSize="small"
+                  />
+                ))}
+              </div>
+              
+              {/* Mobile Lobby with More Margin */}
+              <div className="bg-green-50 border-2 border-green-400 rounded-lg flex items-center justify-center h-16 mb-6 mx-4">
+                <span className="text-gray-800 font-bold text-sm text-center">Lobby</span>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                {/* Last 4 tables */}
+                {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
+                  <TableComponent 
+                    key={tableId} 
+                    tableId={tableId} 
+                    index={index + 4} 
+                    seatSize="small"
+                  />
+                ))}
+              </div>
             </div>
 
-            <div className="bg-green-50 border-2 border-green-400 rounded-xl flex items-center justify-center" style={{width: '200px', height: '530px'}}>
-              <span className="text-gray-800 font-bold text-lg text-center">
-                Lobby
-              </span>
+            {/* Tablet Layout (768-1024px): Two-column layout (2x4 arrangement) */}
+            <div className="hidden md:block lg:hidden w-full max-w-3xl">
+              <div className="flex flex-col items-center gap-6">
+                <div className="grid grid-cols-2 gap-4 w-full">
+                  {/* Tables T1-T4 with Better Spacing */}
+                  {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
+                    <TableComponent 
+                      key={tableId} 
+                      tableId={tableId} 
+                      index={index} 
+                      seatSize="medium"
+                    />
+                  ))}
+                </div>
+                
+                {/* Tablet Lobby with More Margin */}
+                <div className="bg-green-50 border-2 border-green-400 rounded-lg flex items-center justify-center w-64 h-28 my-4">
+                  <span className="text-gray-800 font-bold text-lg text-center">Lobby</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 w-full">
+                  {/* Tables T5-T8 */}
+                  {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
+                    <TableComponent 
+                      key={tableId} 
+                      tableId={tableId} 
+                      index={index + 4} 
+                      seatSize="medium"
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
-                <div key={tableId} className="bg-white rounded-lg border border-gray-300 shadow-sm p-3">
-                  
-                  <div className="flex justify-center gap-2 mb-2">
-                    {Array.from({ length: 4 }, (_, i) => {
-                      const chairId = `${tableId}-chair${i + 1}`;
-                      return (
-                        <Seat
-                          key={i}
-                          chairId={chairId}
-                          tableId={tableId}
-                          bookedChairs={bookedChairs}
-                          onClick={!bookingSubmitted ? () => handleChairClick(chairId, tableId) : () => {}}
-                          label={`Seat-${i + 1}`}
-                          isUserBooked={!bookingSubmitted && userBooking?.chairId === chairId}
-                        />
-                      );
-                    })}
-                  </div>
-                  
-                  <div className="bg-green-50 text-center py-1 text-sm font-semibold text-gray-700 rounded mb-2">
-                    Table {index + 5}
-                  </div>
-                  
-                  <div className="flex justify-center gap-2">
-                    {Array.from({ length: 4 }, (_, i) => {
-                      const chairId = `${tableId}-chair${i + 5}`;
-                      return (
-                        <Seat
-                          key={i + 4}
-                          chairId={chairId}
-                          tableId={tableId}
-                          bookedChairs={bookedChairs}
-                          onClick={!bookingSubmitted ? () => handleChairClick(chairId, tableId) : () => {}}
-                          label={`Seat-${i + 5}`}
-                          isUserBooked={!bookingSubmitted && userBooking?.chairId === chairId}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            {/* Desktop Layout (1024px+): Original three-column layout - Better Centered */}
+            <div className="hidden lg:flex lg:items-center lg:justify-center lg:gap-8 w-full max-w-6xl">
+              {/* Left Tables */}
+              <div className="flex flex-col gap-4">
+                {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
+                  <TableComponent 
+                    key={tableId} 
+                    tableId={tableId} 
+                    index={index} 
+                    seatSize="normal"
+                  />
+                ))}
+              </div>
+
+              {/* Desktop Lobby - Better Centered */}
+              <div className="bg-green-50 border-2 border-green-400 rounded-lg flex items-center justify-center w-48 h-[500px] mx-6">
+                <span className="text-gray-800 font-bold text-xl text-center">Lobby</span>
+              </div>
+
+              {/* Right Tables */}
+              <div className="flex flex-col gap-4">
+                {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
+                  <TableComponent 
+                    key={tableId} 
+                    tableId={tableId} 
+                    index={index + 4} 
+                    seatSize="normal"
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* CONTROL BUTTONS - Always visible */}
+          {/* Control Buttons - Better Centered */}
           {!bookingSubmitted && (
-            <div className="bg-white rounded-lg shadow-md p-3 flex flex-row gap-4 border border-gray-300 flex-shrink-0">
-              <button 
-                className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg text-sm"
-                onClick={handleUnbook}
-              >
-                Unbook
-              </button>
-              <button
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg text-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
-                onClick={handleSubmit}
-                disabled={!hasBookedSeat()}
-              >
-                Submit
-              </button>
-              <button 
-                className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg text-sm"
-                onClick={handleCancel}
-              >
-                Cancel
-              </button>
+            <div className="bg-white rounded-lg shadow-md p-3 border border-gray-300 w-full max-w-sm mt-6 mx-4">
+              <div className="flex gap-3 justify-center">
+                <button 
+                  className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg text-sm"
+                  onClick={handleUnbook}
+                >
+                  Unbook
+                </button>
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg text-sm disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  onClick={handleSubmit}
+                  disabled={!hasBookedSeat()}
+                >
+                  Submit
+                </button>
+                <button 
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg text-sm"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Show message when booking is submitted */}
+          {/* Success Message - Better Centered */}
           {bookingSubmitted && (
-            <div className="bg-green-100 border border-green-300 rounded-lg p-4 text-center">
-              <p className="text-green-800 font-semibold">✅ Booking Submitted Successfully!</p>
+            <div className="bg-green-100 border border-green-300 rounded-lg p-4 text-center w-full max-w-xl mt-6 mx-4 mb-4">
+              <p className="text-green-800 font-semibold text-base mb-3">✅ Booking Submitted Successfully!</p>
               <button 
-                className="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg text-sm"
+                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-6 rounded-lg text-sm"
                 onClick={() => navigate('/datebooking')}
               >
                 Make Another Booking
@@ -842,23 +873,24 @@ export default function FloorLayout() {
           )}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center gap-4 text-center">
-          <p className="text-gray-800 text-lg font-semibold">Loading your session...</p>
+        <div className="flex flex-col items-center justify-center gap-4 text-center h-screen p-4 m-0">
+          <p className="text-gray-800 text-base sm:text-lg font-semibold">Loading your session...</p>
         </div>
       )}
 
+      {/* Popups */}
       {message && <PopUp message={message} onClose={closeMessage} />}
       {showAddMemberPrompt && (
         <PopUp message="Do you want to book for another member?">
-          <div className="flex gap-4">
+          <div className="flex gap-3 sm:gap-4 w-full sm:w-auto">
             <button 
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg"
+              className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 sm:px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg text-sm sm:text-base"
               onClick={handleAddMemberPromptYes}
             >
               Yes
             </button>
             <button 
-              className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg"
+              className="flex-1 sm:flex-none bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 sm:px-6 rounded-lg transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-lg text-sm sm:text-base"
               onClick={handleAddMemberPromptNo}
             >
               No
