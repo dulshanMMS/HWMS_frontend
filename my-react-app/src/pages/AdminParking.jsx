@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import Modal from '../components/AdminParkingModel';
 import AdminSidebar from '../components/AdminSidebar';
+import useAuthGuard from '../components/AuthGuard';
 
 const AdminParking = () => {
+  useAuthGuard("admin");  // do roll base access control
   const [formData, setFormData] = useState({
     date: '',
     username: '',
