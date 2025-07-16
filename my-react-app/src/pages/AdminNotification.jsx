@@ -8,9 +8,9 @@ import NotificationFilters from '../components/Notification/NotificationFilters'
 import NotificationList from '../components/Notification/NotificationList';
 
 
-const API_BASE_URL = 'http://localhost:5000/api/notifications';
+const API_BASE_URL = 'http://localhost:6001/api/notifications';
 
-const socket = io('http://localhost:5000', {
+const socket = io('http://localhost:6001', {
   withCredentials: true,
 });
 
