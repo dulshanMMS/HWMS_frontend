@@ -83,11 +83,15 @@ const Login = () => {
   return (
     <div className="w-full min-h-screen flex flex-col lg:flex-row bg-[#D0E7D6]">
       <Navbar />
+
+      {/* Image - visible on all screens, top on mobile, left on large screens */}
       <div
-        className="hidden lg:block lg:w-[65%] h-screen bg-cover bg-center"
+        className="w-full lg:w-[65%] h-64 lg:h-screen bg-cover bg-center"
         style={{ backgroundImage: `url(${signInImg})` }}
       ></div>
-      <div className="w-full lg:w-[35%] flex items-center justify-center py-12 px-8">
+
+      {/* Form - bottom on mobile, right on large screens */}
+      <div className="w-full lg:w-[35%] flex items-center justify-center py-12 px-6 sm:px-8">
         <AuthForm
           currentState={currentState}
           {...formData}
