@@ -18,6 +18,7 @@ import UserDashboard from "./pages/UserDashboard";
 import UserNotification from "./pages/UserNotification";
 
 import Profile from "./pages/Profile";
+import MessagingPage from "./pages/MessagingPage";
 
 const App = () => {
   const location = useLocation();
@@ -48,6 +49,7 @@ const App = () => {
         <Route path="/user/notifications" element={<UserNotification />} />
         <Route path="/user/AboutUsPage" element={<AboutUsPage />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/messaging" element={<MessagingPage />} />
       </Routes>
 
       {/* Toast Container for notifications */}

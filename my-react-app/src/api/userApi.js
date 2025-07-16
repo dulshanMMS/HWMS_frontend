@@ -19,3 +19,10 @@ export const updateProfile = async (token, profileData) => {
   });
   return res.data;
 };
+
+export const getUnreadCount = async (token) => {
+  // Mock for now - will be replaced when backend is ready
+  return { unreadCount: 3 };
+};
+
+
