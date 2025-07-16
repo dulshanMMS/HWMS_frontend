@@ -1,5 +1,5 @@
 export const getBookings = async () => {
-    const response = await fetch('http://localhost:5000/api/bookings');
+    const response = await fetch('http://localhost:6001/api/bookings');
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Get bookings failed with status:", response.status, "Response:", errorText);
@@ -24,9 +24,9 @@ export const getBookings = async () => {
     let url = '';
   
     if (role === 'leader' && selectedMember) {
-      url = `http://localhost:5000/api/bookings/leader/${userName}/member/${selectedMember}/seat/${chairId}`;
+      url = `http://localhost:6001/api/bookings/leader/${userName}/member/${selectedMember}/seat/${chairId}`;
     } else {
-      url = `http://localhost:5000/api/bookings/member/${userName}/seat/${chairId}`;
+      url = `http://localhost:6001/api/bookings/member/${userName}/seat/${chairId}`;
     }
   
     const body = { roomId, teamName, teamColor, memberName };
@@ -60,7 +60,7 @@ export const getBookings = async () => {
   };
   
   export const unbookSeat = async (roomId, chairId) => {
-    const response = await fetch(`http://localhost:5000/api/bookings/unbook/${roomId}/${chairId}`, {
+    const response = await fetch(`http://localhost:6001/api/bookings/unbook/${roomId}/${chairId}`, {
       method: 'DELETE',
     });
     if (!response.ok) {

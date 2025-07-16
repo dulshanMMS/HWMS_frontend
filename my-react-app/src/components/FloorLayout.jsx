@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Seat from './Seat';
@@ -16,9 +16,26 @@ const getColorFromTailwind = (tailwindClass) => {
     'bg-indigo-500': '#6366f1',
     'bg-orange-500': '#f97316',
     'bg-teal-500': '#14b8a6',
-    'bg-cyan-500': '#06b6d4'
+    'bg-cyan-500': '#06b6d4',
+    'bg-gray-500': '#6b7280',
+    'bg-slate-500': '#64748b',
+    'bg-amber-500': '#f59e0b',
+    'bg-lime-500': '#84cc16',
+    'bg-emerald-500': '#10b981',
+    'bg-sky-500': '#0ea5e9',
+    'bg-violet-500': '#8b5cf6',
+    'bg-fuchsia-500': '#d946ef',
+    'bg-rose-500': '#f43f5e'
   };
   return colorMap[tailwindClass] || '#808080';
+};
+
+// Helper function to ensure we always have hex colors
+const ensureHexColor = (color) => {
+  if (!color) return '#808080'; // Default gray
+  if (color.startsWith('#')) return color; // Already hex
+  if (color.startsWith('bg-')) return getColorFromTailwind(color); // Tailwind class
+  return '#808080'; // Fallback
 };
 
 // Helper function to check if times overlap
@@ -111,7 +128,54 @@ export default function FloorLayout() {
     }
   }, [navigate]);
 
-  // Validate booking info and fetch bookings with TIME FILTERING
+  // Message handling
+  const showMessage = (msg) => {
+    setMessage(msg);
+  };
+  
+  const closeMessage = () => {
+    setMessage(null);
+  };
+
+  // Fetch all database bookings WITHOUT time filtering
+  const fetchAllDatabaseBookings = async () => {
+    try {
+      const response = await fetch(`http://localhost:6001/api/bookings/filtered?date=${bookingInfo.date}&floor=${bookingInfo.floor}`);
+      if (!response.ok) throw new Error('Failed to fetch all bookings');
+      
+      const data = await response.json();
+      console.log('📥 Fetching ALL database bookings:', data);
+      
+      const allBookings = {};
+      
+      if (data.chairs) {
+        Object.keys(data.chairs).forEach(chairId => {
+          const booking = data.chairs[chairId];
+          
+          allBookings[chairId] = {
+            ...booking,
+            userName: booking.userName || booking.username,
+            teamColor: ensureHexColor(booking.teamColor), // CONVERT TO HEX
+            timeSlot: booking.timeSlot || `${booking.entryTime} - ${booking.exitTime}`,
+            isFromDatabase: true
+          };
+          
+          console.log(`📋 Database booking for chair ${chairId}:`, {
+            userName: allBookings[chairId].userName,
+            teamColor: allBookings[chairId].teamColor,
+            timeSlot: allBookings[chairId].timeSlot
+          });
+        });
+      }
+      
+      setBookedChairs(allBookings);
+      console.log('🎯 All database bookings loaded and displayed');
+    } catch (err) {
+      console.error("Failed to fetch database bookings:", err);
+    }
+  };
+
+  // Enhanced fetch bookings with permanent display
   useEffect(() => {
     if (!bookingInfo.floor || !bookingInfo.date || !bookingInfo.entryTime || !bookingInfo.exitTime) {
       setMessage('Please select a floor, date, entry time, and exit time.');
@@ -129,10 +193,12 @@ export default function FloorLayout() {
           floor: bookingInfo.floor
         });
         
-        const response = await fetch(`http://localhost:5000/api/bookings/filtered?${queryParams}`);
+        const response = await fetch(`http://localhost:6001/api/bookings/filtered?${queryParams}`);
         if (!response.ok) throw new Error('Failed to fetch bookings');
         
         const data = await response.json();
+        
+        console.log('📥 Received booking data from server:', data);
         
         const filteredChairs = {};
         
@@ -148,23 +214,69 @@ export default function FloorLayout() {
             );
             
             if (overlaps) {
-              filteredChairs[chairId] = booking;
+              filteredChairs[chairId] = {
+                ...booking,
+                userName: booking.userName || booking.username,
+                teamColor: ensureHexColor(booking.teamColor), // CONVERT TO HEX
+                timeSlot: booking.timeSlot || `${booking.entryTime} - ${booking.exitTime}`
+              };
+              console.log(`📋 Chair ${chairId} booking:`, {
+                userName: filteredChairs[chairId].userName,
+                teamColor: filteredChairs[chairId].teamColor,
+                timeSlot: filteredChairs[chairId].timeSlot
+              });
             }
           });
         }
         
-        setBookedChairs(filteredChairs);
+        console.log('🎯 Final filtered chairs:', filteredChairs);
+        
+        setBookedChairs(prev => {
+          const merged = { ...prev };
+          
+          Object.keys(filteredChairs).forEach(chairId => {
+            merged[chairId] = filteredChairs[chairId];
+          });
+          
+          Object.keys(prev).forEach(chairId => {
+            if (!filteredChairs[chairId] && prev[chairId]?.userName === memberDetails?.userName) {
+              merged[chairId] = prev[chairId];
+              console.log('🔒 Preserving user booking:', chairId, prev[chairId]);
+            }
+          });
+          
+          return merged;
+        });
+        
         setIsLoading(false);
       } catch (err) {
         console.error("Failed to fetch bookings:", err);
         setMessage('Failed to fetch bookings: ' + err.message);
-        setBookedChairs({});
         setIsLoading(false);
       }
     };
     
     fetchBookings();
-  }, [bookingInfo, navigate]);
+
+    if (bookingSubmitted) {
+      console.log('🔄 Fetching all database bookings since booking is submitted...');
+      fetchAllDatabaseBookings();
+    }
+
+    const refreshInterval = setInterval(() => {
+      if (!bookingSubmitted) {
+        console.log('🔄 Auto-refreshing bookings...');
+        fetchBookings();
+      } else {
+        console.log('🔄 Refreshing all database bookings...');
+        fetchAllDatabaseBookings();
+      }
+    }, 30000);
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [bookingInfo, navigate, bookingSubmitted, memberDetails?.userName]);
 
   // Fetch user and team data when memberId is available
   useEffect(() => {
@@ -172,7 +284,7 @@ export default function FloorLayout() {
 
     const fetchUserAndTeam = async () => {
       try {
-        const userRes = await fetch(`http://localhost:5000/api/bookings/users/${memberId}`);
+        const userRes = await fetch(`http://localhost:6001/api/bookings/users/${memberId}`);
         if (!userRes.ok) throw new Error('User not found');
         const user = await userRes.json();
         
@@ -180,7 +292,7 @@ export default function FloorLayout() {
           throw new Error('User data incomplete - missing username or teamId');
         }
 
-        const teamRes = await fetch(`http://localhost:5000/api/teams/${user.teamId}`);
+        const teamRes = await fetch(`http://localhost:6001/api/teams/${user.teamId}`);
         if (!teamRes.ok) throw new Error('Team not found');
         const team = await teamRes.json();
         
@@ -205,7 +317,7 @@ export default function FloorLayout() {
         setTeamName(team.teamName);
         setRole(user.role);
 
-        const teamUsersRes = await fetch(`http://localhost:5000/api/bookings/users/team/${user.teamId}`);
+        const teamUsersRes = await fetch(`http://localhost:6001/api/bookings/users/team/${user.teamId}`);
         if (teamUsersRes.ok) {
           const teamUsers = await teamUsersRes.json();
           setAllTeamMembers(teamUsers.map(u => u.username));
@@ -226,27 +338,25 @@ export default function FloorLayout() {
     fetchUserAndTeam();
   }, [memberId]);
 
-  // Message handling
-  const showMessage = (msg) => {
-    setMessage(msg);
-  };
-  
-  const closeMessage = () => {
-    setMessage(null);
-  };
-
-  // Function to refresh bookings with TIME FILTERING
+  // Refresh bookings with permanent preservation
   const refreshBookings = async () => {
+    if (bookingSubmitted) {
+      await fetchAllDatabaseBookings();
+      return;
+    }
+    
     try {
       const queryParams = new URLSearchParams({
         date: bookingInfo.date,
         floor: bookingInfo.floor
       });
       
-      const response = await fetch(`http://localhost:5000/api/bookings/filtered?${queryParams}`);
+      const response = await fetch(`http://localhost:6001/api/bookings/filtered?${queryParams}`);
       if (!response.ok) throw new Error('Failed to fetch bookings');
       
       const data = await response.json();
+      
+      console.log('🔄 Refreshing bookings, received:', data);
       
       const filteredChairs = {};
       
@@ -262,17 +372,162 @@ export default function FloorLayout() {
           );
           
           if (overlaps) {
-            filteredChairs[chairId] = booking;
+            filteredChairs[chairId] = {
+              ...booking,
+              userName: booking.userName || booking.username,
+              teamColor: ensureHexColor(booking.teamColor), // CONVERT TO HEX
+              timeSlot: booking.timeSlot || `${booking.entryTime} - ${booking.exitTime}`
+            };
+            console.log(`📋 Refreshed chair ${chairId}:`, {
+              userName: filteredChairs[chairId].userName,
+              teamColor: filteredChairs[chairId].teamColor
+            });
           }
         });
       }
       
-      setBookedChairs(filteredChairs);
+      console.log('🎯 Filtered chairs after refresh:', filteredChairs);
+      
+      setBookedChairs(prev => {
+        const merged = { ...prev };
+        
+        Object.keys(filteredChairs).forEach(chairId => {
+          merged[chairId] = filteredChairs[chairId];
+        });
+        
+        Object.keys(prev).forEach(chairId => {
+          if (!filteredChairs[chairId] && prev[chairId]?.userName === memberDetails?.userName) {
+            merged[chairId] = prev[chairId];
+            console.log('🔒 Preserving user booking during refresh:', chairId);
+          }
+        });
+        
+        return merged;
+      });
     } catch (err) {
       console.error("Failed to refresh bookings:", err);
     }
   };
 
+  // Chair click handler with permanent display
+  const handleChairClick = (chairId, tableId) => {
+    if (bookingSubmitted) return;
+    if (!entered || !memberDetails) {
+      showMessage('Please ensure you are logged in and have valid team data.');
+      return;
+    }
+
+    if (role === 'member') {
+      if (bookedChairs[chairId]) {
+        if (bookedChairs[chairId].userName === memberDetails?.userName) {
+          const dateToUse = bookingInfo.date;
+          
+          fetch(`http://localhost:6001/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
+            method: 'DELETE',
+          })
+            .then((response) => {
+              if (!response.ok) {
+                return response.json().then((errorData) => {
+                  throw new Error(errorData.error || 'Unbooking failed');
+                });
+              }
+              return response.json();
+            })
+            .then(() => {
+              setUserBooking(null);
+              
+              setBookedChairs(prev => {
+                const updated = { ...prev };
+                delete updated[chairId];
+                console.log('✅ Removed booking from state:', chairId);
+                return updated;
+              });
+              
+              showMessage('Seat unbooked successfully!');
+            })
+            .catch((err) => {
+              showMessage('Failed to unbook seat: ' + err.message);
+            });
+        } else {
+          showMessage('This seat is booked by another user.');
+        }
+      } else {
+        if (!memberDetails.userName) {
+          showMessage('Member details incomplete.');
+          return;
+        }
+        
+        const bookingDetails = {
+          roomId: tableId,
+          teamName,
+          teamColor: memberDetails.teamColor,
+          userName: memberDetails.userName,
+          floor: bookingInfo.floor,
+          date: bookingInfo.date,
+          entryTime: bookingInfo.entryTime,
+          exitTime: bookingInfo.exitTime,
+        };
+        
+        console.log('🚀 Sending booking request:', bookingDetails);
+        
+        fetch(`http://localhost:6001/api/bookings/member/${memberDetails.userName}/seat/${chairId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bookingDetails),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              return response.json().then((data) => {
+                throw new Error(data.message || 'Booking failed');
+              });
+            }
+            return response.json();
+          })
+          .then((result) => {
+            console.log('✅ Booking successful - Backend Response:', result);
+            
+            setUserBooking({ chairId, tableId });
+            
+            console.log('🎨 DEBUG - Team color values:');
+            console.log('memberDetails.teamColor:', memberDetails.teamColor);
+            console.log('Converted color:', ensureHexColor(memberDetails.teamColor));
+            
+            const chairData = {
+              userName: memberDetails.userName,
+              username: memberDetails.userName,
+              teamColor: ensureHexColor(memberDetails.teamColor), // CONVERT TO HEX
+              teamName: teamName,
+              teamId: memberDetails.teamId,
+              entryTime: bookingInfo.entryTime,
+              exitTime: bookingInfo.exitTime,
+              timeSlot: `${bookingInfo.entryTime} - ${bookingInfo.exitTime}`,
+              bookingId: result.bookingId,
+              bookedAt: new Date(),
+              floor: bookingInfo.floor,
+              date: bookingInfo.date
+            };
+            
+            console.log('🎯 Adding chair data to state:', chairData);
+            console.log('🎨 Chair color will be:', chairData.teamColor);
+            
+            setBookedChairs(prev => ({
+              ...prev,
+              [chairId]: chairData
+            }));
+            
+            console.log('✅ Seat booking completed - username and color now visible');
+          })
+          .catch((err) => {
+            console.error('❌ Booking error:', err);
+            showMessage(`Booking error: ${err.message}`);
+          });
+      }
+    }
+  };
+
+  // Rest of your component code continues exactly the same...
+  // (All the PopUp, TableComponent, handlers, and JSX remain identical)
+  
   // Popup components
   const PopUp = ({ message, onClose, children }) => (
     <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50 animate-fade-in p-4">
@@ -326,27 +581,25 @@ export default function FloorLayout() {
     </div>
   );
 
-  // Responsive Table Component with your specified strategy
   const TableComponent = ({ tableId, index, seatSize = "normal" }) => {
     const getSeatClasses = () => {
       switch (seatSize) {
         case "small":
-          return "w-12 h-6"; // Mobile: 12x6 as specified
+          return "w-12 h-6";
         case "medium": 
-          return "w-14 h-7"; // Tablet: medium-sized
+          return "w-14 h-7";
         default:
-          return "w-16 h-8"; // Desktop: full-sized
+          return "w-16 h-8";
       }
     };
 
-    // Minimal padding and compact spacing
     const getTableClasses = () => {
       if (seatSize === "small") {
-        return "bg-white rounded-lg border border-gray-300 shadow-sm p-1"; // Minimal padding
+        return "bg-white rounded-lg border border-gray-300 shadow-sm p-1";
       } else if (seatSize === "medium") {
-        return "bg-white rounded-lg border border-gray-300 shadow-sm p-1"; // Minimal padding
+        return "bg-white rounded-lg border border-gray-300 shadow-sm p-1";
       } else {
-        return "bg-white rounded-lg border border-gray-300 shadow-sm p-2"; // Slightly more for desktop
+        return "bg-white rounded-lg border border-gray-300 shadow-sm p-2";
       }
     };
 
@@ -361,7 +614,7 @@ export default function FloorLayout() {
     };
 
     const getMarginClasses = () => {
-      return "mb-1"; // Minimal margin for all sizes
+      return "mb-1";
     };
 
     return (
@@ -411,82 +664,6 @@ export default function FloorLayout() {
     );
   };
 
-  // Chair click handler
-  const handleChairClick = (chairId, tableId) => {
-    if (bookingSubmitted) return;
-    if (!entered || !memberDetails) {
-      showMessage('Please ensure you are logged in and have valid team data.');
-      return;
-    }
-  
-    if (role === 'member') {
-      if (bookedChairs[chairId]) {
-        if (bookedChairs[chairId].userName === memberDetails?.userName) {
-          const dateToUse = bookingInfo.date;
-          
-          fetch(`http://localhost:5000/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
-            method: 'DELETE',
-          })
-            .then((response) => {
-              if (!response.ok) {
-                return response.json().then((errorData) => {
-                  throw new Error(errorData.error || 'Unbooking failed');
-                });
-              }
-              return response.json();
-            })
-            .then(() => {
-              setUserBooking(null);
-              refreshBookings();
-            })
-            .catch((err) => {
-              showMessage('Failed to unbook seat: ' + err.message);
-            });
-        } else {
-          showMessage('This seat is booked by another user.');
-        }
-      } else {
-        if (!memberDetails.userName) {
-          showMessage('Member details incomplete.');
-          return;
-        }
-        
-        const bookingDetails = {
-          roomId: tableId,
-          teamName,
-          teamColor: memberDetails.teamColor,
-          userName: memberDetails.userName,
-          floor: bookingInfo.floor,
-          date: bookingInfo.date,
-          entryTime: bookingInfo.entryTime,
-          exitTime: bookingInfo.exitTime,
-        };
-        
-        fetch(`http://localhost:5000/api/bookings/member/${memberDetails.userName}/seat/${chairId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(bookingDetails),
-        })
-          .then((response) => {
-            if (!response.ok) {
-              return response.json().then((data) => {
-                throw new Error(data.message || 'Booking failed');
-              });
-            }
-            return response.json();
-          })
-          .then(() => {
-            setUserBooking({ chairId, tableId });
-            refreshBookings();
-          })
-          .catch((err) => {
-            showMessage(`Booking error: ${err.message}`);
-          });
-      }
-    }
-  };
-
-  // Handler functions
   const handleUnbook = () => {
     const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;
     if (!targetMember) {
@@ -506,7 +683,7 @@ export default function FloorLayout() {
     const tableId = chairId.split('-')[0];
     const dateToUse = bookingInfo.date;
     
-    fetch(`http://localhost:5000/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
+    fetch(`http://localhost:6001/api/bookings/unbook/${tableId}/${chairId}/${bookingInfo.floor}/${dateToUse}`, {
       method: 'DELETE',
     })
       .then((response) => {
@@ -521,11 +698,32 @@ export default function FloorLayout() {
         if (role === 'member' || (role === 'leader' && selectedMember === memberDetails?.userName)) {
           setUserBooking(null);
         }
+        
+        setBookedChairs(prev => {
+          const updated = { ...prev };
+          delete updated[chairId];
+          console.log('✅ Unbooked seat removed from state:', chairId);
+          return updated;
+        });
+        
         refreshBookings();
+        showMessage('Seat unbooked successfully!');
       })
       .catch((err) => {
         showMessage(`Unbooking error: ${err.message}`);
       });
+  };
+
+  const hasBookedSeat = () => {
+    const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;
+    if (!targetMember) return false;
+    
+    const hasUserBooking = userBooking?.chairId;
+    const hasChairBooking = Object.keys(bookedChairs).some(
+      (chairId) => bookedChairs[chairId]?.userName === targetMember
+    );
+    
+    return hasUserBooking || hasChairBooking;
   };
 
   const handleSubmit = () => {
@@ -535,11 +733,7 @@ export default function FloorLayout() {
       return;
     }
 
-    const bookedSeat = userBooking?.chairId || Object.keys(bookedChairs).find(
-      (chairId) => bookedChairs[chairId]?.userName === targetMember
-    );
-
-    if (!bookedSeat) {
+    if (!hasBookedSeat()) {
       showMessage('Please book a seat before submitting.');
       return;
     }
@@ -547,6 +741,9 @@ export default function FloorLayout() {
     setBookingSubmitted(true);
     const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
     localStorage.setItem(submissionKey, 'true');
+    
+    console.log('✅ Booking submitted - preserving all seat displays');
+    console.log('Current bookedChairs:', bookedChairs);
     
     showMessage('Seat booking submitted successfully!');
 
@@ -573,13 +770,6 @@ export default function FloorLayout() {
     setMemberDetails(null);
     showMessage('Session canceled successfully!');
     navigate('/datebooking');
-  };
-
-  const hasBookedSeat = () => {
-    const targetMember = role === 'leader' ? selectedMember : memberDetails?.userName;
-    return Object.keys(bookedChairs).some(
-      (chairId) => bookedChairs[chairId]?.userName === targetMember
-    );
   };
 
   const handleAddMemberPromptYes = () => {
@@ -613,7 +803,7 @@ export default function FloorLayout() {
   const handleAddMemberIdSubmit = async () => {
     if (newMemberId.trim()) {
       try {
-        const userRes = await fetch(`http://localhost:5000/api/bookings/users/${newMemberId}`);
+        const userRes = await fetch(`http://localhost:6001/api/bookings/users/${newMemberId}`);
         if (!userRes.ok) {
           setMessage('User not found with this username.');
           setNewMemberId('');
@@ -695,14 +885,14 @@ export default function FloorLayout() {
       {shouldShowLayout ? (
         <div className="flex flex-col items-center justify-center gap-6 w-full min-h-screen py-8">
           
-          {/* Booking Information Header - Perfectly Centered */}
+          {/* Booking Information Header */}
           <div className="bg-blue-100 border border-blue-300 rounded-xl p-4 text-center w-full max-w-2xl mx-auto shadow-sm">
             <p className="text-sm md:text-base font-semibold text-blue-800">
               📅 Booking for: {bookingInfo.date} | 🕐 Time: {bookingInfo.entryTime} - {bookingInfo.exitTime} | 🏢 Floor {bookingInfo.floor}
             </p>
           </div>
         
-          {/* Leader Controls - Centered */}
+          {/* Leader Controls */}
           {entered && role === 'leader' && !bookingSubmitted && (
             <div className="bg-white rounded-xl shadow-md p-4 border border-gray-300 w-full max-w-2xl mx-auto">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-center">
@@ -731,12 +921,11 @@ export default function FloorLayout() {
             </div>
           )}
 
-          {/* Main Floor Layout - Perfectly Centered */}
+          {/* Main Floor Layout */}
           <div className="w-full flex justify-center items-center">
-            {/* Mobile Layout (320-768px): Single column with stacked tables */}
+            {/* Mobile Layout */}
             <div className="block md:hidden w-full max-w-sm px-4">
               <div className="flex flex-col gap-4 mb-8">
-                {/* First 4 tables */}
                 {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
                   <div key={tableId} className="flex justify-center">
                     <TableComponent 
@@ -748,13 +937,11 @@ export default function FloorLayout() {
                 ))}
               </div>
               
-              {/* Mobile Lobby - Centered */}
               <div className="bg-green-50 border-2 border-green-400 rounded-xl flex items-center justify-center h-20 mb-8 mx-auto max-w-xs shadow-sm">
                 <span className="text-gray-800 font-bold text-base text-center">Lobby</span>
               </div>
               
               <div className="flex flex-col gap-4">
-                {/* Last 4 tables */}
                 {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
                   <div key={tableId} className="flex justify-center">
                     <TableComponent 
@@ -767,11 +954,10 @@ export default function FloorLayout() {
               </div>
             </div>
 
-            {/* Tablet Layout (768-1024px): Two-column layout */}
+            {/* Tablet Layout */}
             <div className="hidden md:block lg:hidden w-full max-w-4xl px-6">
               <div className="flex flex-col items-center gap-8">
                 <div className="grid grid-cols-2 gap-6 w-full max-w-3xl">
-                  {/* Tables T1-T4 */}
                   {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
                     <div key={tableId} className="flex justify-center">
                       <TableComponent 
@@ -783,13 +969,11 @@ export default function FloorLayout() {
                   ))}
                 </div>
                 
-                {/* Tablet Lobby - Centered */}
                 <div className="bg-green-50 border-2 border-green-400 rounded-xl flex items-center justify-center w-80 h-32 shadow-sm">
                   <span className="text-gray-800 font-bold text-xl text-center">Lobby</span>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-6 w-full max-w-3xl">
-                  {/* Tables T5-T8 */}
                   {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
                     <div key={tableId} className="flex justify-center">
                       <TableComponent 
@@ -803,10 +987,9 @@ export default function FloorLayout() {
               </div>
             </div>
 
-            {/* Desktop Layout (1024px+): Three-column layout - Better Centered */}
+            {/* Desktop Layout */}
             <div className="hidden lg:flex lg:items-center lg:justify-center w-full max-w-7xl px-8">
               <div className="flex items-center justify-center gap-12">
-                {/* Left Tables */}
                 <div className="flex flex-col gap-5">
                   {['T1', 'T2', 'T3', 'T4'].map((tableId, index) => (
                     <TableComponent 
@@ -818,12 +1001,10 @@ export default function FloorLayout() {
                   ))}
                 </div>
 
-                {/* Desktop Lobby - Perfectly Centered */}
                 <div className="bg-green-50 border-2 border-green-400 rounded-xl flex items-center justify-center w-56 h-[520px] shadow-lg">
                   <span className="text-gray-800 font-bold text-2xl text-center">Lobby</span>
                 </div>
 
-                {/* Right Tables */}
                 <div className="flex flex-col gap-5">
                   {['T5', 'T6', 'T7', 'T8'].map((tableId, index) => (
                     <TableComponent 
@@ -838,7 +1019,7 @@ export default function FloorLayout() {
             </div>
           </div>
 
-          {/* Control Buttons - Perfectly Centered */}
+          {/* Control Buttons */}
           {!bookingSubmitted && (
             <div className="bg-green-100 border border-green-300 rounded-xl p-6 text-center w-full max-w-md mx-auto mt-6 shadow-sm">
               <div className="flex gap-3 justify-center">
@@ -865,9 +1046,9 @@ export default function FloorLayout() {
             </div>
           )}
 
-          {/* Success Message - Perfectly Centered */}
+          {/* Success Message */}
           {bookingSubmitted && (
-            <div className="bg-green-100 border border-green-300 rounded-xl p-6 text-center w-full max-w-xl mx-auto mt-6 shadow-sm">
+            <div className="bg-green-100 border border-green-300 rounded-xl p-6 text-center w-full max-w-md mx-auto mt-6 shadow-sm">
               <p className="text-green-800 font-semibold text-lg mb-4">✅ Booking Submitted Successfully!</p>
               <button 
                 className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg text-sm transition-colors"
