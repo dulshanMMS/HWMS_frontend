@@ -44,7 +44,7 @@ const AdminDashboard = () => {
     const token = localStorage.getItem("token");
 
     try {
-      const res = await fetch("/api/notifications/send-bulk", {
+      const res = await fetch("/api/announcements", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
