@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -20,13 +21,16 @@ const NotificationPreferences = () => {
     const fetchPreferences = async () => {
       try {
         const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("No authentication token found. Please log in.");
+        }
         const response = await axios.get("/api/notifications/preferences", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setPreferences(response.data || defaultPreferences);
       } catch (err) {
-        console.error("Error loading preferences", err);
-        setPreferences(defaultPreferences);
+        console.error("Error loading preferences:", err);
+        setMessage(err.message || "Failed to load preferences.");
       } finally {
         setLoading(false);
       }
@@ -43,14 +47,17 @@ const NotificationPreferences = () => {
     setSaving(true);
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No authentication token found. Please log in.");
+      }
       await axios.put("/api/notifications/preferences", preferences, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMessage("Preferences saved successfully!");
       setShowForm(false);
     } catch (err) {
-      console.error("Error saving preferences", err);
-      setMessage("Failed to save preferences.");
+      console.error("Error saving preferences:", err);
+      setMessage(err.response?.data?.message || "Failed to save preferences.");
     } finally {
       setSaving(false);
     }
@@ -62,22 +69,19 @@ const NotificationPreferences = () => {
     <div className="text-center mt-6">
       {!showForm && (
         <button
-        onClick={() => {
-          setMessage("");  // clear message on open
-          setShowForm(true);
-        }}
-        className="flex items-center gap-2 bg-green-900 text-white px-4 py-2 rounded hover:bg-green-800 transition-colors ml-0 md:ml-2 mt-2 md:mt-0"
-      >
-        Change Notification Preferences
-      </button>
-      
+          onClick={() => {
+            setMessage(""); // Clear message on open
+            setShowForm(true);
+          }}
+          className="flex items-center gap-2 bg-green-900 text-white px-4 py-2 rounded hover:bg-green-800 transition-colors ml-0 md:ml-2 mt-2 md:mt-0"
+        >
+          Change Notification Preferences
+        </button>
       )}
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
           <div className="bg-white w-full max-w-4xl p-8 rounded-xl shadow-xl relative">
-
-
             {/* Close (×) Button */}
             <button
               onClick={() => setShowForm(false)}
@@ -134,7 +138,11 @@ const NotificationPreferences = () => {
                 </button>
               </div>
 
-              {message && <p className="mt-2 text-sm text-center">{message}</p>}
+              {message && (
+                <p className={`mt-2 text-sm text-center ${message.includes("successfully") ? "text-green-600" : "text-red-600"}`}>
+                  {message}
+                </p>
+              )}
             </form>
           </div>
         </div>

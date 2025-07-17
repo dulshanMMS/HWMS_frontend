@@ -2,18 +2,15 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import useAuthGuard from "../components/AuthGuard";
-import  UserLayout from '../components/UserLayout';
-//import EventCalendar from "../components/Notification/EventCalendar";
+import UserLayout from '../components/UserLayout';
 import CalendarCard from "../components/CalendarCard";
 import NotificationFilters from "../components/Notification/NotificationFilters";
 import NotificationList from "../components/Notification/NotificationList";
 import NotificationPreferences from "../components/Notification/NotificationPreferences";
 
-const API_BASE_URL = 'http://localhost:5000/api/notifications/user/own';
+const API_BASE_URL = '/api/notifications/user/own';
 
-const socket = io('http://localhost:5000', {
-  withCredentials: true,
-});
+const socket = io('/', { withCredentials: true });
 
 const UserNotification = () => {
   useAuthGuard('user');
@@ -24,7 +21,6 @@ const UserNotification = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState([null, null]);
-  const [startDate, endDate] = dateRange;
   const [date, setDate] = useState(new Date());
   const [allEvents, setAllEvents] = useState([]);
   const [eventDates, setEventDates] = useState([]);
@@ -35,6 +31,43 @@ const UserNotification = () => {
   const notificationsPerPage = 10;
   const [totalNotifications, setTotalNotifications] = useState(0);
 
+  // const fetchNotifications = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const token = localStorage.getItem('token');
+  //     if (!token) {
+  //       setError('Please log in to view notifications');
+  //       setLoading(false);
+  //       return;
+  //     }
+
+  //     const endpoint = `${API_BASE_URL}?page=${currentPage}&limit=${notificationsPerPage}`;
+  //     const response = await fetch(endpoint, {
+  //       headers: { Authorization: `Bearer ${token}` }
+  //     });
+
+  //     if (response.status === 401) {
+  //       localStorage.removeItem('token');
+  //       navigate('/userdashboard');
+  //       return;
+  //     }
+
+  //     if (!response.ok) {
+  //       throw new Error('Failed to fetch notifications');
+  //     }
+
+  //     const data = await response.json();
+  //     if (Array.isArray(data.notifications)) {
+  //       setNotifications(data.notifications);
+  //       setTotalNotifications(data.total);
+  //     }
+  //   } catch (error) {
+  //     setError('Failed to fetch notifications');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const fetchNotifications = async () => {
     try {
       setLoading(true);
@@ -44,26 +77,33 @@ const UserNotification = () => {
         setLoading(false);
         return;
       }
-      let endpoint = `${API_BASE_URL}?page=${currentPage}&limit=${notificationsPerPage}`;
+  
+      const endpoint = `${API_BASE_URL}?page=${currentPage}&limit=${notificationsPerPage}`;
       const response = await fetch(endpoint, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` },
       });
+  
       if (response.status === 401) {
         localStorage.removeItem('token');
         navigate('/userdashboard');
         return;
       }
+  
       if (!response.ok) {
         throw new Error('Failed to fetch notifications');
       }
+  
       const data = await response.json();
+      console.log('Fetched notifications:', data); // Debug log
       if (Array.isArray(data.notifications)) {
         setNotifications(data.notifications);
         setTotalNotifications(data.total);
+      } else {
+        console.error('Notifications data is not an array:', data);
+        setError('Invalid notifications data');
       }
     } catch (error) {
+      console.error('Error fetching notifications:', error);
       setError('Failed to fetch notifications');
     } finally {
       setLoading(false);
@@ -72,13 +112,13 @@ const UserNotification = () => {
 
   useEffect(() => {
     fetchNotifications();
-    // eslint-disable-next-line
   }, [filter, dateRange, currentPage]);
 
   useEffect(() => {
     socket.on('notificationReceived', (notification) => {
-      // Optionally update state or show toast/snackbar
+      // Optionally show toast or update state
     });
+
     return () => {
       socket.off('notificationReceived');
     };
@@ -89,50 +129,46 @@ const UserNotification = () => {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/${id}/read`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
+
       if (!response.ok) throw new Error('Failed to mark notification as read');
-      setNotifications(notifications.map(notification =>
-        notification._id === id ? { ...notification, read: true } : notification
+
+      setNotifications(notifications.map(n =>
+        n._id === id ? { ...n, read: true } : n
       ));
     } catch (error) {
       setError('Failed to mark notification as read');
     }
   };
-  
+
   const deleteNotification = async (notificationId) => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token found');
       const response = await fetch(`${API_BASE_URL}/${notificationId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
+
       if (!response.ok) throw new Error('Failed to delete notification');
-      setNotifications(notifications.filter(notification => notification._id !== notificationId));
+      setNotifications(notifications.filter(n => n._id !== notificationId));
     } catch (error) {
       setError('Failed to delete notification');
     }
   };
 
-  const filteredNotifications = notifications.filter(notification => {
-    const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
+  const filteredNotifications = notifications.filter(n =>
+    n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    n.message.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const fetchAllEvents = async () => {
     try {
-      const res = await fetch(`/api/events`);
+      const res = await fetch('/api/events');
       const data = await res.json();
       if (data.success) {
         setAllEvents(data.events);
-        const dates = data.events.map(event => event.date);
-        setEventDates(dates);
+        setEventDates(data.events.map(e => e.date));
       }
     } catch (err) {}
   };
@@ -163,7 +199,9 @@ const UserNotification = () => {
     fetchNotifications();
   };
 
-  const totalPages = totalNotifications > 0 ? Math.ceil(totalNotifications / notificationsPerPage) : 1;
+  const totalPages = totalNotifications > 0
+    ? Math.ceil(totalNotifications / notificationsPerPage)
+    : 1;
 
   useEffect(() => {
     fetchAllEvents();
@@ -171,19 +209,15 @@ const UserNotification = () => {
 
   if (loading) {
     return (
-      <div>
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
     <UserLayout>
-      
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Notifications</h1>
-      
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -205,16 +239,12 @@ const UserNotification = () => {
             </div>
           </div>
           <div className="lg:col-span-1 flex flex-col gap-4">
-               {/* Button above calendar */}
             <div className="bg-white p-4 rounded shadow w-full">
-                 <NotificationPreferences />
+              <NotificationPreferences />
             </div>
-
-              {/* Calendar same width as above */}
-              <div className="bg-white p-4 rounded shadow w-full">
-              <CalendarCard/>
-              </div>
-            
+            <div className="bg-white p-4 rounded shadow w-full">
+              <CalendarCard />
+            </div>
           </div>
         </div>
         <div className="flex justify-center items-center mt-4">
@@ -227,9 +257,8 @@ const UserNotification = () => {
           </button>
         </div>
       </div>
-      
     </UserLayout>
   );
 };
 
-export default UserNotification; 
+export default UserNotification;
