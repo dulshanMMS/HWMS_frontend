@@ -7,7 +7,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminNotification from "./pages/AdminNotification";
 import AdminParking from "./pages/AdminParking";
 import AdminViewReports from "./pages/AdminViewReports";
-
+import HomePage from './pages/HomePage';
 import AboutUsPage from "./pages/AboutUsPage";
 import BookingHistory from "./pages/BookingHistory";
 import Login from "./pages/Login";
@@ -40,6 +40,7 @@ const App = () => {
     <div className={containerClass}>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/homepage" element={<HomePage />} />
         <Route path="/datebooking" element={<BookingPage />} />
         <Route path="/floorlayout" element={<FloorLayout />} />
         <Route path="/admin" element={<AdminDashboard />} />

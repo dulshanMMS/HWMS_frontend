@@ -34,6 +34,7 @@ const SeatBookingHistory = () => {
     try {
       const token = localStorage.getItem('token');
       
+      // UPDATED: Use the new backend endpoint that expects userName
       const response = await fetch('/api/seathistory/user/team', {
         method: 'GET',
         headers: {
@@ -57,6 +58,7 @@ const SeatBookingHistory = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
+      // UPDATED: Use the new backend endpoint that expects userName
       const response = await fetch('/api/seathistory/user', {
         method: 'POST',
         headers: {
@@ -89,6 +91,7 @@ const SeatBookingHistory = () => {
     try {
       const token = localStorage.getItem('token');
       
+      // UPDATED: Use the new backend endpoint that expects userName
       const response = await fetch('/api/seathistory/user/details', {
         method: 'POST',
         headers: {
@@ -171,6 +174,7 @@ const SeatBookingHistory = () => {
       setError('');
       const token = localStorage.getItem('token');
       
+      // UPDATED: Use the new backend endpoint that expects userName
       const response = await fetch('/api/seathistory/user/delete', {
         method: 'DELETE',
         headers: {
