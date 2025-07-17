@@ -1,22 +1,21 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import AdminLayout from '../components/AdminLayout';
 import useAuthGuard from '../components/AuthGuard';
-import EventCalendar from '../components/Notification/EventCalendar';
+import EventCalendar from '../components/AdminDashboard/EventCalendar';
 import NotificationFilters from '../components/Notification/NotificationFilters';
 import NotificationList from '../components/Notification/NotificationList';
+import NotificationPreferences from "../components/Notification/NotificationPreferences";
 
+const API_BASE_URL = '/api/notifications/admin/own';
 
-const API_BASE_URL = 'http://localhost:5000/api/notifications';
-
-const socket = io('http://localhost:5000', {
-  withCredentials: true,
-});
+const socket = io('/', { withCredentials: true });
 
 const AdminNotification = () => {
   useAuthGuard('admin');
-  
+
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +23,6 @@ const AdminNotification = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState([null, null]);
-  const [startDate, endDate] = dateRange;
   const [date, setDate] = useState(new Date());
   const [allEvents, setAllEvents] = useState([]);
   const [eventDates, setEventDates] = useState([]);
@@ -36,191 +34,114 @@ const AdminNotification = () => {
   const [totalNotifications, setTotalNotifications] = useState(0);
 
   const fetchNotifications = async () => {
-    console.log('Attempting to fetch notifications');
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      console.log('Token exists:', !!token);
-      
+      console.log('Token:', token); // Debug token
+
       if (!token) {
         setError('Please log in to view notifications');
         setLoading(false);
         return;
       }
 
-      let endpoint = `${API_BASE_URL}?page=${currentPage}&limit=${notificationsPerPage}`;
-      
-      console.log('Fetching from endpoint:', endpoint);
-
+      const endpoint = `${API_BASE_URL}?page=${currentPage}&limit=${notificationsPerPage}`;
       const response = await fetch(endpoint, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      console.log('Response status:', response.status);
-
-      if (response.status === 401) {
-        console.log('Unauthorized access - redirecting to login');
+      if (response.status === 401 || response.status === 403) {
+        console.error('Authentication error:', response.status);
         localStorage.removeItem('token');
         navigate('/');
         return;
       }
 
       if (!response.ok) {
-        throw new Error('Failed to fetch notifications');
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch notifications: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('Fetched notifications:', data);
       if (Array.isArray(data.notifications)) {
         setNotifications(data.notifications);
         setTotalNotifications(data.total);
+      } else {
+        throw new Error('Invalid response format');
       }
     } catch (error) {
-      console.error('Error in fetchNotifications:', error);
-      setError('Failed to fetch notifications');
+      console.error('Error in fetchNotifications:', error.message);
+      setError(`Failed to fetch notifications: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log('useEffect triggered');
     fetchNotifications();
   }, [filter, dateRange, currentPage]);
 
   useEffect(() => {
     socket.on('notificationReceived', (notification) => {
       console.log("New notification:", notification);
-      // Optionally update state or show toast/snackbar
+      setNotifications(prev => [notification, ...prev]);
     });
-
-    return () => {
-      socket.off('notificationReceived');
-    };
+    return () => socket.off('notificationReceived');
   }, []);
 
   const markAsRead = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/${id}/read`, {
+      console.log('Mark as read token:', token); // Debug token
+      const response = await fetch(`/api/notifications/${id}/mark-read`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to mark notification as read');
-      }
+      if (!response.ok) throw new Error('Failed to mark notification as read');
 
-      setNotifications(notifications.map(notification =>
-        notification._id === id ? { ...notification, read: true } : notification
+      setNotifications(notifications.map(n =>
+        n._id === id ? { ...n, read: true } : n
       ));
     } catch (error) {
-      console.error('Error marking notification as read:', error);
       setError('Failed to mark notification as read');
     }
   };
-  
+
   const deleteNotification = async (notificationId) => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      console.log('Token:', token);
-
-      const response = await fetch(`${API_BASE_URL}/${notificationId}`, {
+      console.log('Delete notification token:', token); // Debug token
+      const response = await fetch(`/api/notifications/${notificationId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete notification');
-      }
+      if (!response.ok) throw new Error('Failed to delete notification');
 
-      console.log('Notification deleted successfully');
-
-      setNotifications(notifications.filter(notification => notification._id !== notificationId));
+      setNotifications(notifications.filter(n => n._id !== notificationId));
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
   };
- 
 
   const filteredNotifications = notifications.filter(notification => {
-    const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesFilter = filter === 'all' ||
-                          (filter === 'parking' && notification.type === 'parking') ||
-                          (filter === 'seat' && notification.type === 'seat');
-
-    return matchesSearch && matchesFilter;
+    if (filter === 'all') return true;
+    if (filter === 'announcements') return notification.type === 'announcement';
+    if (filter === 'parking') return notification.type === 'important' && notification.message.includes('parking');
+    if (filter === 'seating') return notification.type === 'important' && notification.message.includes('seat');
+    return false;
   });
 
-
-  const fetchAllEvents = async () => {
-    try {
-      const res = await fetch(`/api/events`);
-      const data = await res.json();
-      if (data.success) {
-        setAllEvents(data.events);
-        const dates = data.events.map(event => event.date);
-        setEventDates(dates);
-      }
-    } catch (err) {
-      console.error('Error fetching all events:', err);
-    }
-  };
-
-
-  const fetchEventsForDate = async (selectedDate) => {
-    try {
-      const formattedDate = formatDateToYMD(selectedDate);
-      const res = await fetch(`/api/events/${formattedDate}`);
-      const data = await res.json();
-      if (data.success) {
-        setEvents(data.events);
-      }
-    } catch (err) {
-      console.error('Error fetching events:', err);
-    }
-  };
-
-  const handleDayClick = (value) => {
-    setDate(value);
-    fetchEventsForDate(value);
-    setShowEventModal(true);
-  };
-
-  
-
-  const handleClearDateRange = () => {
-    setDateRange([null, null]);
-    setShowClearButton(false);
-  };
-
-  const handleApply = () => {
-    fetchNotifications();
-  };
-
-  const totalPages = totalNotifications > 0 ? Math.ceil(totalNotifications / notificationsPerPage) : 1;
-
-  useEffect(() => {
-    fetchAllEvents();
-  }, []);
+  const totalPages = totalNotifications > 0
+    ? Math.ceil(totalNotifications / notificationsPerPage)
+    : 1;
 
   if (loading) {
     return (
       <AdminLayout>
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       </AdminLayout>
     );
@@ -234,12 +155,8 @@ const AdminNotification = () => {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-md">
               <NotificationFilters
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
                 filter={filter}
                 setFilter={setFilter}
-                handleClearDateRange={handleClearDateRange}
-                showClearButton={showClearButton}
               />
               <NotificationList
                 notifications={filteredNotifications}
@@ -249,34 +166,40 @@ const AdminNotification = () => {
               />
             </div>
           </div>
-
-          <EventCalendar
-            date={date}
-            setDate={setDate}
-            eventDates={eventDates}
-            handleDayClick={handleDayClick}
-            showEventModal={showEventModal}
-            setShowEventModal={setShowEventModal}
-            events={events}
-          />
+          <div className="lg:col-span-1 flex flex-col gap-4">
+            <div className="bg-white p-4 rounded shadow w-full">
+              <NotificationPreferences />
+            </div>
+            <div className="bg-white p-4 rounded shadow w-full">
+              <EventCalendar
+                date={date}
+                setDate={setDate}
+                eventDates={eventDates || []}
+                todayEvents={events || []}
+              />
+            </div>
+          </div>
         </div>
-
         <div className="flex justify-center items-center mt-4">
-          <button className="px-4 py-2 bg-gray-300 rounded-l-md" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
+          <button
+            className="px-4 py-2 bg-gray-300 rounded-l-md"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(currentPage - 1)}
+          >
             Previous
           </button>
           <span className="px-4">Page {currentPage} of {totalPages}</span>
-          <button className="px-4 py-2 bg-blue-500 text-white rounded-r-md" disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
+          <button
+            className="px-4 py-2 bg-blue-500 text-white rounded-r-md"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(currentPage + 1)}
+          >
             Next
           </button>
         </div>
-
-        {/* <button onClick={handleApply}>
-          Refresh
-        </button> */}
       </div>
     </AdminLayout>
   );
 };
 
-export default AdminNotification; 
+export default AdminNotification;

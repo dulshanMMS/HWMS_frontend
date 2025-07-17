@@ -1,81 +1,82 @@
 import React from 'react';
-import { FaUser } from 'react-icons/fa';
-import teamColors from '../../constants/teamColors';
 
-const PROGRAM_TO_TEAM = {
-  SENG: 'Team A',
-  BM: 'Team B',
-  IT: 'Team C',
-  TEAM4: 'Team D',
-  TEAM5: 'Team E',
-  TEAM6: 'Team F',
-  TEAM7: 'Team G',
-  TEAM8: 'Team H',
-  TEAM9: 'Team I',
-  TEAM10: 'Team J',
-  TEAM11: 'Team K',
-  TEAM12: 'Team L',
-  TEAM13: 'Team M',
-  TEAM14: 'Team N',
-  TEAM15: 'Team O',
-};
+const UserBookingTable = ({ userBookings }) => {
+  if (!userBookings || !userBookings.bookings || userBookings.bookings.length === 0) {
+    return (
+      <div className="mt-6 bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">User Bookings</h3>
+        <p className="text-gray-600">No bookings found for this user.</p>
+      </div>
+    );
+  }
 
-const UserBookingsTable = ({ bookings }) => {
-  if (!bookings || bookings.length === 0) return null;
+  // Sort bookings by date (most recent first) and take latest 10
+  const latestBookings = userBookings.bookings
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 10);
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 mt-4">
-      <h3 className="text-lg font-semibold mb-3">Recent Bookings</h3>
+    <div className="mt-6 bg-white rounded-lg shadow overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-800">
+          Latest 10 Bookings for {userBookings.user.name} ({userBookings.user.username})
+        </h3>
+        <p className="text-sm text-gray-600 mt-1">
+          Team: {userBookings.user.team} | Total Seat Bookings: {userBookings.seatCount} | Total Parking Bookings: {userBookings.parkingCount}
+        </p>
+      </div>
+      
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border rounded-lg">
+        <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">USER ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">USER</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PROGRAM</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATE</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Booking ID
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Entry Time
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Exit Time
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
-            {bookings.map((booking, idx) => {
-              // Map program to team and color
-              const team = PROGRAM_TO_TEAM[booking.program] || booking.program;
-              const color = teamColors[team] || '#9E9E9E';
-              return (
-                <tr key={idx}>
-                  <td className="px-6 py-4 whitespace-nowrap">{booking.userId}</td>
-                  <td className="px-6 py-4 whitespace-nowrap flex items-center gap-2">
-                    <span
-                      className="inline-flex items-center justify-center rounded-full h-8 w-8"
-                      style={{ backgroundColor: color }}
-                    >
-                      <FaUser className="text-white" />
-                    </span>
-                    <span className="font-semibold text-gray-800">{booking.username}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap flex items-center gap-2">
-                    <span
-                      className="inline-block w-3 h-3 rounded-full"
-                      style={{ backgroundColor: color }}
-                    ></span>
-                    <span className="font-semibold" style={{ color }}>{booking.program}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">
-                      {booking.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {new Date(booking.date).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
-                  </td>
-                </tr>
-              );
-            })}
+          <tbody className="bg-white divide-y divide-gray-200">
+            {latestBookings.map((booking, index) => (
+              <tr key={index} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  #{index + 1}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    booking.type === 'seat' 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-purple-100 text-purple-800'
+                  }`}>
+                    {booking.type === 'seat' ? 'Seating' : 'Parking'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {new Date(booking.date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {booking.entryTime || 'N/A'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {booking.exitTime || 'N/A'}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -83,4 +84,4 @@ const UserBookingsTable = ({ bookings }) => {
   );
 };
 
-export default UserBookingsTable;
+export default UserBookingTable;
