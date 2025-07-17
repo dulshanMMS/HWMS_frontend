@@ -182,11 +182,11 @@ const UserDashboard = () => {
         <div className="flex flex-wrap gap-6">
           <BookingDashboard />
 
-          <div className="flex items-center">
+          {/* <div className="flex items-center">
             <button className="px-4 py-2 bg-white rounded-xl shadow border font-semibold text-sm">
               View All Booking History →
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 
