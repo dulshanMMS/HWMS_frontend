@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import AdminLayout from '../components/AdminLayout';
+//import AdminLayout from '../components/AdminLayout';
+import AdminSidebar from '../components/AdminSidebar';
 import useAuthGuard from '../components/AuthGuard';
 import EventCalendar from '../components/AdminDashboard/EventCalendar';
 import NotificationFilters from '../components/Notification/NotificationFilters';
@@ -139,19 +140,24 @@ const AdminNotification = () => {
 
   if (loading) {
     return (
-      <AdminLayout>
+      // <AdminLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
-      </AdminLayout>
+      // </AdminLayout>
     );
   }
 
   return (
-    <AdminLayout>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Notifications</h1>
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <AdminSidebar>
+      <h1 className="text-3xl font-bold text-gray-900 mb-8 mt-6 ml-8">Notifications</h1>
+
+      
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-md">
               <NotificationFilters
@@ -198,7 +204,7 @@ const AdminNotification = () => {
           </button>
         </div>
       </div>
-    </AdminLayout>
+   </AdminSidebar>
   );
 };
 
