@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import useAuthGuard from "../components/AuthGuard";
-import UserLayout from '../components/UserLayout';
+import LeftSidebar from "../components/LeftSidebar";
 import CalendarCard from "../components/CalendarCard";
 import NotificationFilters from "../components/Notification/NotificationFilters";
 import NotificationList from "../components/Notification/NotificationList";
@@ -31,42 +31,7 @@ const UserNotification = () => {
   const notificationsPerPage = 10;
   const [totalNotifications, setTotalNotifications] = useState(0);
 
-  // const fetchNotifications = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const token = localStorage.getItem('token');
-  //     if (!token) {
-  //       setError('Please log in to view notifications');
-  //       setLoading(false);
-  //       return;
-  //     }
-
-  //     const endpoint = `${API_BASE_URL}?page=${currentPage}&limit=${notificationsPerPage}`;
-  //     const response = await fetch(endpoint, {
-  //       headers: { Authorization: `Bearer ${token}` }
-  //     });
-
-  //     if (response.status === 401) {
-  //       localStorage.removeItem('token');
-  //       navigate('/userdashboard');
-  //       return;
-  //     }
-
-  //     if (!response.ok) {
-  //       throw new Error('Failed to fetch notifications');
-  //     }
-
-  //     const data = await response.json();
-  //     if (Array.isArray(data.notifications)) {
-  //       setNotifications(data.notifications);
-  //       setTotalNotifications(data.total);
-  //     }
-  //   } catch (error) {
-  //     setError('Failed to fetch notifications');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  
 
   const fetchNotifications = async () => {
     try {
@@ -216,8 +181,8 @@ const UserNotification = () => {
   }
 
   return (
-    <UserLayout>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Notifications</h1>
+    <LeftSidebar>
+      <h1 className="text-3xl font-bold text-gray-900 mb-8 mt-6 ml-8">Notifications</h1>
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -257,7 +222,7 @@ const UserNotification = () => {
           </button>
         </div>
       </div>
-    </UserLayout>
+    </LeftSidebar>
   );
 };
 

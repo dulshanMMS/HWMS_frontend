@@ -1,22 +1,25 @@
 
-import axios from 'axios';
-import { saveAs } from 'file-saver';
-import { useEffect, useState } from 'react';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
-import { FaCalendar } from 'react-icons/fa';
-import * as XLSX from 'xlsx';
-import AdminLayout from '../components/AdminLayout';
-import useAuthGuard from '../components/AuthGuard';
-import BookingLookup from '../components/Reports/BookingLookup';
-import DailyTrendsChart from '../components/Reports/DailyTrendsChart';
-import FloorUsageChart from '../components/Reports/FloorUsageChart';
-import MonthlyStatsChart from '../components/Reports/MonthlyStatsChart';
-import RecentBookingsTable from '../components/Reports/RecentBookingsTable';
-import UserBookingTable from '../components/Reports/UserBookingTable';
-import TeamLookupTable from '../components/Reports/TeamLookupTable';
-import TeamColorPalette from '../components/shared/TeamColorPalette';
-import api from '../config/api';
+// import axios from 'axios';
+// import { saveAs } from 'file-saver';
+// import { useEffect, useState } from 'react';
+// import DatePicker from 'react-datepicker';
+// import "react-datepicker/dist/react-datepicker.css";
+// import { FaCalendar } from 'react-icons/fa';
+// import * as XLSX from 'xlsx';
+
+// import AdminSidebar from '../components/AdminSidebar';
+// import useAuthGuard from '../components/AuthGuard';
+// import BookingLookup from '../components/Reports/BookingLookup';
+// import DailyTrendsChart from '../components/Reports/DailyTrendsChart';
+// import FloorUsageChart from '../components/Reports/FloorUsageChart';
+// import MonthlyStatsChart from '../components/Reports/MonthlyStatsChart';
+// import RecentBookingsTable from '../components/Reports/RecentBookingsTable';
+// import UserBookingTable from '../components/Reports/UserBookingTable';
+// import TeamLookupTable from '../components/Reports/TeamLookupTable';
+// import TeamColorPalette from '../components/shared/TeamColorPalette';
+// import api from '../config/api';
+
+
 
 // const AdminViewReports = () => {
 //   useAuthGuard('admin');
@@ -37,9 +40,18 @@ import api from '../config/api';
 //   const [teamStatsError, setTeamStatsError] = useState(null);
 //   const [loadingTeamStats, setLoadingTeamStats] = useState(false);
 
-//   //const totalDesksPerFloor = { 14: 64, 30: 64, 31: 64, 32: 64 }; // Update as needed
-//   const totalDesksPerFloor = { 1: 64, 2: 64, 3: 64, 4: 64 };
-//   useEffect(() => { 
+//   // Dynamically generate totalDesksPerFloor based on all unique floors in bookings
+//   const getTotalDesksPerFloor = (bookings) => {
+//     const floors = new Set(bookings.filter(b => b.type === 'seat').map(b => b.slot?.floor));
+//     const defaultCapacity = 64; // Default capacity per floor
+//     const floorMap = {};
+//     floors.forEach(floor => {
+//       floorMap[floor] = defaultCapacity;
+//     });
+//     return floorMap;
+//   };
+
+//   useEffect(() => {
 //     fetchAnalyticsData();
 //     fetchAllBookings();
 //   }, [appliedDateRange]);
@@ -285,10 +297,13 @@ import api from '../config/api';
 //       );
 //     }
 
+//     const floorUsageBookings = getFloorUsageBookings();
+//     const dynamicTotalDesksPerFloor = getTotalDesksPerFloor(floorUsageBookings);
+
 //     return (
-//       <div className="max-w-7xl mx-auto">
+//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 //         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-//           <h1 className="text-2xl font-semibold text-gray-800">Analytics & Reports</h1>
+//           <h1 className="text-3xl font-bold text-gray-900 mb-8 mt-6 ml-8">Analytics & Reports</h1>
 //           <div className="flex items-center gap-4">
 //             <div className="flex items-center gap-2">
 //               <FaCalendar className="text-gray-500" />
@@ -371,8 +386,8 @@ import api from '../config/api';
 //         <div className="flex flex-col md:flex-row items-start">
 //           <div className="flex-1 h-[340px] mr-6">
 //             <FloorUsageChart
-//               bookings={getFloorUsageBookings()}
-//               totalDesksPerFloor={totalDesksPerFloor}
+//               bookings={floorUsageBookings}
+//               totalDesksPerFloor={dynamicTotalDesksPerFloor}
 //             />
 //           </div>
 //           <div className="self-start">
@@ -424,14 +439,34 @@ import api from '../config/api';
 //   };
 
 //   return (
-//     <AdminLayout>
+//     <AdminSidebar>
+//       <div>
 //       {renderContent()}
-//     </AdminLayout>
+//       </div>
+//     </AdminSidebar>
 //   );
 // };
 
+// export default AdminViewReports;
 
-// ... (previous imports and state setup remain the same)
+import { saveAs } from 'file-saver';
+import { useEffect, useState } from 'react';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import { FaCalendar } from 'react-icons/fa';
+import * as XLSX from 'xlsx';
+
+import AdminSidebar from '../components/AdminSidebar';
+import useAuthGuard from '../components/AuthGuard';
+import BookingLookup from '../components/Reports/BookingLookup';
+import DailyTrendsChart from '../components/Reports/DailyTrendsChart';
+import FloorUsageChart from '../components/Reports/FloorUsageChart';
+import MonthlyStatsChart from '../components/Reports/MonthlyStatsChart';
+import RecentBookingsTable from '../components/Reports/RecentBookingsTable';
+import UserBookingTable from '../components/Reports/UserBookingTable';
+import TeamLookupTable from '../components/Reports/TeamLookupTable';
+import TeamColorPalette from '../components/shared/TeamColorPalette';
+import api from '../config/api';
 
 const AdminViewReports = () => {
   useAuthGuard('admin');
@@ -514,11 +549,8 @@ const AdminViewReports = () => {
       setUserError(null);
       setUserBookings(null);
 
-      const response = await axios.get('http://localhost:5000/api/reports/user-lookup', {
+      const response = await api.get('/api/reports/user-lookup', {
         params: { username: query },
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
       });
 
       setUserBookings(response.data);
@@ -543,11 +575,8 @@ const AdminViewReports = () => {
       setTeamStatsError(null);
 
       try {
-        const res = await axios.get('http://localhost:5000/api/reports/team-stats', {
+        const res = await api.get('/api/reports/team-stats', {
           params: { teamName: query },
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
         });
 
         setTeamStats(res.data);
@@ -564,11 +593,7 @@ const AdminViewReports = () => {
 
   const fetchAllBookings = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/reports/all-bookings', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await api.get('/api/reports/all-bookings');
       setAllBookings(response.data);
     } catch (err) {
       console.error('Error fetching all bookings:', err);
@@ -713,9 +738,9 @@ const AdminViewReports = () => {
     const dynamicTotalDesksPerFloor = getTotalDesksPerFloor(floorUsageBookings);
 
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-          <h1 className="text-2xl font-semibold text-gray-800">Analytics & Reports</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-8 mt-6 ml-8">Analytics & Reports</h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <FaCalendar className="text-gray-500" />
@@ -851,13 +876,13 @@ const AdminViewReports = () => {
   };
 
   return (
-    <AdminLayout>
+    <AdminSidebar>
+      <div>
       {renderContent()}
-    </AdminLayout>
+      </div>
+    </AdminSidebar>
   );
 };
 
 export default AdminViewReports;
-
-
 

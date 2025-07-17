@@ -6,6 +6,8 @@ import AvailableSlots from "../components/parking/Availableslots";
 import BookButton from "../components/parking/Bookbutton";
 import MessageBox from "../components/parking/Messagebox";
 import LeftSidebar from "../components/LeftSidebar";
+import RatingModal from "../components/ratingModal"; // Importing the RatingModal component
+
 
 //import SidebarWrapper from '../components/profilesidebar/SidebarWrapper'; //methn1
 
@@ -19,6 +21,8 @@ const ParkingBooking = () => {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isRatingOpen, setIsRatingOpen] = useState(false);//ratingModal original
+  // const [isRatingOpen, setIsRatingOpen] = useState(false);//ratingModal test button
 
   useEffect(() => {
     const timer = setTimeout(() => setLoadingScreen(false), 2000);
@@ -49,6 +53,8 @@ const ParkingBooking = () => {
       setMessage(result.message || "Booking completed!");
       setSelectedSlot(null);
       setAvailableSlots([]);
+      if (Math.random() < 1) setIsRatingOpen(true); // Randomly open rating modal 50% chance
+      
     } catch {
       setMessage("Failed to book the slot.");
     } finally {
@@ -99,6 +105,28 @@ const ParkingBooking = () => {
         sidebarOpen={sidebarOpen}
         closeSidebar={() => setSidebarOpen(false)}
       /> */}
+
+     {/* <button   //ratingmodal test button
+       onClick={() => setIsRatingOpen(true)}
+       className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+      >
+           Test Seating Rating
+     </button> */}
+      
+    
+
+   <RatingModal
+     isOpen={isRatingOpen}
+     onClose={() => setIsRatingOpen(false)}
+     onSubmit={(data) => {
+       fetch('/api/ratings/submit-rating', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ userId: 'userIdHere', bookingType: 'parking', ...data })
+       });
+     }}
+   />
+
     </div>
   );
 };
