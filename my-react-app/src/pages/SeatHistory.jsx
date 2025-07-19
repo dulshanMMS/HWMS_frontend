@@ -8,7 +8,7 @@ import SeatBookingDetailsPopup from '../components/seatHistory/SeatBookingDetail
 import DeleteSeatBookingPopup from '../components/seatHistory/DeleteSeatBookingPopup';
 import ErrorMessage from '../components/seatHistory/ErrorMessage';
 
-const API_BASE_URL = 'http://localhost:6001/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 export default function SeatHistory() {
   

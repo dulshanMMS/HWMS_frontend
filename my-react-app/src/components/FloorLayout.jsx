@@ -34,26 +34,26 @@ const timesOverlap = (start1, end1, start2, end2) => {
 // API functions
 const api = {
   async fetchBookings(date, floor) {
-    const response = await fetch(`http://localhost:6001/api/bookings/filtered?date=${date}&floor=${floor}`);
+    const response = await fetch(`http://localhost:5000/api/bookings/filtered?date=${date}&floor=${floor}`);
     if (!response.ok) throw new Error('Failed to fetch bookings');
     return response.json();
   },
 
   async fetchUser(userId) {
-    const response = await fetch(`http://localhost:6001/api/bookings/users/${userId}`);
+    const response = await fetch(`http://localhost:5000/api/bookings/users/${userId}`);
     if (!response.ok) throw new Error('User not found');
     return response.json();
   },
 
   async fetchTeam(teamId) {
-    const response = await fetch(`http://localhost:6001/api/teams/${teamId}`);
+    const response = await fetch(`http://localhost:5000/api/teams/${teamId}`);
     if (!response.ok) throw new Error('Team not found');
     return response.json();
   },
 
   // SIMPLIFIED: Self-booking only - user can only book for themselves
   async bookSeat(userName, chairId, bookingDetails) {
-    const response = await fetch(`http://localhost:6001/api/bookings/member/${userName}/seat/${chairId}`, {
+    const response = await fetch(`http://localhost:5000/api/bookings/member/${userName}/seat/${chairId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bookingDetails),
@@ -67,7 +67,7 @@ const api = {
   },
 
   async unbookSeat(tableId, chairId, floor, date) {
-    const response = await fetch(`http://localhost:6001/api/bookings/unbook/${tableId}/${chairId}/${floor}/${date}`, {
+    const response = await fetch(`http://localhost:5000/api/bookings/unbook/${tableId}/${chairId}/${floor}/${date}`, {
       method: 'DELETE',
     });
     

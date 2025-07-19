@@ -44,7 +44,7 @@ const AdminDashboard = () => {
     const token = localStorage.getItem("token");
 
     try {
-      const res = await fetch("/api/notifications/send-bulk", {
+      const res = await fetch("/api/announcements", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -194,14 +194,10 @@ const AdminDashboard = () => {
   }, [date]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      <div className="w-64 flex-none">
-        <AdminSidebar />
-      </div>
-
-      <div className="flex-1 bg-gray-100 overflow-y-auto p-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="space-y-4">
+    <AdminSidebar>
+      <div className="bg-gray-100 overflow-y-auto p-4 sm:p-6 md:p-8 lg:p-10 min-h-screen">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="space-y-4 order-3 md:order-3 xl:order-1">
             <AdminHeader />
             <AnnouncementBox
               announcement={announcement}
@@ -211,7 +207,7 @@ const AdminDashboard = () => {
             <TodayTeamStats topTeams={teamBookings} />
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 order-2 md:order-2 xl:order-2">
             <EventCalendar
               date={date}
               setDate={setDate}
@@ -226,28 +222,28 @@ const AdminDashboard = () => {
             <TeamColorPalette teamColors={teamColors} />
           </div>
 
-          <div className="space-y-4">
-            <div className="relative bg-white rounded-xl shadow-md p-6 w-full lg:w-[380px]">
+          <div className="space-y-4 order-1 md:order-1 xl:order-3">
+            <div className="relative bg-white rounded-xl shadow-md p-6 w-full max-w-md mx-auto">
               <ProfileGreeting userProfile={userProfile} />
             </div>
             <QuickStats todayBookingCount={todayBookingCount} />
             <BookingChart parkingData={parkingStats} seatingData={seatingStats} />
           </div>
         </div>
-      </div>
 
-      {showEventModal && (
-        <EventModal
-          date={date}
-          events={events}
-          newEvent={newEvent}
-          setNewEvent={setNewEvent}
-          onClose={() => setShowEventModal(false)}
-          onAdd={addEvent}
-          onDelete={deleteEvent}
-        />
-      )}
-    </div>
+        {showEventModal && (
+          <EventModal
+            date={date}
+            events={events}
+            newEvent={newEvent}
+            setNewEvent={setNewEvent}
+            onClose={() => setShowEventModal(false)}
+            onAdd={addEvent}
+            onDelete={deleteEvent}
+          />
+        )}
+      </div>
+    </AdminSidebar>
   );
 };
 
