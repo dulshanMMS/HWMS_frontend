@@ -2,7 +2,7 @@ import { Route, Routes, useLocation } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ParkingHistory from "./pages/ParkingHistory";
-
+import HomePage from './pages/HomePage';
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminNotification from "./pages/AdminNotification";
 import AdminParking from "./pages/AdminParking";
@@ -38,6 +38,7 @@ const App = () => {
     <div className={containerClass}>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/homepage" element={<HomePage />} />
         <Route path="/datebooking" element={<BookingPage />} />
         <Route path="/floorlayout" element={<FloorLayout />} />
         <Route path="/admin" element={<AdminDashboard />} />

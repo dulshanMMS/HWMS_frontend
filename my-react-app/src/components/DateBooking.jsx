@@ -33,13 +33,14 @@ export default function DateBooking() {
   const [message, setMessage] = useState("");
   const [user, setUser] = useState('');
 
-  // Decode JWT to get the logged-in user's username
+  // UPDATED: Decode JWT to get the logged-in user's userName
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        setUser(decoded.username);
+        // UPDATED: Use userName instead of username from JWT
+        setUser(decoded.userName || decoded.username); // Fallback to username for backward compatibility
       } catch (e) {
         console.error("Invalid token");
       }
@@ -138,7 +139,7 @@ export default function DateBooking() {
         entryTime: `${pad(entryHour)}:${pad(entryMinute)}`,
         exitTime: `${pad(exitHour)}:${pad(exitMinute)}`,
         floor,
-        user,
+        user, // This now contains userName
       },
     });
   };

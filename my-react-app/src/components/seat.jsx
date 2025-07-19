@@ -3,6 +3,7 @@ import React from 'react';
 const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked, seatSize = "normal" }) => {
   const booking = bookedChairs[chairId];
   const isBooked = !!booking;
+  // UPDATED: Use userName consistently throughout the component
   const userName = booking?.userName || '';
   const teamColor = booking?.teamColor || '#808080';
   
@@ -54,7 +55,7 @@ const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked, seatSize = 
     return {};
   };
 
-  // Enhanced tooltip function
+  // Enhanced tooltip function - UPDATED to use userName
   const getTooltipText = () => {
     if (isBooked) {
       let timeInfo = '';
@@ -75,10 +76,10 @@ const Seat = ({ chairId, bookedChairs, onClick, label, isUserBooked, seatSize = 
     }
   };
 
-  // Fully responsive label display
+  // Fully responsive label display - UPDATED to use userName
   const getDisplayLabel = () => {
     if (isBooked) {
-      // Show username with appropriate truncation for all screen sizes
+      // Show userName with appropriate truncation for all screen sizes
       if (seatSize === 'small') {
         const firstName = userName.split(' ')[0];
         return firstName.length > 4 ? firstName.substring(0, 3) + '..' : firstName;
