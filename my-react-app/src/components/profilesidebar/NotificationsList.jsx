@@ -1,5 +1,6 @@
 import React from "react";
 import { FiChevronRight } from "react-icons/fi";
+import { FaCar, FaChair, FaMapMarkerAlt } from "react-icons/fa";
 import NotificationItem from "./NotificationItem";
 
 /**
@@ -50,21 +51,56 @@ const NotificationsList = ({
         {count === 0 ? (
           <p className="text-sm text-gray-700">No bookings today.</p>
         ) : (
-          // Show up to 5 booking reminders
+          // Show up to 5 booking reminders with enhanced display
           todayBookings.slice(0, 5).map((booking, idx) => (
-            <div key={idx} className="mb-3 text-sm text-gray-700">
-              <p className="font-medium text-green-700">
-                {booking.type === "seat" ? "Seat" : "Parking"}:{" "}
-                {booking.details}
-              </p>
-              {booking.floor && (
-                <p className="text-xs text-gray-500">Floor: {booking.floor}</p>
-              )}
-              {booking.entryTime && booking.exitTime && (
-                <p className="text-xs text-gray-500">
-                  {booking.entryTime} - {booking.exitTime}
-                </p>
-              )}
+            <div
+              key={idx}
+              className="mb-3 p-2 bg-white rounded border-l-4 border-red-400"
+            >
+              <div className="flex items-start gap-2">
+                {/* Booking type icon */}
+                <div className="mt-1">
+                  {booking.type === "seat" ? (
+                    <FaChair className="text-green-500 text-sm" />
+                  ) : (
+                    <FaCar className="text-blue-500 text-sm" />
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <p className="font-medium text-gray-800 text-sm">
+                    {booking.type === "seat" ? "Seat" : "Parking"}:{" "}
+                    {booking.details}
+                  </p>
+
+                  {/* Enhanced location display */}
+                  {booking.location && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <FaMapMarkerAlt className="text-gray-400 text-xs" />
+                      <p className="text-xs text-gray-600">
+                        {booking.location}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Fallback floor display */}
+                  {!booking.location && booking.floor && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <FaMapMarkerAlt className="text-gray-400 text-xs" />
+                      <p className="text-xs text-gray-600">
+                        Floor: {booking.floor}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Time display */}
+                  {booking.entryTime && booking.exitTime && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      🕐 {booking.entryTime} - {booking.exitTime}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           ))
         )}
@@ -102,24 +138,54 @@ const NotificationsList = ({
       <div className="bg-pink-100 p-3 rounded-lg mb-4 max-h-64 overflow-auto">
         <h4 className="font-semibold mb-2">Upcoming Booking</h4>
         {upcomingBooking ? (
-          <div className="text-sm text-gray-700">
-            <p className="font-medium text-pink-700">
-              {upcomingBooking.type === "seat" ? "Seat" : "Parking"}:{" "}
-              {upcomingBooking.details}
-            </p>
-            {upcomingBooking.floor && (
-              <p className="text-xs text-gray-500">
-                Floor: {upcomingBooking.floor}
-              </p>
-            )}
-            {upcomingBooking.entryTime && upcomingBooking.exitTime && (
-              <p className="text-xs text-gray-500">
-                {upcomingBooking.entryTime} - {upcomingBooking.exitTime}
-              </p>
-            )}
-            <p className="text-xs text-gray-500">
-              Date: {upcomingBooking.date}
-            </p>
+          <div className="p-2 bg-white rounded border-l-4 border-pink-400">
+            <div className="flex items-start gap-2">
+              {/* Booking type icon */}
+              <div className="mt-1">
+                {upcomingBooking.type === "seat" ? (
+                  <FaChair className="text-green-500 text-sm" />
+                ) : (
+                  <FaCar className="text-blue-500 text-sm" />
+                )}
+              </div>
+
+              <div className="flex-1">
+                <p className="font-medium text-pink-800 text-sm">
+                  {upcomingBooking.type === "seat" ? "Seat" : "Parking"}:{" "}
+                  {upcomingBooking.details}
+                </p>
+
+                {/* Enhanced location display */}
+                {upcomingBooking.location && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <FaMapMarkerAlt className="text-gray-400 text-xs" />
+                    <p className="text-xs text-gray-600">
+                      {upcomingBooking.location}
+                    </p>
+                  </div>
+                )}
+
+                {/* Fallback floor display */}
+                {!upcomingBooking.location && upcomingBooking.floor && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <FaMapMarkerAlt className="text-gray-400 text-xs" />
+                    <p className="text-xs text-gray-600">
+                      Floor: {upcomingBooking.floor}
+                    </p>
+                  </div>
+                )}
+
+                {/* Time and date display */}
+                {upcomingBooking.entryTime && upcomingBooking.exitTime && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    🕐 {upcomingBooking.entryTime} - {upcomingBooking.exitTime}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  📅 Date: {upcomingBooking.date}
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
           <p className="text-sm text-gray-700">No upcoming bookings.</p>

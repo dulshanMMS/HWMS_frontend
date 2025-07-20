@@ -29,8 +29,59 @@ const UserDashboard = () => {
   const [todaysBookingCount, setTodaysBookingCount] = useState(0); // Number of bookings today
   const [totalBookingCount, setTotalBookingCount] = useState(0); // Total bookings count
 
+  // NEW: Separated booking counts
+  const [bookingCounts, setBookingCounts] = useState({
+    parkingCount: 0,
+    seatCount: 0,
+    totalCount: 0,
+  });
+  const [bookingStatsLoading, setBookingStatsLoading] = useState(true);
+
   // Controls active tab in dashboard (default "Bookings")
   const [activeTab, setActiveTab] = useState("Bookings");
+
+  // NEW: Function to fetch separated booking statistics
+  const fetchBookingStats = async (token) => {
+    try {
+      setBookingStatsLoading(true);
+      const response = await axios.get(
+        "http://localhost:5000/api/calendar/stats",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.data.success) {
+        setBookingCounts(response.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch booking statistics:", error);
+      // Fallback: calculate from existing data
+      try {
+        const allBookings = await axios.get(
+          "http://localhost:5000/api/calendar/user-view",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const bookings = allBookings.data || [];
+        const parkingCount = bookings.filter(
+          (b) => b.type === "parking"
+        ).length;
+        const seatCount = bookings.filter((b) => b.type === "seat").length;
+
+        setBookingCounts({
+          parkingCount,
+          seatCount,
+          totalCount: parkingCount + seatCount,
+        });
+      } catch (fallbackError) {
+        console.error("Fallback booking count also failed:", fallbackError);
+      }
+    } finally {
+      setBookingStatsLoading(false);
+    }
+  };
 
   // Effect to update sidebar visibility on window resize
   useEffect(() => {
@@ -50,6 +101,9 @@ const UserDashboard = () => {
     getProfile(token)
       .then((data) => setUserProfile(data))
       .catch((err) => console.error("Failed to load profile", err));
+
+    // NEW: Fetch separated booking statistics
+    fetchBookingStats(token);
 
     // Fetch booking data for the user from backend API
     axios
@@ -98,7 +152,7 @@ const UserDashboard = () => {
       <LeftSidebar />
 
       {/* Main content area */}
-      <div className="flex flex-col flex-1 p-6 lg:p-10 gap-6">
+      <div className=" rounded-2xl shadow-lg p-6 mb-6">
         {/* Header with sidebar toggle */}
         <DashboardHeader
           sidebarOpen={sidebarOpen}
@@ -109,20 +163,30 @@ const UserDashboard = () => {
         <UserProfileSummary userProfile={userProfile} />
 
         {/* Booking summary and calendar cards */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          <BookingSummaryCard totalBookings={totalBookingCount} />
-          <CalendarCard />
+        <div className="flex gap-6">
+          <div className="fw-80">
+            <BookingSummaryCard
+              bookingCounts={bookingCounts}
+              totalBookings={totalBookingCount}
+              loading={bookingStatsLoading}
+            />
+          </div>
+
+          {/* Calendar with details panel - full width */}
+          <div className="flex-1">
+            <CalendarCard />
+          </div>
         </div>
 
         {/* Booking dashboard and action button */}
         <div className="flex flex-wrap gap-6">
           <BookingDashboard />
 
-          <div className="flex items-center">
+          {/* <div className="flex items-center">
             <button className="px-4 py-2 bg-white rounded-xl shadow border font-semibold text-sm">
               View All Booking History →
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 
