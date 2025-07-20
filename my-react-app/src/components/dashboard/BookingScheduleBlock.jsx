@@ -1,5 +1,6 @@
 // src/components/BookingScheduleBlock.jsx
 import React, { useEffect } from "react";
+import { FaCar, FaChair, FaMapMarkerAlt, FaClock } from "react-icons/fa";
 
 /**
  * BookingScheduleBlock displays a list of bookings under a given title.
@@ -11,7 +12,7 @@ import React, { useEffect } from "react";
  * For each booking, it shows:
  * - Type of booking (Seat or Parking)
  * - Booking details text
- * - Optional floor information
+ * - Enhanced location information
  * - Optional entry and exit times
  *
  * If no bookings exist, it shows a "No bookings" message.
@@ -23,32 +24,77 @@ const BookingScheduleBlock = ({ title, bookings }) => {
   }, [bookings, title]);
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 w-[260px]">
+    <div className="bg-white rounded-xl shadow-md p-6 w-[280px]">
       {/* Block Title */}
-      <p className="font-semibold mb-2">{title}</p>
+      <p className="font-semibold mb-4 text-gray-800">{title}</p>
 
       {/* Show message if no bookings */}
       {bookings.length === 0 ? (
-        <p className="text-sm text-gray-500">No bookings</p>
+        <div className="text-center py-8">
+          <div className="text-gray-300 text-3xl mb-2">📅</div>
+          <p className="text-sm text-gray-500">No bookings</p>
+        </div>
       ) : (
         // Map and display each booking's info
         bookings.map((booking, i) => (
-          <div key={i} className="mb-3 text-sm text-gray-700">
-            {/* Booking type label and details */}
-            <p className="font-medium text-green-700">
-              {booking.type === "seat" ? "Seat" : "Parking"}: {booking.details}
-            </p>
+          <div
+            key={i}
+            className="mb-4 p-3 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
+          >
+            {/* Booking type header with icon */}
+            <div className="flex items-center gap-2 mb-2">
+              {booking.type === "seat" ? (
+                <FaChair className="text-green-500" />
+              ) : (
+                <FaCar className="text-blue-500" />
+              )}
+              <p className="font-medium text-gray-800">
+                {booking.type === "seat" ? "Seat Booking" : "Parking Booking"}
+              </p>
+            </div>
 
-            {/* Optional floor number */}
-            {booking.floor && (
-              <p className="text-xs text-gray-500">Floor: {booking.floor}</p>
+            {/* Booking details */}
+            <p className="text-sm text-gray-700 mb-2">{booking.details}</p>
+
+            {/* Location information */}
+            {booking.location && (
+              <div className="flex items-center gap-1 mb-2">
+                <FaMapMarkerAlt className="text-gray-400 text-xs" />
+                <p className="text-xs text-gray-600">{booking.location}</p>
+              </div>
             )}
 
-            {/* Optional entry and exit times */}
+            {/* Fallback floor display if location not available */}
+            {!booking.location && booking.floor && (
+              <div className="flex items-center gap-1 mb-2">
+                <FaMapMarkerAlt className="text-gray-400 text-xs" />
+                <p className="text-xs text-gray-600">Floor: {booking.floor}</p>
+              </div>
+            )}
+
+            {/* Time information */}
             {booking.entryTime && booking.exitTime && (
-              <p className="text-xs text-gray-500">
-                {booking.entryTime} - {booking.exitTime}
-              </p>
+              <div className="flex items-center gap-1">
+                <FaClock className="text-gray-400 text-xs" />
+                <p className="text-xs text-gray-600">
+                  {booking.entryTime} - {booking.exitTime}
+                </p>
+              </div>
+            )}
+
+            {/* Additional details for seating bookings */}
+            {booking.type === "seat" && booking.areaId && (
+              <div className="mt-2 text-xs text-gray-500">
+                Area: {booking.areaId}
+                {booking.seatId && ` • Seat: ${booking.seatId}`}
+              </div>
+            )}
+
+            {/* Additional details for parking bookings */}
+            {booking.type === "parking" && booking.slotNumber && (
+              <div className="mt-2 text-xs text-gray-500">
+                Slot: {booking.slotNumber}
+              </div>
             )}
           </div>
         ))

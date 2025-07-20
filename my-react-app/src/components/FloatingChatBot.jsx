@@ -6,6 +6,7 @@ import {
   FaComments,
   FaQuestionCircle,
   FaTimes,
+  FaRobot,
 } from "react-icons/fa";
 
 /**
@@ -192,7 +193,7 @@ const FloatingChatBot = () => {
               : "w-16 h-16 bg-green-600 text-white hover:bg-green-700"
           }`}
       >
-        {isOpen ? <FaTimes size={24} /> : <FaComments size={24} />}
+        {isOpen ? <FaTimes size={24} /> : < FaRobot size={24} />}
       </button>
 
       {/* Chat window panel */}
@@ -225,7 +226,7 @@ const FloatingChatBot = () => {
             role="tab"
             type="button"
           >
-            <FaComments />
+            < FaRobot/>
             Chat
           </button>
           <button

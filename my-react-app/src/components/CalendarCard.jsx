@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import BookingDetailsPanel from "./userCalendar/BookingDetailsPanel";
 
 const CalendarCard = () => {
   // State for currently viewed month/year on calendar
@@ -11,11 +12,8 @@ const CalendarCard = () => {
   // User bookings (seat & parking bookings)
   const [bookings, setBookings] = useState([]);
 
-  // Selected date's info for popup display
-  const [selectedInfo, setSelectedInfo] = useState(null);
-
-  // Position for popup (x, y coordinates)
-  const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
+  // Selected date for details panel
+  const [selectedDate, setSelectedDate] = useState(null);
 
   // Current day number (1-31)
   const currentDay = new Date().getDate();
@@ -97,6 +95,16 @@ const CalendarCard = () => {
     return matches;
   };
 
+  // Get bookings for selected date (for details panel)
+  const getBookingsForDate = (dateStr) => {
+    return bookings.filter((b) => b.date.startsWith(dateStr));
+  };
+
+  // Get events for selected date (for details panel)
+  const getEventsForDate = (dateStr) => {
+    return events.filter((e) => e.date === dateStr);
+  };
+
   // Determine what type of marks to show on calendar day
   const getDateType = (matches) => {
     const hasSeat = matches.some((m) => m.type === "seat");
@@ -109,143 +117,129 @@ const CalendarCard = () => {
     return null;
   };
 
-  // Handler when user clicks on a day with matching info
-  const handleDayClick = (matches, e) => {
-    if (matches.length > 0) {
-      setSelectedInfo(matches);
-      setPopupPosition({ x: e.clientX, y: e.clientY });
+  // Handler when user clicks on a day
+  const handleDayClick = (date, matches) => {
+    const dateStr =
+      date.getFullYear() +
+      "-" +
+      String(date.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(date.getDate()).padStart(2, "0");
 
-      // Auto-hide popup after 5 seconds
-      setTimeout(() => setSelectedInfo(null), 5000);
-    }
+    setSelectedDate(dateStr);
   };
 
   return (
-    <div className="relative bg-white rounded-xl shadow-md p-6 w-full lg:w-[360px]">
-      {/* Month navigation header */}
-      <div className="flex justify-between items-center mb-4">
-        <button
-          onClick={goToPreviousMonth}
-          className="text-sm px-2 py-1 rounded hover:bg-gray-200"
-        >
-          ◀
-        </button>
-        <p className="text-lg font-semibold">
-          {viewDate.toLocaleString("default", { month: "long" })}{" "}
-          {viewDate.getFullYear()}
-        </p>
-        <button
-          onClick={goToNextMonth}
-          className="text-sm px-2 py-1 rounded hover:bg-gray-200"
-        >
-          ▶
-        </button>
-      </div>
-
-      {/* Weekday labels */}
-      <div className="grid grid-cols-7 text-center font-medium text-sm mb-2">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-          <div key={day}>{day}</div>
-        ))}
-      </div>
-
-      {/* Calendar days grid */}
-      <div className="grid grid-cols-7 gap-2 text-sm">
-        {Array.from({ length: daysInMonth }, (_, i) => {
-          const date = new Date(
-            viewDate.getFullYear(),
-            viewDate.getMonth(),
-            i + 1
-          );
-          const isToday = isCurrentMonth && date.getDate() === currentDay;
-          const matches = getMatchesForDate(date);
-          const type = getDateType(matches);
-
-          // Base styling for each day cell
-          const baseStyle =
-            "h-12 w-12 flex items-center justify-center rounded-lg font-medium cursor-pointer transition-colors duration-200 text-center";
-
-          // Styling based on day type
-          const style =
-            type === "booking"
-              ? "bg-green-200 text-green-900"
-              : type === "event"
-              ? "bg-blue-200 text-blue-900"
-              : type === "both"
-              ? "bg-purple-300 text-white"
-              : "bg-gray-100 hover:bg-gray-200";
-
-          return (
-            <div
-              key={i}
-              className={`${baseStyle} ${style}`}
-              onClick={(e) => handleDayClick(matches, e)}
-            >
-              {isToday ? (
-                <span className="font-bold animate-pulse">{i + 1}</span>
-              ) : (
-                <span>{i + 1}</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Popup displaying details of selected date */}
-      {selectedInfo && (
-        <div
-          className="fixed bg-white border shadow-md rounded-md p-4 text-sm z-50 w-[260px]"
-          style={{
-            top: `${popupPosition.y + 10}px`,
-            left: `${popupPosition.x + 10}px`,
-          }}
-        >
-          <h4 className="font-semibold text-gray-800 mb-2">Day Details</h4>
-          <ul className="space-y-2">
-            {selectedInfo.map((item, idx) => (
-              <li key={idx} className="text-gray-700">
-                {item.type === "event" ? (
-                  <>
-                    <strong>Event:</strong> {item.title}
-                    <br />
-                    <span className="text-xs">{item.time}</span>
-                    <br />
-                    <span className="text-xs text-gray-600">
-                      {item.description}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <strong>
-                      {item.type === "seat"
-                        ? "Seat Booking"
-                        : "Parking Booking"}
-                      :
-                    </strong>{" "}
-                    {item.details}
-                    {item.floor && (
-                      <>
-                        <br />
-                        <span className="text-xs text-gray-600">
-                          Floor: {item.floor}
-                        </span>
-                      </>
-                    )}
-                    {item.entryTime && item.exitTime && (
-                      <>
-                        <br />
-                        <span className="text-xs text-gray-600">
-                          {item.entryTime} - {item.exitTime}
-                        </span>
-                      </>
-                    )}
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
+    <div className="flex gap-6">
+      {/* Calendar Component */}
+      <div className="relative bg-white rounded-xl shadow-md p-4 sm:p-6 w-full min-w-[280px] max-w-[400px]">
+        {/* Month navigation header */}
+        <div className="flex justify-between items-center mb-4">
+          <button
+            onClick={goToPreviousMonth}
+            className="text-xs sm:text-sm px-1 sm:px-2 py-1 rounded hover:bg-gray-200"
+          >
+            ◀
+          </button>
+          <p className="text-sm sm:text-lg font-semibold">
+            {viewDate.toLocaleString("default", { month: "long" })}{" "}
+            {viewDate.getFullYear()}
+          </p>
+          <button
+            onClick={goToNextMonth}
+            className="text-sm px-2 py-1 rounded hover:bg-gray-200"
+          >
+            ▶
+          </button>
         </div>
-      )}
+
+        {/* Weekday labels */}
+        <div className="grid grid-cols-7 text-center font-medium text-xs sm:text-sm mb-2">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+            <div key={day}>{day}</div>
+          ))}
+        </div>
+
+        {/* Calendar days grid */}
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-xs sm:text-sm">
+          {Array.from({ length: daysInMonth }, (_, i) => {
+            const date = new Date(
+              viewDate.getFullYear(),
+              viewDate.getMonth(),
+              i + 1
+            );
+            const isToday = isCurrentMonth && date.getDate() === currentDay;
+            const matches = getMatchesForDate(date);
+            const type = getDateType(matches);
+
+            // Format date for comparison with selected date
+            const dateStr =
+              date.getFullYear() +
+              "-" +
+              String(date.getMonth() + 1).padStart(2, "0") +
+              "-" +
+              String(date.getDate()).padStart(2, "0");
+
+            const isSelected = selectedDate === dateStr;
+
+            // Base styling for each day cell
+            const baseStyle =
+              "h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 flex items-center justify-center rounded-lg font-medium cursor-pointer transition-colors duration-200 text-center";
+
+            // Styling based on day type and selection
+            let style = "";
+            if (isSelected) {
+              style = "bg-blue-500 text-white border-2 border-blue-600";
+            } else if (type === "booking") {
+              style = "bg-green-200 text-green-900 hover:bg-green-300";
+            } else if (type === "event") {
+              style = "bg-blue-200 text-blue-900 hover:bg-blue-300";
+            } else if (type === "both") {
+              style = "bg-purple-300 text-white hover:bg-purple-400";
+            } else {
+              style = "bg-gray-100 hover:bg-gray-200";
+            }
+
+            return (
+              <div
+                key={i}
+                className={`${baseStyle} ${style}`}
+                onClick={() => handleDayClick(date, matches)}
+              >
+                {isToday ? (
+                  <span className="font-bold animate-pulse">{i + 1}</span>
+                ) : (
+                  <span>{i + 1}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="mt-4 flex flex-wrap gap-2 text-xs">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-green-200 rounded"></div>
+            <span className="text-gray-600">Bookings</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-blue-200 rounded"></div>
+            <span className="text-gray-600">Events</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-purple-300 rounded"></div>
+            <span className="text-gray-600">Both</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Booking Details Panel */}
+      <BookingDetailsPanel
+        selectedDate={selectedDate}
+        bookings={selectedDate ? getBookingsForDate(selectedDate) : []}
+        events={selectedDate ? getEventsForDate(selectedDate) : []}
+        onClose={() => setSelectedDate(null)}
+      />
     </div>
   );
 };
