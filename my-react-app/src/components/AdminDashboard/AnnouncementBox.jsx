@@ -9,9 +9,9 @@
 
 const AnnouncementBox = ({ announcement, setAnnouncement, onSend }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700 mb-2">
+    <h2 className="font-semibold mb-2">
       Special Announcement
-    </label>
+    </h2>
     <textarea
       value={announcement}
       onChange={(e) => setAnnouncement(e.target.value)}

@@ -5,6 +5,7 @@ import useAuthGuard from "../components/AuthGuard";
 import { toast } from "react-toastify";
 
 import AdminHeader from "../components/AdminDashboard/AdminHeader";
+//import AdminHeader from "../components/dashboard/DashboardHeader";
 import AnnouncementBox from "../components/AdminDashboard/AnnouncementBox";
 import BookingChart from "../components/AdminDashboard/BookingChart";
 import EventCalendar from "../components/AdminDashboard/EventCalendar";
@@ -91,7 +92,6 @@ const AdminDashboard = () => {
         setShowEventModal(false);
         setNewEvent({ title: "", description: "", time: "" });
 
-        // Refresh events
         const updated = await axios.get("/api/events");
         if (updated.data.success) {
           const updatedEvents = updated.data.events;
@@ -195,10 +195,12 @@ const AdminDashboard = () => {
 
   return (
     <AdminSidebar>
-      <div className="bg-gray-100 overflow-y-auto p-4 sm:p-6 md:p-8 lg:p-10 min-h-screen">
+      <div className="bg-green-100 overflow-y-auto p-4 sm:p-6 md:p-8 lg:p-10 min-h-screen">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <div className="space-y-4 order-3 md:order-3 xl:order-1">
-            <AdminHeader />
+            <div className="hidden xl:block">
+              <AdminHeader />
+            </div>
             <AnnouncementBox
               announcement={announcement}
               setAnnouncement={setAnnouncement}
@@ -223,11 +225,11 @@ const AdminDashboard = () => {
           </div>
 
           <div className="space-y-4 order-1 md:order-1 xl:order-3">
-            <div className="relative bg-white rounded-xl shadow-md p-6 w-full max-w-md mx-auto">
+            <div className="relative bg-white rounded-xl shadow-md p-6 w-full">
               <ProfileGreeting userProfile={userProfile} />
             </div>
             <QuickStats todayBookingCount={todayBookingCount} />
-            <BookingChart parkingData={parkingStats} seatingData={seatingStats} />
+            <BookingChart />
           </div>
         </div>
 
