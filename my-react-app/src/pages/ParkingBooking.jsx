@@ -7,7 +7,8 @@ import BookButton from "../components/parking/Bookbutton";
 import MessageBox from "../components/parking/Messagebox";
 import LeftSidebar from "../components/LeftSidebar";
 
-//import SidebarWrapper from '../components/profilesidebar/SidebarWrapper'; //methn1
+//import SidebarWrapper from '../components/profilesidebar/SidebarWrapper';
+//methn1
 
 const ParkingBooking = () => {
   const [loadingScreen, setLoadingScreen] = useState(true);
@@ -25,9 +26,57 @@ const ParkingBooking = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Function to check if selected date is in the past
+  const isDateInPast = (selectedDate) => {
+    const today = new Date();
+    const selected = new Date(selectedDate);
+    
+    // Set time to beginning of day for accurate comparison
+    today.setHours(0, 0, 0, 0);
+    selected.setHours(0, 0, 0, 0);
+    
+    return selected < today;
+  };
+
   const handleCheckAvailability = async () => {
     setLoading(true);
     setMessage("");
+    
+    // Check if all required fields are filled
+    if (!date) {
+      setMessage("Please select a date.");
+      setLoading(false);
+      return;
+    }
+    
+    if (!entryTime) {
+      setMessage("Please select an entry time.");
+      setLoading(false);
+      return;
+    }
+    
+    if (!exitTime) {
+      setMessage("Please select an exit time.");
+      setLoading(false);
+      return;
+    }
+    
+    // Check if exit time is after entry time
+    if (entryTime >= exitTime) {
+      setMessage("Exit time must be after entry time.");
+      setLoading(false);
+      return;
+    }
+    
+    // Check if selected date is in the past
+    if (isDateInPast(date)) {
+      setMessage("You cannot select a past date. Please select today or a future date.");
+      setLoading(false);
+      setAvailableSlots([]); // Clear any existing slots
+      setSelectedSlot(null); // Clear selected slot
+      return;
+    }
+
     try {
       const slots = await fetchAvailableSlots({ date, entryTime, exitTime, floor: Number(floor) });
       setAvailableSlots(slots);
@@ -56,14 +105,15 @@ const ParkingBooking = () => {
     }
   };
 
-  //const [sidebarOpen, setSidebarOpen] = useState(true); // or false based on what you want  // * *methn 2
-  
+  //const [sidebarOpen, setSidebarOpen] = useState(true); // or false based on what you want
+  // * *methn 2
 
   if (loadingScreen) return <LoadingScreen />;
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-green-50 px-4">
-      <LeftSidebar /> 
+      <LeftSidebar />
+
       <div className="bg-white shadow-lg p-6 rounded-lg w-full max-w-4xl min-h-screen">
         <h1 className="text-2xl font-bold mb-4 text-center text-green-600 p-10">Parking Slot Booking</h1>
 
@@ -94,7 +144,7 @@ const ParkingBooking = () => {
 
         <MessageBox message={message} />
       </div>
-      
+
       {/*<SidebarWrapper                          // * * methn 3
         sidebarOpen={sidebarOpen}
         closeSidebar={() => setSidebarOpen(false)}
