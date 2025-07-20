@@ -31,29 +31,72 @@ const timesOverlap = (start1, end1, start2, end2) => {
   return s1 < e2 && s2 < e1;
 };
 
+// Helper function to check if user is admin
+const isUserAdmin = () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return false;
+    
+    const decoded = jwtDecode(token);
+    // Check if user has admin role - adjust this based on your token structure
+    return decoded.role === 'admin' || decoded.isAdmin === true;
+  } catch (error) {
+    console.error("Error checking admin status:", error);
+    return false;
+  }
+};
+
+// Helper function to get current user's userName from token
+const getCurrentUserName = () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    
+    const decoded = jwtDecode(token);
+    return decoded.userName || decoded.username;
+  } catch (error) {
+    console.error("Error getting username:", error);
+    return null;
+  }
+};
+
 // API functions
 const api = {
   async fetchBookings(date, floor) {
-    const response = await fetch(`http://localhost:5000/api/bookings/filtered?date=${date}&floor=${floor}`);
+    const response = await fetch(`http://localhost:6001/api/bookings/filtered?date=${date}&floor=${floor}`);
     if (!response.ok) throw new Error('Failed to fetch bookings');
     return response.json();
   },
 
   async fetchUser(userId) {
-    const response = await fetch(`http://localhost:5000/api/bookings/users/${userId}`);
+    const response = await fetch(`http://localhost:6001/api/bookings/users/${userId}`);
     if (!response.ok) throw new Error('User not found');
     return response.json();
   },
 
   async fetchTeam(teamId) {
-    const response = await fetch(`http://localhost:5000/api/teams/${teamId}`);
-    if (!response.ok) throw new Error('Team not found');
-    return response.json();
+    const response = await fetch(`http://localhost:6001/api/teams`);
+    if (!response.ok) throw new Error('Failed to fetch teams');
+    
+    const teams = await response.json();
+    const team = teams.find(t => t.teamId === teamId);
+    
+    if (!team) throw new Error('Team not found');
+    return team;
   },
 
-  // SIMPLIFIED: Self-booking only - user can only book for themselves
-  async bookSeat(userName, chairId, bookingDetails) {
-    const response = await fetch(`http://localhost:5000/api/bookings/member/${userName}/seat/${chairId}`, {
+  // UPDATED: Use current user's actual userName (admin uses their own name)
+  async bookSeat(chairId, bookingDetails) {
+    const isAdmin = isUserAdmin();
+    const currentUserName = getCurrentUserName(); // Get admin's actual userName
+    
+    const endpoint = isAdmin 
+      ? `/api/bookings/admin/${currentUserName}/seat/${chairId}`    // Admin's own userName
+      : `/api/bookings/member/${currentUserName}/seat/${chairId}`;  // User's userName
+    
+    console.log(`🎯 Using ${isAdmin ? 'ADMIN' : 'USER'} booking route:`, endpoint);
+    
+    const response = await fetch(`http://localhost:6001${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bookingDetails),
@@ -66,8 +109,16 @@ const api = {
     return response.json();
   },
 
+  // UPDATED: Choose unbooking route based on user role
   async unbookSeat(tableId, chairId, floor, date) {
-    const response = await fetch(`http://localhost:5000/api/bookings/unbook/${tableId}/${chairId}/${floor}/${date}`, {
+    const isAdmin = isUserAdmin();
+    const endpoint = isAdmin 
+      ? `/api/bookings/admin/unbook/${tableId}/${chairId}/${floor}/${date}`
+      : `/api/bookings/unbook/${tableId}/${chairId}/${floor}/${date}`;
+    
+    console.log(`🎯 Using ${isAdmin ? 'ADMIN' : 'USER'} unbooking route:`, endpoint);
+    
+    const response = await fetch(`http://localhost:6001${endpoint}`, {
       method: 'DELETE',
     });
     
@@ -82,6 +133,7 @@ const api = {
 // Custom hooks
 const useAuth = () => {
   const [memberId, setMemberId] = useState('');
+  const [userRole, setUserRole] = useState('user');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -94,13 +146,14 @@ const useAuth = () => {
     try {
       const decoded = jwtDecode(token);
       setMemberId(decoded.userName || decoded.username);
+      setUserRole(decoded.role || 'user');
     } catch (e) {
       console.error("Invalid token", e);
       navigate('/');
     }
   }, [navigate]);
 
-  return memberId;
+  return { memberId, userRole };
 };
 
 // SIMPLIFIED: No role/leader logic - everyone is a member for self-booking
@@ -205,7 +258,7 @@ const TableComponent = ({ tableId, index, seatSize = "normal", bookedChairs, onC
 export default function FloorLayout() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const memberId = useAuth();
+  const { memberId, userRole } = useAuth();
   const { memberDetails, teamName, loading: userLoading } = useUserData(memberId);
 
   const bookingInfo = useMemo(() => ({
@@ -299,11 +352,10 @@ export default function FloorLayout() {
   const showMessage = (msg) => setMessage(msg);
   const closeMessage = () => setMessage(null);
 
-  // SIMPLIFIED: Self-booking only - no leader/member selection logic
+  // UPDATED: No popup messages when clicking seats, only silent booking/unbooking
   const handleChairClick = async (chairId, tableId) => {
     if (bookingSubmitted || !memberDetails) {
-      showMessage('Please ensure you are logged in and have valid team data.');
-      return;
+      return; // Silent return, no popup
     }
 
     const booking = bookedChairs[chairId];
@@ -311,6 +363,7 @@ export default function FloorLayout() {
     if (booking) {
       if (booking.userName === memberDetails.userName) {
         try {
+          // Silent unbooking - no popup message
           await api.unbookSeat(tableId, chairId, bookingInfo.floor, bookingInfo.date);
           setUserBooking(null);
           setBookedChairs(prev => {
@@ -318,12 +371,15 @@ export default function FloorLayout() {
             delete updated[chairId];
             return updated;
           });
-          showMessage('Seat unbooked successfully!');
+          console.log(`✅ Seat ${chairId} unbooked silently`);
         } catch (err) {
-          showMessage('Failed to unbook seat: ' + err.message);
+          console.error('Failed to unbook seat:', err.message);
+          // Could add error handling here if needed
         }
       } else {
-        showMessage('This seat is booked by another user.');
+        // Silent return - seat is taken by someone else
+        console.log(`❌ Seat ${chairId} is booked by ${booking.userName}`);
+        return;
       }
     } else {
       const bookingDetails = {
@@ -338,7 +394,8 @@ export default function FloorLayout() {
       };
 
       try {
-        const result = await api.bookSeat(memberDetails.userName, chairId, bookingDetails);
+        // Silent booking - no popup message
+        const result = await api.bookSeat(chairId, bookingDetails);
         setUserBooking({ chairId, tableId });
         
         const chairData = {
@@ -356,8 +413,10 @@ export default function FloorLayout() {
         };
         
         setBookedChairs(prev => ({ ...prev, [chairId]: chairData }));
+        console.log(`✅ ${userRole === 'admin' ? 'Admin' : 'User'} booking successful for ${chairId}`);
       } catch (err) {
-        showMessage(`Booking error: ${err.message}`);
+        console.error(`Booking error for ${chairId}:`, err.message);
+        // Could add error handling here if needed
       }
     }
   };
@@ -365,14 +424,12 @@ export default function FloorLayout() {
   // SIMPLIFIED: Self-booking only unbook
   const handleUnbook = async () => {
     if (!memberDetails?.userName) {
-      showMessage('No user logged in.');
-      return;
+      return; // Silent return
     }
 
     const chairId = Object.keys(bookedChairs).find(id => bookedChairs[id]?.userName === memberDetails.userName);
     if (!chairId) {
-      showMessage('No seat booked to unbook.');
-      return;
+      return; // Silent return
     }
 
     const tableId = chairId.split('-')[0];
@@ -385,9 +442,9 @@ export default function FloorLayout() {
         delete updated[chairId];
         return updated;
       });
-      showMessage('Seat unbooked successfully!');
+      console.log('✅ Seat unbooked via button');
     } catch (err) {
-      showMessage(`Unbooking error: ${err.message}`);
+      console.error(`Unbooking error:`, err.message);
     }
   };
 
@@ -399,6 +456,7 @@ export default function FloorLayout() {
     );
   };
 
+  // UPDATED: Only show popup message when submitting
   const handleSubmit = () => {
     if (!memberDetails?.userName) {
       showMessage('No user logged in for submission.');
@@ -414,7 +472,8 @@ export default function FloorLayout() {
     const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
     localStorage.setItem(submissionKey, 'true');
     
-    showMessage('Seat booking submitted successfully!');
+    // ONLY popup message for successful submission
+    showMessage('Booking submitted successfully!');
   };
 
   const handleCancel = () => {
@@ -424,7 +483,6 @@ export default function FloorLayout() {
     localStorage.removeItem(submissionKey);
     
     setUserBooking(null);
-    showMessage('Session canceled successfully!');
     navigate('/datebooking');
   };
 
@@ -465,10 +523,9 @@ export default function FloorLayout() {
           <div className="bg-blue-100 border border-blue-300 rounded-xl p-4 text-center w-full max-w-2xl shadow-sm">
             <p className="text-base font-semibold text-blue-800">
               📅 Booking for: {bookingInfo.date}  | 🕐 Time: {bookingInfo.entryTime} - {bookingInfo.exitTime} | 🏢 Floor {bookingInfo.floor}
+              {userRole === 'admin' && <span className="ml-2 bg-red-500 text-white px-2 py-1 rounded text-sm">ADMIN</span>}
             </p>
           </div>
-
-          {/* REMOVED: Leader Controls - Self-booking only */}
 
           {/* Floor Layout - Responsive */}
           <div className="w-full flex justify-center">
@@ -629,7 +686,7 @@ export default function FloorLayout() {
         </div>
       </div>
 
-      {/* Popups */}
+      {/* Popups - Only for submission messages */}
       {message && <PopUp message={message} onClose={closeMessage} />}
     </div>
   );

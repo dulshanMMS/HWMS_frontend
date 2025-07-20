@@ -1,6 +1,6 @@
 // bookingAPI.js - Self-booking only version
 export const getBookings = async () => {
-  const response = await fetch('http://localhost:5000/api/bookings');
+  const response = await fetch('http://localhost:6001/api/bookings');
   if (!response.ok) {
     const errorText = await response.text();
     console.error("Get bookings failed with status:", response.status, "Response:", errorText);
@@ -25,7 +25,7 @@ export const bookSeat = async (chairId, bookingDetails) => {
   const { roomId, userName, teamName, teamColor } = bookingDetails;
   
   // SELF-BOOKING ONLY: Always use the member booking endpoint
-  const url = `http://localhost:5000/api/bookings/member/${userName}/seat/${chairId}`;
+  const url = `http://localhost:6001/api/bookings/member/${userName}/seat/${chairId}`;
 
   const body = { 
     roomId, 
@@ -64,7 +64,7 @@ export const bookSeat = async (chairId, bookingDetails) => {
 };
 
 export const unbookSeat = async (roomId, chairId, floor, date) => {
-  const response = await fetch(`http://localhost:5000/api/bookings/unbook/${roomId}/${chairId}/${floor}/${date}`, {
+  const response = await fetch(`http://localhost:6001/api/bookings/unbook/${roomId}/${chairId}/${floor}/${date}`, {
     method: 'DELETE',
   });
   
