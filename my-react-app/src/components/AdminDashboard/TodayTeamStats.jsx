@@ -1,7 +1,7 @@
 const TodayTeamStats = ({ topTeams }) => {
   return (
     <div className="bg-white p-6 rounded-lg shadow">
-      <h2 className="font-semibold text-lg mb-4">Top 5 Teams Today</h2>
+      <h2 className="font-semibold mb-4">Top 5 Teams Today</h2>
       <ul className="space-y-3">
         {topTeams.map((team, idx) => (
           <li key={idx} className="flex items-center justify-between">
