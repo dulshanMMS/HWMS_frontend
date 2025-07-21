@@ -1,6 +1,6 @@
 import React from 'react';
 
-const TeamLookupTable = ({ teamData, onMemberClick }) => {
+const TeamLookupTable = ({ teamData }) => {
   if (!teamData || !teamData.members || teamData.members.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -68,9 +68,6 @@ const TeamLookupTable = ({ teamData, onMemberClick }) => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Total Bookings
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -91,7 +88,7 @@ const TeamLookupTable = ({ teamData, onMemberClick }) => {
                     {member.vehicleNo || 'N/A'}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 kaart py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900 text-center">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800">
                       {member.seatCount}
@@ -111,14 +108,6 @@ const TeamLookupTable = ({ teamData, onMemberClick }) => {
                       {member.totalBookings}
                     </span>
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => onMemberClick && onMemberClick(member)}
-                    className="text-blue-600 hover:text-blue-900 hover:underline"
-                  >
-                    View Details
-                  </button>
                 </td>
               </tr>
             ))}

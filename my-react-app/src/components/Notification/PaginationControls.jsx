@@ -1,24 +1,33 @@
+import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 
-const PaginationControls = ({ currentPage, setCurrentPage }) => {
+const PaginationControls = ({ currentPage, setCurrentPage, totalPages }) => {
   return (
-    <div className="flex justify-center mt-4">
+    <div className="flex justify-center items-center mt-4 mb-4">
       <button
         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
         disabled={currentPage === 1}
-        className={`px-6 py-3 text-white font-bold rounded-lg mr-2 transition-colors duration-300 ${
+        className={`p-3 text-white rounded-full transition-colors duration-300 ${
           currentPage === 1 ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'
         }`}
+        aria-label="Previous page"
       >
-        Previous
+        <FaArrowLeft className="text-lg" />
       </button>
+      <span className="px-4 py-2 text-gray-700 font-medium">
+        Page {currentPage} of {totalPages}
+      </span>
       <button
-        onClick={() => setCurrentPage(prev => prev + 1)}
-        className="px-6 py-3 bg-blue-500 text-white font-bold rounded-lg transition-colors duration-300 hover:bg-blue-600"
+        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+        disabled={currentPage === totalPages}
+        className={`p-3 text-white rounded-full transition-colors duration-300 ${
+          currentPage === totalPages ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'
+        }`}
+        aria-label="Next page"
       >
-        Next
+        <FaArrowRight className="text-lg" />
       </button>
     </div>
   );
 };
 
-export default PaginationControls; 
+export default PaginationControls;

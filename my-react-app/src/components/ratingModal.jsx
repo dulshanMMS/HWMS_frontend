@@ -1,129 +1,4 @@
-
-// import React, { useState } from 'react';
-// import { FaStar } from 'react-icons/fa';
-
-// const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
-//   const [rating, setRating] = useState(0);
-//   const [feedback, setFeedback] = useState('');
-//   const [isSubmitted, setIsSubmitted] = useState(false);
-//   const [errorMessage, setErrorMessage] = useState('');
-
-//   if (!isOpen) return null;
-
-//   const handleSubmit = async () => {
-//     if (rating === 0 && !feedback.trim()) {
-//       setErrorMessage('Please provide a star rating and feedback text.');
-//       return;
-//     }
-//     if (rating === 0) {
-//       setErrorMessage('Please select a star rating.');
-//       return;
-//     }
-//     if (!feedback.trim()) {
-//       setErrorMessage('Please provide feedback text.');
-//       return;
-//     }
-//     if (userId) {
-//       try {
-//         const response = await onSubmit({ userId, bookingType: 'parking', rating, feedback });
-//         if (response.ok) {
-//           setIsSubmitted(true);
-//           setErrorMessage('');
-//           setTimeout(() => {
-//             setIsSubmitted(false);
-//             onClose();
-//           }, 2000);
-//         } else {
-//           throw new Error('Failed to submit rating');
-//         }
-//       } catch (error) {
-//         setErrorMessage('Error submitting rating. Please try again.');
-//       }
-//     }
-//   };
-
-//   if (isSubmitted) {
-//     return (
-//       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-//         <div className="bg-white p-10 rounded-lg shadow-xl text-center w-full max-w-2xl">
-//           <h2 className="text-2xl font-bold text-green-600 mb-4">Thank You for Rating Us!</h2>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-//       <div className="bg-white p-10 rounded-lg shadow-xl w-full max-w-2xl">
-//         <div className="flex justify-between items-center mb-6">
-//           <span className="text-gray-500 font-semibold">Type of testimonial</span>
-//           <div className="flex gap-2 items-center">
-//             <span className="text-sm font-medium text-gray-600">Text</span>
-//             <label className="inline-flex items-center cursor-pointer">
-//               <input type="checkbox" className="sr-only peer" />
-//               <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:left-0.5 after:top-0.5 relative"></div>
-//             </label>
-//             <span className="text-sm font-medium text-gray-600">Video</span>
-//           </div>
-//         </div>
-
-//         <div className="mb-6">
-//           <label className="block text-gray-800 font-medium mb-2">How many stars would you give me?</label>
-//           <div className="flex items-center gap-2">
-//             {[1, 2, 3, 4, 5].map((star) => (
-//               <FaStar
-//                 key={star}
-//                 className={`cursor-pointer text-2xl ${rating >= star ? 'text-yellow-400' : 'text-gray-300'}`}
-//                 onClick={() => setRating(star)}
-//               />
-//             ))}
-//             {rating === 5 && (
-//               <span className="ml-2 bg-yellow-300 text-gray-800 text-sm font-semibold px-3 py-1 rounded">
-//                 Excellent
-//               </span>
-//             )}
-//           </div>
-//         </div>
-
-//         <div className="mb-6">
-//           <label className="block text-xl font-semibold text-gray-900 mb-3">
-//             How would you rate your experience with us?
-//           </label>
-//           <textarea
-//             value={feedback}
-//             onChange={(e) => setFeedback(e.target.value)}
-//             className="w-full p-3 border border-gray-300 rounded-lg"
-//             rows="3"
-//             placeholder="Share your feedback here..."
-//           />
-//         </div>
-
-//         {errorMessage && <div className="text-red-500 mb-4">{errorMessage}</div>}
-
-//         <div className="flex justify-end gap-2">
-//           <button
-//             onClick={handleSubmit}
-//             className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-2 rounded"
-//             disabled={!userId}
-//           >
-//             Next
-//           </button>
-//           <button
-//             onClick={onClose}
-//             className="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-6 py-2 rounded"
-//           >
-//             Rate Later
-//           </button>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default RatingModal;
-
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaStar } from 'react-icons/fa';
 
 const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
@@ -131,14 +6,131 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
   const [feedback, setFeedback] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [scrollPosition, setScrollPosition] = useState(0);
+
+  // Hardcoded employee feedbacks
+  const employeeFeedbacks = [
+    {
+      id: 1,
+      name: "Priya Sharma",
+      role: "Product Manager",
+      rating: 5,
+      text: "Exceptional service and user-friendly design! Highly recommended.",
+      avatarColor: "bg-purple-500"
+    },
+    {
+      id: 2,
+      name: "James Wilson",
+      role: "Software Developer",
+      rating: 5,
+      text: "Impressive functionality and excellent customer support!",
+      avatarColor: "bg-blue-500"
+    },
+    {
+      id: 3,
+      name: "Nisha Gupta",
+      role: "Data Analyst",
+      rating: 3,
+      text: "Decent features, but the lack of customization options is disappointing.",
+      avatarColor: "bg-pink-500"
+    },
+    {
+      id: 4,
+      name: "Michael Chen",
+      role: "UI/UX Designer",
+      rating: 4,
+      text: "Great interface design and smooth user experience. Could use more advanced features.",
+      avatarColor: "bg-indigo-500"
+    },
+    {
+      id: 5,
+      name: "Sarah Johnson",
+      role: "Marketing Manager",
+      rating: 5,
+      text: "Outstanding platform! Easy to use and very efficient for our daily operations.",
+      avatarColor: "bg-teal-500"
+    },
+    {
+      id: 6,
+      name: "David Rodriguez",
+      role: "Operations Lead",
+      rating: 4,
+      text: "Solid performance and reliable service. Minor room for improvement in loading times.",
+      avatarColor: "bg-orange-500"
+    },
+    {
+      id: 7,
+      name: "Emily Chen",
+      role: "HR Manager",
+      rating: 5,
+      text: "Streamlined our entire workflow. The team loves using this platform daily.",
+      avatarColor: "bg-red-500"
+    },
+    {
+      id: 8,
+      name: "Alex Kumar",
+      role: "Business Analyst",
+      rating: 4,
+      text: "Good value for money. The reporting features are particularly useful.",
+      avatarColor: "bg-yellow-500"
+    }
+  ];
+
+  // Reset fields when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setRating(0);
+      setFeedback('');
+      setErrorMessage('');
+      setIsSubmitted(false);
+      setScrollPosition(0);
+    }
+  }, [isOpen]);
+
+  // Auto-scroll animation
+  useEffect(() => {
+    if (!isOpen || isSubmitted) return;
+
+    const scrollContainer = document.getElementById('feedback-scroll-container');
+    if (!scrollContainer) return;
+
+    let animationId;
+    const scroll = () => {
+      setScrollPosition((prev) => {
+        const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        const newPosition = prev + 4;
+        
+        if (newPosition >= maxScroll) {
+          return 0; // Reset to top
+        }
+        return newPosition;
+      });
+      animationId = requestAnimationFrame(scroll);
+    };
+
+    const timer = setTimeout(() => {
+      animationId = requestAnimationFrame(scroll);
+    }, 10); // Start after 1 second
+
+    return () => {
+      clearTimeout(timer);
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    };
+  }, [isOpen, isSubmitted]);
+
+  // Update scroll position
+  useEffect(() => {
+    const scrollContainer = document.getElementById('feedback-scroll-container');
+    if (scrollContainer) {
+      scrollContainer.scrollTop = scrollPosition;
+    }
+  }, [scrollPosition]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
-    if (rating === 0 && !feedback.trim()) {
-      setErrorMessage('Please provide a star rating and feedback text.');
-      return;
-    }
     if (rating === 0) {
       setErrorMessage('Please select a star rating.');
       return;
@@ -147,51 +139,61 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
       setErrorMessage('Please provide feedback text.');
       return;
     }
-    if (userId) {
-      try {
-        const response = await onSubmit({ userId, bookingType: 'parking', rating, feedback });
-        if (response.ok) {
-          setIsSubmitted(true);
-          setErrorMessage('');
-          setTimeout(() => {
-            setIsSubmitted(false);
-            onClose();
-          }, 2000);
-        } else {
-          throw new Error('Failed to submit rating');
-        }
-      } catch (error) {
-        setErrorMessage('Error submitting rating. Please try again.');
-      }
+    if (!userId) {
+      setErrorMessage('User not authenticated.');
+      return;
     }
+    try {
+      const response = await onSubmit({ userId, bookingType: 'parking', rating, feedback });
+      if (!response) {
+        console.error('No response received from onSubmit');
+        throw new Error('No response from server');
+      }
+      const responseData = await response.json();
+      console.log('Submit rating response:', response.status, responseData);
+      if (response.status === 201) {
+        setIsSubmitted(true);
+        setErrorMessage('');
+        setTimeout(() => {
+          setIsSubmitted(false);
+          onClose();
+        }, 2000);
+      } else {
+        console.error('Submit rating failed:', responseData);
+        throw new Error(responseData.error || 'Failed to submit rating');
+      }
+    } catch (error) {
+      console.error('Error in handleSubmit:', error.message, error);
+      setErrorMessage(`Error submitting rating: ${error.message}. Please try again.`);
+    }
+  };
+
+  const renderStars = (starRating) => {
+    return Array.from({ length: 5 }, (_, index) => (
+      <FaStar
+        key={index}
+        className={`text-sm ${index < starRating ? 'text-yellow-400' : 'text-gray-300'}`}
+      />
+    ));
   };
 
   if (isSubmitted) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative overflow-hidden">
-          {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 opacity-50">
-            <img 
-              src="/src/assets/your-image.png" 
-              alt="Background decoration" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-          
-          <div className="relative z-10 p-12 text-center">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md h-auto relative overflow-hidden">
+          <div className="relative p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Thank you</h2>
-            <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto">
-              The feedback helps us improve, appreciate the time you took to send us the feedback!
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Thank you</h2>
+            <p className="text-gray-600 mb-6">
+              Your feedback helps us improve. Thank you for taking the time to share!
             </p>
             <button
               onClick={onClose}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-12 py-4 rounded-xl text-lg transition-colors"
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-2 rounded-lg transition-colors"
             >
               Done
             </button>
@@ -202,91 +204,125 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-64 h-64 opacity-50">
-          <img 
-            src="/src/assets/ratingimage.svg" 
-            alt="Background decoration" 
-            className="w-full h-full object-cover"
-          />
-        </div>
-        
-        <div className="relative z-10 p-12">
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="absolute top-6 right-6 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-          >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] relative overflow-hidden">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors z-10"
+        >
+          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
 
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8">Rate your experience</h2>
-            
-            {/* Star Rating */}
-            <div className="mb-8">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <FaStar
-                    key={star}
-                    className={`cursor-pointer text-4xl transition-colors ${
-                      rating >= star ? 'text-yellow-400' : 'text-gray-300'
-                    } hover:text-yellow-400`}
-                    onClick={() => setRating(star)}
+        <div className="flex h-full">
+          {/* Left Side - Rating Form */}
+          <div className="w-1/2 p-8 flex items-center justify-center">
+            <div className="w-full max-w-lg">
+              <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
+                <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Rate your experience</h2>
+                
+                <div className="mb-8">
+                  <h3 className="text-lg font-medium text-gray-700 mb-4 text-center">
+                    How was your experience? Give us some stars! ⭐
+                  </h3>
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <FaStar
+                        key={star}
+                        className={`cursor-pointer text-3xl transition-colors ${
+                          rating >= star ? 'text-yellow-400' : 'text-gray-300'
+                        } hover:text-yellow-400`}
+                        onClick={() => setRating(star)}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex justify-center">
+                    {rating > 0 && (
+                      <span className="text-lg font-medium text-gray-700">
+                        {rating === 1 && 'Poor'}
+                        {rating === 2 && 'Fair'}
+                        {rating === 3 && 'Good'}
+                        {rating === 4 && 'Very Good'}
+                        {rating === 5 && 'Excellent'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <textarea
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none resize-none"
+                    rows="4"
+                    placeholder="Share your feedback here..."
                   />
+                </div>
+
+                {errorMessage && (
+                  <div className="text-red-500 mb-4 text-center font-medium">
+                    {errorMessage}
+                  </div>
+                )}
+
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={handleSubmit}
+                    className="bg-green-800 hover:bg-green-900 text-white font-semibold px-6 py-2 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    disabled={!userId || rating === 0 || !feedback.trim()}
+                  >
+                    Submit Feedback
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold px-6 py-2 rounded-lg transition-colors"
+                  >
+                    Not Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side - Employee Feedbacks */}
+          <div className="w-1/2 bg-gray-50 p-8 border-l border-gray-200">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+               What Others Say About Us
+            </h3>
+            
+            <div id="feedback-scroll-container" className="h-full overflow-y-auto pr-2 scrollbar-hide" style={{ maxHeight: 'calc(100vh - 200px)', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <div className="space-y-4">
+                {employeeFeedbacks.map((feedback) => (
+                  <div key={feedback.id} className="bg-green-50 rounded-xl p-6 shadow-lg border border-green-100">
+                    <div className="flex items-start space-x-4">
+                      <div className={`w-12 h-12 ${feedback.avatarColor} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold text-gray-900 text-sm">
+                              {feedback.name}
+                            </h4>
+                            <p className="text-gray-600 text-xs">
+                              {feedback.role}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            {renderStars(feedback.rating)}
+                          </div>
+                        </div>
+                        <p className="text-gray-700 text-sm leading-relaxed">
+                          {feedback.text}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
-              
-              {/* Rating labels */}
-              <div className="flex justify-center">
-                {rating > 0 && (
-                  <span className="text-lg font-medium text-gray-700">
-                    {rating === 1 && 'Poor'}
-                    {rating === 2 && 'Fair'}
-                    {rating === 3 && 'Good'}
-                    {rating === 4 && 'Very Good'}
-                    {rating === 5 && 'Excellent'}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Feedback text area */}
-            <div className="mb-6">
-              <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none resize-none text-lg"
-                rows="4"
-                placeholder="Tell us more (optional)"
-              />
-            </div>
-
-            {errorMessage && (
-              <div className="text-red-500 mb-6 text-center font-medium">
-                {errorMessage}
-              </div>
-            )}
-
-            {/* Submit and Not Now buttons */}
-            <div className="flex justify-center gap-6">
-              <button
-                onClick={handleSubmit}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold px-16 py-5 rounded-xl text-xl transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                disabled={!userId}
-              >
-                Submit your feedback
-              </button>
-              <button
-                onClick={onClose}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold px-16 py-5 rounded-xl text-xl transition-colors"
-              >
-                Not Now
-              </button>
             </div>
           </div>
         </div>
@@ -296,4 +332,3 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
 };
 
 export default RatingModal;
-

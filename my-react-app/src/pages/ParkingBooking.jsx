@@ -7,7 +7,7 @@ import BookButton from "../components/parking/Bookbutton";
 import MessageBox from "../components/parking/Messagebox";
 import LeftSidebar from "../components/LeftSidebar";
 import RatingModal from "../components/ratingModal"; // Importing the RatingModal component
-
+import { getProfile } from "../api/userApi"; // Import userApi for ratingModal
 
 //import SidebarWrapper from '../components/profilesidebar/SidebarWrapper'; //methn1
 
@@ -23,8 +23,34 @@ const ParkingBooking = () => {
   const [loading, setLoading] = useState(false);
   const [isRatingOpen, setIsRatingOpen] = useState(false);//ratingModal original
   // const [isRatingOpen, setIsRatingOpen] = useState(false);//ratingModal test button
+  const [userId, setUserId] = useState(null); // State for userId for ratingModal
 
   useEffect(() => {
+  //for ratingmodal
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error('No token found in localStorage');
+          setMessage('Please log in to submit ratings.');
+          return;
+        }
+        const profile = await getProfile(token);
+        if (!profile._id) {
+          console.error('No userId found in profile:', profile);
+          setMessage('Unable to fetch user profile.');
+          return;
+        }
+        setUserId(profile._id);
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error.message);
+        setMessage('Failed to fetch user profile. Please log in again.');
+      }
+    };
+
+    fetchUserProfile();
+//for ratingmodal
+
     const timer = setTimeout(() => setLoadingScreen(false), 2000);
     return () => clearTimeout(timer);
   }, []);
@@ -53,7 +79,7 @@ const ParkingBooking = () => {
       setMessage(result.message || "Booking completed!");
       setSelectedSlot(null);
       setAvailableSlots([]);
-      if (Math.random() < 1) setIsRatingOpen(true); // Randomly open rating modal 50% chance
+      if (Math.random() < 0.5) setIsRatingOpen(true); // Randomly open rating modal 50% chance
       
     } catch {
       setMessage("Failed to book the slot.");
@@ -116,16 +142,23 @@ const ParkingBooking = () => {
     
 
    <RatingModal
-     isOpen={isRatingOpen}
-     onClose={() => setIsRatingOpen(false)}
-     onSubmit={(data) => {
-       fetch('/api/ratings/submit-rating', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ userId: 'userIdHere', bookingType: 'parking', ...data })
-       });
-     }}
-   />
+        isOpen={isRatingOpen}
+        onClose={() => setIsRatingOpen(false)}
+        onSubmit={async (data) => {
+          try {
+            const response = await fetch('/api/ratings/submit-rating', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId, bookingType: 'parking', ...data }),
+            });
+            return response; // Ensure response is returned
+          } catch (error) {
+            console.error('Fetch error in onSubmit:', error.message);
+            throw error; // Rethrow to be caught in handleSubmit
+          }
+        }}
+        userId={userId}
+      />
 
     </div>
   );
