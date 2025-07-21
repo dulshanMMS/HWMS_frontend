@@ -1,21 +1,24 @@
 
+
+// export default AdminNotification;
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import AdminLayout from '../components/AdminLayout';
+import AdminSidebar from '../components/AdminSidebar';
 import useAuthGuard from '../components/AuthGuard';
 import EventCalendar from '../components/AdminDashboard/EventCalendar';
 import NotificationFilters from '../components/Notification/NotificationFilters';
 import NotificationList from '../components/Notification/NotificationList';
 import NotificationPreferences from "../components/Notification/NotificationPreferences";
 
-const API_BASE_URL = '/api/notifications/admin/own';
 
-const socket = io('/', { withCredentials: true });
+const API_BASE_URL = '/api/notifications/admin/own';
+const ANNOUNCEMENT_API_URL = '/api/announcements';
+
+const socket = io('/', { withCredentials: true }); 
 
 const AdminNotification = () => {
   useAuthGuard('admin');
-
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,48 +33,99 @@ const AdminNotification = () => {
   const [events, setEvents] = useState([]);
   const [showClearButton, setShowClearButton] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [unreadCount, setUnreadCount] = useState(0);
   const notificationsPerPage = 10;
   const [totalNotifications, setTotalNotifications] = useState(0);
+
+  // Deduplicate notifications by _id and message content
+  const deduplicateNotifications = (notifications) => {
+    const seen = new Set();
+    return notifications.filter(n => {
+      const key = `${n._id}-${n.message}`;
+      if (seen.has(key)) {
+        console.log(`Duplicate notification filtered: ${key}`);
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  };
 
   const fetchNotifications = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      console.log('Token:', token); // Debug token
-
       if (!token) {
         setError('Please log in to view notifications');
         setLoading(false);
         return;
       }
 
-      const endpoint = `${API_BASE_URL}?page=${currentPage}&limit=${notificationsPerPage}`;
-      const response = await fetch(endpoint, {
+      const notificationEndpoint = `${API_BASE_URL}?page=${currentPage}&limit=${notificationsPerPage}`;
+      const notificationResponse = await fetch(notificationEndpoint, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (response.status === 401 || response.status === 403) {
-        console.error('Authentication error:', response.status);
+      if (notificationResponse.status === 401 || notificationResponse.status === 403) {
+        console.error('Authentication error:', notificationResponse.status);
         localStorage.removeItem('token');
         navigate('/');
         return;
       }
 
-      if (!response.ok) {
-        const errorText = await response.text();
+      if (!notificationResponse.ok) {
+        const errorText = await notificationResponse.text();
         throw new Error(`Failed to fetch notifications: ${errorText}`);
       }
 
-      const data = await response.json();
-      if (Array.isArray(data.notifications)) {
-        setNotifications(data.notifications);
-        setTotalNotifications(data.total);
-      } else {
-        throw new Error('Invalid response format');
+      const notificationData = await notificationResponse.json();
+      if (!Array.isArray(notificationData.notifications)) {
+        throw new Error('Invalid notification response format');
+      }
+
+      const announcementEndpoint = `${ANNOUNCEMENT_API_URL}?page=${currentPage}&limit=${notificationsPerPage}`;
+      const announcementResponse = await fetch(announcementEndpoint, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!announcementResponse.ok) {
+        const errorText = await announcementResponse.text();
+        throw new Error(`Failed to fetch announcements: ${errorText}`);
+      }
+
+      const announcementData = await announcementResponse.json();
+      if (!Array.isArray(announcementData.announcements)) {
+        throw new Error('Invalid announcement response format');
+      }
+
+      const normalizedAnnouncements = announcementData.announcements.map(ann => ({
+        _id: ann._id,
+        message: ann.message,
+        type: 'announcement',
+        read: false,
+        createdAt: ann.createdAt,
+        sender: ann.sender,
+      }));
+
+      const combinedNotifications = deduplicateNotifications(
+        [...notificationData.notifications, ...normalizedAnnouncements]
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      );
+
+      setNotifications(combinedNotifications);
+      setTotalNotifications(notificationData.total + announcementData.total);
+
+      // Fetch unread count
+      const unreadResponse = await fetch('/api/notifications/admin/unread-count', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (unreadResponse.ok) {
+        const unreadData = await unreadResponse.json();
+        setUnreadCount(unreadData.count);
       }
     } catch (error) {
       console.error('Error in fetchNotifications:', error.message);
-      setError(`Failed to fetch notifications: ${error.message}`);
+      setError(`Failed to fetch notifications or announcements: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -82,50 +136,116 @@ const AdminNotification = () => {
   }, [filter, dateRange, currentPage]);
 
   useEffect(() => {
+    const seenNotifications = new Set();
+
     socket.on('notificationReceived', (notification) => {
+      const key = `${notification._id}-${notification.message}`;
+      if (seenNotifications.has(key)) {
+        console.log(`Duplicate notification received via socket: ${key}`);
+        return;
+      }
+      seenNotifications.add(key);
       console.log("New notification:", notification);
-      setNotifications(prev => [notification, ...prev]);
+      setNotifications(prev => deduplicateNotifications([notification, ...prev]));
+      setUnreadCount(prev => prev + 1);
     });
-    return () => socket.off('notificationReceived');
+
+    socket.on('announcementReceived', (announcement) => {
+      const key = `${announcement._id}-${announcement.message}`;
+      if (seenNotifications.has(key)) {
+        console.log(`Duplicate announcement received via socket: ${key}`);
+        return;
+      }
+      seenNotifications.add(key);
+      console.log("New announcement:", announcement);
+      const normalizedAnnouncement = {
+        _id: announcement._id,
+        message: announcement.message,
+        type: 'announcement',
+        read: false,
+        createdAt: announcement.createdAt,
+        sender: announcement.sender,
+      };
+      setNotifications(prev => deduplicateNotifications([normalizedAnnouncement, ...prev]));
+      setUnreadCount(prev => prev + 1);
+    });
+
+    return () => {
+      socket.off('notificationReceived');
+      socket.off('announcementReceived');
+    };
   }, []);
 
-  const markAsRead = async (id) => {
+  const markAsRead = async (id, isAnnouncement = false) => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Mark as read token:', token); // Debug token
-      const response = await fetch(`/api/notifications/${id}/mark-read`, {
-        method: 'PATCH',
+      const endpoint = isAnnouncement
+        ? `${ANNOUNCEMENT_API_URL}/${id}/mark-read`
+        : `/api/notifications/${id}/mark-read`;
+      const response = await fetch(endpoint, {
+        method: 'PUT',
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (!response.ok) throw new Error('Failed to mark notification as read');
+      if (!response.ok) throw new Error(`Failed to mark ${isAnnouncement ? 'announcement' : 'notification'} as read`);
 
       setNotifications(notifications.map(n =>
         n._id === id ? { ...n, read: true } : n
       ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      setError('Failed to mark notification as read');
+      setError(`Failed to mark ${isAnnouncement ? 'announcement' : 'notification'} as read`);
     }
   };
 
-  const deleteNotification = async (notificationId) => {
+  const markAsUnread = async (id, isAnnouncement = false) => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Delete notification token:', token); // Debug token
-      const response = await fetch(`/api/notifications/${notificationId}`, {
+      const endpoint = isAnnouncement
+        ? `${ANNOUNCEMENT_API_URL}/${id}/mark-unread`
+        : `/api/notifications/${id}/mark-unread`;
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error(`Failed to mark ${isAnnouncement ? 'announcement' : 'notification'} as unread`);
+
+      setNotifications(notifications.map(n =>
+        n._id === id ? { ...n, read: false } : n
+      ));
+      setUnreadCount(prev => prev + 1);
+    } catch (error) {
+      setError(`Failed to mark ${isAnnouncement ? 'announcement' : 'notification'} as unread`);
+    }
+  };
+
+  const deleteNotification = async (notificationId, isAnnouncement = false) => {
+    try {
+      const token = localStorage.getItem('token');
+      const endpoint = isAnnouncement
+        ? `${ANNOUNCEMENT_API_URL}/${notificationId}`
+        : `/api/notifications/${notificationId}`;
+      const response = await fetch(endpoint, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (!response.ok) throw new Error('Failed to delete notification');
+      if (!response.ok) throw new Error(`Failed to delete ${isAnnouncement ? 'announcement' : 'notification'}`);
 
       setNotifications(notifications.filter(n => n._id !== notificationId));
+      if (!notifications.find(n => n._id === notificationId).read) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
     } catch (error) {
-      console.error('Error deleting notification:', error);
+      console.error(`Error deleting ${isAnnouncement ? 'announcement' : 'notification'}:`, error);
     }
   };
 
   const filteredNotifications = notifications.filter(notification => {
+    const matchesSearch = notification.message.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+
     if (filter === 'all') return true;
     if (filter === 'announcements') return notification.type === 'announcement';
     if (filter === 'parking') return notification.type === 'important' && notification.message.includes('parking');
@@ -133,25 +253,28 @@ const AdminNotification = () => {
     return false;
   });
 
+  const paginatedNotifications = filteredNotifications.slice(
+    (currentPage - 1) * notificationsPerPage,
+    currentPage * notificationsPerPage
+  );
+
   const totalPages = totalNotifications > 0
     ? Math.ceil(totalNotifications / notificationsPerPage)
     : 1;
 
   if (loading) {
     return (
-      <AdminLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      </AdminLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   return (
-    <AdminLayout>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Notifications</h1>
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <AdminSidebar>
+      <h1 className="text-3xl font-bold text-gray-900 mb-8 mt-6 ml-8">Notifications</h1>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-md">
               <NotificationFilters
@@ -159,10 +282,12 @@ const AdminNotification = () => {
                 setFilter={setFilter}
               />
               <NotificationList
-                notifications={filteredNotifications}
+                notifications={paginatedNotifications}
                 markAsRead={markAsRead}
+                markAsUnread={markAsUnread}
                 deleteNotification={deleteNotification}
                 error={error}
+                unreadCount={unreadCount}
               />
             </div>
           </div>
@@ -198,7 +323,7 @@ const AdminNotification = () => {
           </button>
         </div>
       </div>
-    </AdminLayout>
+    </AdminSidebar>
   );
 };
 

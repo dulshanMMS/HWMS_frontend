@@ -78,7 +78,7 @@ const ProfileSidebar = ({ isOpen }) => {
     if (!token) return;
 
     axios
-      .get("http://localhost:5000/api/notifications/user", {
+      .get("http://localhost:5000/api/notifications/user/own", {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
