@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import { teamColors } from '../../utils/teamColors';
 
 const TeamForm = ({ existingTeam, onSuccess, onCancel }) => {
   const [teamName, setTeamName] = useState(existingTeam?.teamName || '');
@@ -15,6 +16,7 @@ const TeamForm = ({ existingTeam, onSuccess, onCancel }) => {
         if (existingTeam) {
             // Edit team (only name)
             await axios.put(`/api/teams/${existingTeam._id}`, { teamName });
+            toast.success(`Team "${teamName}" updated successfully!`);
         } else {
             // Add team (we must generate teamId + color)
             const res = await axios.get("/api/teams"); // fetch existing to generate
@@ -28,26 +30,33 @@ const TeamForm = ({ existingTeam, onSuccess, onCancel }) => {
             };
 
             const usedColors = existingTeams.map(t => t.color);
-            const allColors = [/* your full color array here */];
-            const getUnusedColor = () => allColors.find(c => !usedColors.includes(c)) || 'bg-gray-500';
+            const getUnusedColor = () => {
+                const unused = teamColors.find(c => !usedColors.includes(c));
+                return unused || teamColors[Math.floor(Math.random() * teamColors.length)];
+            };
 
+            const color = getUnusedColor();
             const newTeam = {
                 teamId: generateNextTeamId(),
                 teamName,
-                color: getUnusedColor(),
+                color,
             };
 
             await axios.post("/api/teams", newTeam);
+            toast.success(`Team "${teamName}" added successfully with color "${color}"`);
         }
-
-      onSuccess(); // refresh
-    } catch (err) {
-      console.error("Error saving team:", err);
-      toast.error("Failed to save team");
-    } finally {
-      setLoading(false);
-    }
-  };
+        onSuccess(); // refresh
+        } catch (err) {
+            console.error("Error saving team:", err);
+            if (err.response && err.response.status === 409) {
+                toast.error("Team name already exists. Please choose another.");
+            } else {
+                toast.error("Failed to save team");
+            }
+        } finally {
+        setLoading(false);
+        }
+    };
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow space-y-4">
