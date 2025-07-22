@@ -12,6 +12,7 @@ import {
   FaChartBar,
   FaSignOutAlt,
   FaBars,
+  FaUsers
 } from "react-icons/fa";
 
 const AdminSidebar = ({ children }) => {
@@ -63,7 +64,7 @@ const AdminSidebar = ({ children }) => {
               label="Seat Booking"
             />
             <SidebarLink
-              to="/admin/adminparking"
+              to="/user/parking-booking"
               icon={<FaCar />}
               label="Parking Booking"
             />
@@ -78,7 +79,7 @@ const AdminSidebar = ({ children }) => {
 
         {/* Account */}
         <div className="mb-6">
-          <h3 className="text-gray-400 text-sm uppercase mb-3">Account</h3>
+          <h3 className="text-gray-400 text-sm uppercase mb-3">Admin Access</h3>
           <ul>
             <SidebarLink
               to="/AdminNotification"
@@ -86,7 +87,8 @@ const AdminSidebar = ({ children }) => {
               label="Notifications"
               active={isActive("/AdminNotification")}
             />
-            <SidebarLink to="/settings" icon={<FaCog />} label="Settings" />
+            <SidebarLink to="/admin/adminparking" icon={<FaCar />} label="Parking ADMIN" />
+            <SidebarLink to="/admin/team-management" icon={<FaUsers />} label="Teams" active={isActive("/admin/team-management")} />
             <SidebarLink to="/profile" icon={<FaUser />} label="Profile" />
             <SidebarLink
               to="/admin-reports"

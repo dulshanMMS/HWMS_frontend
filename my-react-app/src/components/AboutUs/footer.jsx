@@ -56,7 +56,7 @@ const Footer = () => {
                 <li><a href="#" className="hover:text-white transition-colors flex items-center">
                   <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>Home
                 </a></li>
-                <li><a href="/user/AboutUsPage" className="hover:text-white transition-colors flex items-center">
+                <li><a href="/about/us" className="hover:text-white transition-colors flex items-center">
                   <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>About Us
                 </a></li>
                 <li><a href="#" className="hover:text-white transition-colors flex items-center">

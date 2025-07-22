@@ -7,6 +7,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminNotification from "./pages/AdminNotification";
 import AdminParking from "./pages/AdminParking";
 import AdminViewReports from "./pages/AdminViewReports";
+import AdminTeamManagement from "./pages/AdminTeamManagement";
+
 import AboutUsPage from "./pages/AboutUsPage";
 import BookingHistory from "./pages/BookingHistory";
 import Login from "./pages/Login";
@@ -19,12 +21,13 @@ import UserDashboard from "./pages/UserDashboard";
 import UserNotification from "./pages/UserNotification";
 
 import Profile from "./pages/Profile";
+import MessagingPage from "./pages/MessagingPage";
 
 const App = () => {
   const location = useLocation();
 
   // List of routes that need simple green background (without center)
-  const greenPages = ["/user/parking-booking", "/history", "/user/AboutUsPage"]; //  "/history"
+  const greenPages = ["/user/parking-booking", "/history", "/about/us", "/admin"]; //  "/history"
 
   // Check if current page matches
 
@@ -51,10 +54,12 @@ const App = () => {
         <Route path="/admin/adminparking" element={<AdminParking />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/user/notifications" element={<UserNotification />} />
-        <Route path="/user/AboutUsPage" element={<AboutUsPage />} />
+        <Route path="/about/us" element={<AboutUsPage />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/user/AboutUsPage" element={<AboutUsPage />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/messaging" element={<MessagingPage />} />
+        <Route path="/admin/team-management" element={<AdminTeamManagement />} />
       </Routes>
 
       {/* Toast Container for notifications */}

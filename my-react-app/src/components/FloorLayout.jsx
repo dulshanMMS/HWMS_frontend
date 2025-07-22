@@ -63,19 +63,19 @@ const getCurrentUserName = () => {
 // API functions
 const api = {
   async fetchBookings(date, floor) {
-    const response = await fetch(`http://localhost:6001/api/bookings/filtered?date=${date}&floor=${floor}`);
+    const response = await fetch(`http://localhost:5000/api/bookings/filtered?date=${date}&floor=${floor}`);
     if (!response.ok) throw new Error('Failed to fetch bookings');
     return response.json();
   },
 
   async fetchUser(userId) {
-    const response = await fetch(`http://localhost:6001/api/bookings/users/${userId}`);
+    const response = await fetch(`http://localhost:5000/api/bookings/users/${userId}`);
     if (!response.ok) throw new Error('User not found');
     return response.json();
   },
 
   async fetchTeam(teamId) {
-    const response = await fetch(`http://localhost:6001/api/teams`);
+    const response = await fetch(`http://localhost:5000/api/teams`);
     if (!response.ok) throw new Error('Failed to fetch teams');
     
     const teams = await response.json();
@@ -96,7 +96,7 @@ const api = {
     
     console.log(`🎯 Using ${isAdmin ? 'ADMIN' : 'USER'} booking route:`, endpoint);
     
-    const response = await fetch(`http://localhost:6001${endpoint}`, {
+    const response = await fetch(`http://localhost:5000${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bookingDetails),
@@ -118,7 +118,7 @@ const api = {
     
     console.log(`🎯 Using ${isAdmin ? 'ADMIN' : 'USER'} unbooking route:`, endpoint);
     
-    const response = await fetch(`http://localhost:6001${endpoint}`, {
+    const response = await fetch(`http://localhost:5000${endpoint}`, {
       method: 'DELETE',
     });
     

@@ -52,7 +52,7 @@ const EventCalendar = ({ date, setDate, eventDates, todayEvents, onDayClick }) =
   };
 
   return (
-    <div className="relative bg-white rounded-xl shadow-md p-6 w-full lg:w-[380px]">
+    <div className="relative bg-white rounded-xl shadow-md p-6 w-full">
       {/* Month, Year navigation header */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex space-x-2">

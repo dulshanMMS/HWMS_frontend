@@ -23,7 +23,7 @@ const BookingDashboard = () => {
     if (!token) return;
 
     axios
-      .get("http://localhost:6001/api/calendar/user-view", {
+      .get("http://localhost:5000/api/calendar/user-view", {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
