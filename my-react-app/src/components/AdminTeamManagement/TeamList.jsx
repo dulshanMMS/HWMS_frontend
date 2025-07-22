@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 
-const TeamList = ({ teams, onEdit, onDelete, loading, memberCounts = {} }) => {
+const TeamList = ({ teams, onEdit, onDelete, loading, memberCounts = {}, onTeamClick }) => {
   const [deletingId, setDeletingId] = useState(null);
 
   const handleDelete = async (id) => {
@@ -22,52 +22,84 @@ const TeamList = ({ teams, onEdit, onDelete, loading, memberCounts = {} }) => {
     }
   };
 
+  const getMemberBadgeClass = (count) => {
+    if (count >= 10) return "bg-green-100 text-green-700";
+    if (count > 0) return "bg-yellow-100 text-yellow-800";
+    return "bg-red-100 text-red-700";
+  };
+
   if (loading) return <p>Loading teams...</p>;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-sm text-left">
-        <thead className="bg-gray-100">
+    <div className="bg-white rounded-lg shadow-md p-4 overflow-x-auto">
+      <table className="min-w-full text-sm text-left border-collapse">
+        <thead className="bg-gray-100 text-gray-700">
           <tr>
-            <th className="py-2 px-4 border-b">Team ID</th>
-            <th className="py-2 px-4 border-b">Team Name</th>
-            <th className="py-2 px-4 border-b">Team Color</th>
-            <th className="py-2 px-4 border-b">Members</th>
-            <th className="py-2 px-4 border-b">Actions</th>
+            <th className="py-3 px-4">Team ID</th>
+            <th className="py-3 px-4">Team Name</th>
+            <th className="py-3 px-4">Team Color</th>
+            <th className="py-3 px-4">Members</th>
+            <th className="py-3 px-4 text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
           {[...teams]
             .sort((a, b) => {
-            const idA = parseInt(a.teamId.replace(/\D/g, '')) || 0;
-            const idB = parseInt(b.teamId.replace(/\D/g, '')) || 0;
-            return idA - idB;
-          })
-          .map((team) => (
-            <tr key={team._id} className="hover:bg-gray-50">
-              <td className="py-2 px-4 border-b">{team.teamId}</td>
-              <td className="py-2 px-4 border-b">{team.teamName}</td>
-              <td className="py-2 px-4 border-b">
-                <span className={`inline-block w-4 h-4 rounded-full ${team.color}`} title={team.color}></span>
-              </td>
-              <td className="py-2 px-4 border-b">
-                <span className="inline-flex items-center gap-1 text-gray-800">
-                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                        <path d="M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C17 14.17 12.33 13 10 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-                    </svg>
-                    {memberCounts[team.teamId] ?? 0}
-                </span>
-              </td>
-              <td className="py-2 px-4 border-b space-x-2">
-                <button onClick={() => onEdit(team)} className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded">
-                  Edit
-                </button>
-                <button onClick={() => handleDelete(team._id)} className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded">
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
+              const idA = parseInt(a.teamId.replace(/\D/g, "")) || 0;
+              const idB = parseInt(b.teamId.replace(/\D/g, "")) || 0;
+              return idA - idB;
+            })
+            .map((team) => {
+              const count = memberCounts[team.teamId] ?? 0;
+              return (
+                <tr
+                  key={team._id}
+                  className="hover:shadow-sm hover:bg-gray-200 transition duration-150 border-b last:border-none cursor-pointer"
+                  onClick={() => onTeamClick?.(team)}
+                >
+                  <td className="py-3 px-4 font-medium">{team.teamId}</td>
+                  <td className="py-3 px-4">{team.teamName}</td>
+                  <td className="py-3 px-4">
+                    <span
+                      className={`inline-block w-4 h-4 rounded-full ${team.color} transition transform hover:scale-110`}
+                      title={team.color}
+                    ></span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full font-medium ${getMemberBadgeClass(
+                        count
+                      )} transition-all`}
+                    >
+                      {count} {count === 1 ? "member" : "members"}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center space-x-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(team);
+                      }}
+                      title="Edit team"
+                      className="bg-blue-700 hover:bg-blue-800 hover:scale-[1.03] transition text-white text-xs px-3 py-1 rounded font-medium shadow"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(team._id);
+                      }}
+                      disabled={deletingId === team._id}
+                      title="Delete team"
+                      className="bg-red-600 hover:bg-red-700 hover:scale-[1.03] transition text-white text-xs px-3 py-1 rounded font-medium shadow"
+                    >
+                      {deletingId === team._id ? "Deleting..." : "Delete"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
         </tbody>
       </table>
     </div>
