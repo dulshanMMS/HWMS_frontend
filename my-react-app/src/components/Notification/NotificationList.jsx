@@ -8,14 +8,7 @@ const NotificationList = ({ notifications, markAsRead, markAsUnread, deleteNotif
           {error}
         </div>
       )}
-      {/* <div className="p-4 flex justify-between items-center">
-        
-        {unreadCount > 0 && (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            {unreadCount} unread notifications
-          </span>
-        )}
-      </div> */}
+      
       {notifications.length === 0 ? (
         <div className="p-4 text-center text-gray-500">
           No notifications available
