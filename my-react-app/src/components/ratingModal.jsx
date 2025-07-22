@@ -98,7 +98,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
     const scroll = () => {
       setScrollPosition((prev) => {
         const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
-        const newPosition = prev + 4;
+        const newPosition = prev + 2;
         
         if (newPosition >= maxScroll) {
           return 0; // Reset to top

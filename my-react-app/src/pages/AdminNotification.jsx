@@ -1,6 +1,4 @@
 
-
-// export default AdminNotification;
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -10,12 +8,13 @@ import EventCalendar from '../components/AdminDashboard/EventCalendar';
 import NotificationFilters from '../components/Notification/NotificationFilters';
 import NotificationList from '../components/Notification/NotificationList';
 import NotificationPreferences from "../components/Notification/NotificationPreferences";
-
+import NotificationBadge from '../components/Notification/NotificationBadge';
+import PaginationControls from '../components/Notification/PaginationControls';
 
 const API_BASE_URL = '/api/notifications/admin/own';
 const ANNOUNCEMENT_API_URL = '/api/announcements';
 
-const socket = io('/', { withCredentials: true }); 
+const socket = io('/', { withCredentials: true });
 
 const AdminNotification = () => {
   useAuthGuard('admin');
@@ -37,11 +36,10 @@ const AdminNotification = () => {
   const notificationsPerPage = 10;
   const [totalNotifications, setTotalNotifications] = useState(0);
 
-  // Deduplicate notifications by _id and message content
   const deduplicateNotifications = (notifications) => {
     const seen = new Set();
     return notifications.filter(n => {
-      const key = `${n._id}-${n.message}`;
+      const key = `${n.bookingId || n._id}-${n.message}-${n.type}-${n.createdAt}`;
       if (seen.has(key)) {
         console.log(`Duplicate notification filtered: ${key}`);
         return false;
@@ -51,7 +49,7 @@ const AdminNotification = () => {
     });
   };
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (page = currentPage) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -61,41 +59,53 @@ const AdminNotification = () => {
         return;
       }
 
-      const notificationEndpoint = `${API_BASE_URL}?page=${currentPage}&limit=${notificationsPerPage}`;
-      const notificationResponse = await fetch(notificationEndpoint, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      let notificationData = { notifications: [], total: 0 };
+      let announcementData = { announcements: [], total: 0 };
+      let totalNotificationsCount = 0;
 
-      if (notificationResponse.status === 401 || notificationResponse.status === 403) {
-        console.error('Authentication error:', notificationResponse.status);
-        localStorage.removeItem('token');
-        navigate('/');
-        return;
+      // Fetch notifications based on filter
+      if (filter === 'all' || filter === 'parking' || filter === 'seating') {
+        const notificationEndpoint = `${API_BASE_URL}?page=${page}&limit=${notificationsPerPage}&filter=${filter}`;
+        const notificationResponse = await fetch(notificationEndpoint, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (notificationResponse.status === 401 || notificationResponse.status === 403) {
+          console.error('Authentication error:', notificationResponse.status);
+          localStorage.removeItem('token');
+          navigate('/');
+          return;
+        }
+
+        if (!notificationResponse.ok) {
+          const errorText = await notificationResponse.text();
+          throw new Error(`Failed to fetch notifications: ${errorText}`);
+        }
+
+        notificationData = await notificationResponse.json();
+        if (!Array.isArray(notificationData.notifications)) {
+          throw new Error('Invalid notification response format');
+        }
+        totalNotificationsCount += notificationData.total;
       }
 
-      if (!notificationResponse.ok) {
-        const errorText = await notificationResponse.text();
-        throw new Error(`Failed to fetch notifications: ${errorText}`);
-      }
+      // Fetch announcements if filter is 'all' or 'announcements'
+      if (filter === 'all' || filter === 'announcements') {
+        const announcementEndpoint = `${ANNOUNCEMENT_API_URL}?page=${page}&limit=${notificationsPerPage}`;
+        const announcementResponse = await fetch(announcementEndpoint, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-      const notificationData = await notificationResponse.json();
-      if (!Array.isArray(notificationData.notifications)) {
-        throw new Error('Invalid notification response format');
-      }
+        if (!announcementResponse.ok) {
+          const errorText = await announcementResponse.text();
+          throw new Error(`Failed to fetch announcements: ${errorText}`);
+        }
 
-      const announcementEndpoint = `${ANNOUNCEMENT_API_URL}?page=${currentPage}&limit=${notificationsPerPage}`;
-      const announcementResponse = await fetch(announcementEndpoint, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!announcementResponse.ok) {
-        const errorText = await announcementResponse.text();
-        throw new Error(`Failed to fetch announcements: ${errorText}`);
-      }
-
-      const announcementData = await announcementResponse.json();
-      if (!Array.isArray(announcementData.announcements)) {
-        throw new Error('Invalid announcement response format');
+        announcementData = await announcementResponse.json();
+        if (!Array.isArray(announcementData.announcements)) {
+          throw new Error('Invalid announcement response format');
+        }
+        totalNotificationsCount += announcementData.total;
       }
 
       const normalizedAnnouncements = announcementData.announcements.map(ann => ({
@@ -108,12 +118,13 @@ const AdminNotification = () => {
       }));
 
       const combinedNotifications = deduplicateNotifications(
-        [...notificationData.notifications, ...normalizedAnnouncements]
+        [...notificationData.notifications, ...(filter === 'all' || filter === 'announcements' ? normalizedAnnouncements : [])]
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, notificationsPerPage)
       );
 
       setNotifications(combinedNotifications);
-      setTotalNotifications(notificationData.total + announcementData.total);
+      setTotalNotifications(totalNotificationsCount);
 
       // Fetch unread count
       const unreadResponse = await fetch('/api/notifications/admin/unread-count', {
@@ -132,11 +143,11 @@ const AdminNotification = () => {
   };
 
   useEffect(() => {
-    fetchNotifications();
+    fetchNotifications(currentPage);
   }, [filter, dateRange, currentPage]);
 
   useEffect(() => {
-    const seenNotifications = new Set();
+    const seenNotifications = new Set(notifications.map(n => `${n._id}-${n.message}`));
 
     socket.on('notificationReceived', (notification) => {
       const key = `${notification._id}-${notification.message}`;
@@ -145,7 +156,6 @@ const AdminNotification = () => {
         return;
       }
       seenNotifications.add(key);
-      console.log("New notification:", notification);
       setNotifications(prev => deduplicateNotifications([notification, ...prev]));
       setUnreadCount(prev => prev + 1);
     });
@@ -157,7 +167,6 @@ const AdminNotification = () => {
         return;
       }
       seenNotifications.add(key);
-      console.log("New announcement:", announcement);
       const normalizedAnnouncement = {
         _id: announcement._id,
         message: announcement.message,
@@ -174,7 +183,7 @@ const AdminNotification = () => {
       socket.off('notificationReceived');
       socket.off('announcementReceived');
     };
-  }, []);
+  }, [notifications]);
 
   const markAsRead = async (id, isAnnouncement = false) => {
     try {
@@ -237,6 +246,10 @@ const AdminNotification = () => {
       if (!notifications.find(n => n._id === notificationId).read) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
+      // Refetch to fill page if needed
+      if (notifications.length <= notificationsPerPage && currentPage <= totalNotifications / notificationsPerPage) {
+        fetchNotifications(currentPage);
+      }
     } catch (error) {
       console.error(`Error deleting ${isAnnouncement ? 'announcement' : 'notification'}:`, error);
     }
@@ -272,7 +285,10 @@ const AdminNotification = () => {
 
   return (
     <AdminSidebar>
-      <h1 className="text-3xl font-bold text-gray-900 mb-8 mt-6 ml-8">Notifications</h1>
+      <div className="flex items-center gap-4 ml-8 mt-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Notifications</h1>
+        <NotificationBadge isAdmin={true} />
+      </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -289,6 +305,11 @@ const AdminNotification = () => {
                 error={error}
                 unreadCount={unreadCount}
               />
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                setCurrentPage={setCurrentPage}
+              />
             </div>
           </div>
           <div className="lg:col-span-1 flex flex-col gap-4">
@@ -304,23 +325,6 @@ const AdminNotification = () => {
               />
             </div>
           </div>
-        </div>
-        <div className="flex justify-center items-center mt-4">
-          <button
-            className="px-4 py-2 bg-gray-300 rounded-l-md"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(currentPage - 1)}
-          >
-            Previous
-          </button>
-          <span className="px-4">Page {currentPage} of {totalPages}</span>
-          <button
-            className="px-4 py-2 bg-blue-500 text-white rounded-r-md"
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(currentPage + 1)}
-          >
-            Next
-          </button>
         </div>
       </div>
     </AdminSidebar>
