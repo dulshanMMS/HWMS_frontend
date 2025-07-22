@@ -130,116 +130,127 @@ const CalendarCard = () => {
   };
 
   return (
-    <div className="flex gap-6">
-      {/* Calendar Component */}
-      <div className="relative bg-white rounded-xl shadow-md p-4 sm:p-6 w-full min-w-[280px] max-w-[400px]">
-        {/* Month navigation header */}
-        <div className="flex justify-between items-center mb-4">
-          <button
-            onClick={goToPreviousMonth}
-            className="text-xs sm:text-sm px-1 sm:px-2 py-1 rounded hover:bg-gray-200"
-          >
-            ◀
-          </button>
-          <p className="text-sm sm:text-lg font-semibold">
-            {viewDate.toLocaleString("default", { month: "long" })}{" "}
-            {viewDate.getFullYear()}
-          </p>
-          <button
-            onClick={goToNextMonth}
-            className="text-sm px-2 py-1 rounded hover:bg-gray-200"
-          >
-            ▶
-          </button>
-        </div>
-
-        {/* Weekday labels */}
-        <div className="grid grid-cols-7 text-center font-medium text-xs sm:text-sm mb-2">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-            <div key={day}>{day}</div>
-          ))}
-        </div>
-
-        {/* Calendar days grid */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-xs sm:text-sm">
-          {Array.from({ length: daysInMonth }, (_, i) => {
-            const date = new Date(
-              viewDate.getFullYear(),
-              viewDate.getMonth(),
-              i + 1
-            );
-            const isToday = isCurrentMonth && date.getDate() === currentDay;
-            const matches = getMatchesForDate(date);
-            const type = getDateType(matches);
-
-            // Format date for comparison with selected date
-            const dateStr =
-              date.getFullYear() +
-              "-" +
-              String(date.getMonth() + 1).padStart(2, "0") +
-              "-" +
-              String(date.getDate()).padStart(2, "0");
-
-            const isSelected = selectedDate === dateStr;
-
-            // Base styling for each day cell
-            const baseStyle =
-              "h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 flex items-center justify-center rounded-lg font-medium cursor-pointer transition-colors duration-200 text-center";
-
-            // Styling based on day type and selection
-            let style = "";
-            if (isSelected) {
-              style = "bg-blue-500 text-white border-2 border-blue-600";
-            } else if (type === "booking") {
-              style = "bg-green-200 text-green-900 hover:bg-green-300";
-            } else if (type === "event") {
-              style = "bg-blue-200 text-blue-900 hover:bg-blue-300";
-            } else if (type === "both") {
-              style = "bg-purple-300 text-white hover:bg-purple-400";
-            } else {
-              style = "bg-gray-100 hover:bg-gray-200";
-            }
-
-            return (
-              <div
-                key={i}
-                className={`${baseStyle} ${style}`}
-                onClick={() => handleDayClick(date, matches)}
+    <div className="w-full">
+      {/* Container with border to show connection */}
+      <div className="border-2 border-green-200 rounded-2xl p-4 bg-green-50/30">
+        {/* Header to show they work together */}
+        
+        
+        {/* Responsive layout */}
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          {/* Calendar Component */}
+          <div className="relative bg-white rounded-xl shadow-md p-4 sm:p-6 w-full lg:min-w-[280px] lg:max-w-[400px]">
+            {/* Month navigation header */}
+            <div className="flex justify-between items-center mb-4">
+              <button
+                onClick={goToPreviousMonth}
+                className="text-xs sm:text-sm px-1 sm:px-2 py-1 rounded hover:bg-gray-200"
               >
-                {isToday ? (
-                  <span className="font-bold animate-pulse">{i + 1}</span>
-                ) : (
-                  <span>{i + 1}</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                ◀
+              </button>
+              <p className="text-sm sm:text-lg font-semibold">
+                {viewDate.toLocaleString("default", { month: "long" })}{" "}
+                {viewDate.getFullYear()}
+              </p>
+              <button
+                onClick={goToNextMonth}
+                className="text-sm px-2 py-1 rounded hover:bg-gray-200"
+              >
+                ▶
+              </button>
+            </div>
 
-        {/* Legend */}
-        <div className="mt-4 flex flex-wrap gap-2 text-xs">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-green-200 rounded"></div>
-            <span className="text-gray-600">Bookings</span>
+            {/* Weekday labels */}
+            <div className="grid grid-cols-7 text-center font-medium text-xs sm:text-sm mb-2">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                <div key={day}>{day}</div>
+              ))}
+            </div>
+
+            {/* Calendar days grid */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 text-xs sm:text-sm">
+              {Array.from({ length: daysInMonth }, (_, i) => {
+                const date = new Date(
+                  viewDate.getFullYear(),
+                  viewDate.getMonth(),
+                  i + 1
+                );
+                const isToday = isCurrentMonth && date.getDate() === currentDay;
+                const matches = getMatchesForDate(date);
+                const type = getDateType(matches);
+
+                // Format date for comparison with selected date
+                const dateStr =
+                  date.getFullYear() +
+                  "-" +
+                  String(date.getMonth() + 1).padStart(2, "0") +
+                  "-" +
+                  String(date.getDate()).padStart(2, "0");
+
+                const isSelected = selectedDate === dateStr;
+
+                // Base styling for each day cell
+                const baseStyle =
+                  "h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 flex items-center justify-center rounded-lg font-medium cursor-pointer transition-colors duration-200 text-center";
+
+                // Styling based on day type and selection
+                let style = "";
+                if (isSelected) {
+                  style = "bg-blue-500 text-white border-2 border-blue-600";
+                } else if (type === "booking") {
+                  style = "bg-green-200 text-green-900 hover:bg-green-300";
+                } else if (type === "event") {
+                  style = "bg-blue-200 text-blue-900 hover:bg-blue-300";
+                } else if (type === "both") {
+                  style = "bg-purple-300 text-white hover:bg-purple-400";
+                } else {
+                  style = "bg-gray-100 hover:bg-gray-200";
+                }
+
+                return (
+                  <div
+                    key={i}
+                    className={`${baseStyle} ${style}`}
+                    onClick={() => handleDayClick(date, matches)}
+                  >
+                    {isToday ? (
+                      <span className="font-bold animate-pulse">{i + 1}</span>
+                    ) : (
+                      <span>{i + 1}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="mt-4 flex flex-wrap gap-2 text-xs">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-green-200 rounded"></div>
+                <span className="text-gray-600">Bookings</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-blue-200 rounded"></div>
+                <span className="text-gray-600">Events</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-purple-300 rounded"></div>
+                <span className="text-gray-600">Both</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-blue-200 rounded"></div>
-            <span className="text-gray-600">Events</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-purple-300 rounded"></div>
-            <span className="text-gray-600">Both</span>
+
+          {/* Booking Details Panel - responsive positioning */}
+          <div className="w-full lg:w-80">
+            <BookingDetailsPanel
+              selectedDate={selectedDate}
+              bookings={selectedDate ? getBookingsForDate(selectedDate) : []}
+              events={selectedDate ? getEventsForDate(selectedDate) : []}
+              onClose={() => setSelectedDate(null)}
+            />
           </div>
         </div>
       </div>
-
-      {/* Booking Details Panel */}
-      <BookingDetailsPanel
-        selectedDate={selectedDate}
-        bookings={selectedDate ? getBookingsForDate(selectedDate) : []}
-        events={selectedDate ? getEventsForDate(selectedDate) : []}
-        onClose={() => setSelectedDate(null)}
-      />
     </div>
   );
 };

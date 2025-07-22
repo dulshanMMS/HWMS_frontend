@@ -12,6 +12,8 @@ import SidebarWrapper from "../components/profilesidebar/SidebarWrapper";
 
 import axios from "axios";
 import { getProfile } from "../api/userApi";
+import useTokenExpiration from "../hooks/useTokenExpiration";
+
 
 const UserDashboard = () => {
   // State to hold the current user's profile data
@@ -146,60 +148,73 @@ const UserDashboard = () => {
       .catch((err) => console.error("Failed to load bookings:", err));
   }, []);
 
-  return (
-    <div className="w-full min-h-screen flex flex-row">
-      {/* Left Sidebar Navigation */}
-      <LeftSidebar />
+const clearSensitiveData = () => {
+    setUserProfile(null);
+    setBookingCounts({ parkingCount: 0, seatCount: 0, totalCount: 0 });
+    setTodayBookings([]);
+    setClosestLastBookings([]);
+    setTodaysBookingCount(0);
+    setTotalBookingCount(0);
+    setBookingStatsLoading(false);
+  };
 
+ useTokenExpiration(clearSensitiveData);
+
+ return (
+  <div className="w-full min-h-screen flex bg-green-100">
+    <LeftSidebar />
+    
+    <div className="flex-1 flex">
       {/* Main content area */}
-      <div className=" rounded-2xl shadow-lg p-6 mb-6">
-        {/* Header with sidebar toggle */}
+      <div className="flex-1 p-4 md:p-6 lg:pr-0 max-w-full overflow-hidden">
         <DashboardHeader
           sidebarOpen={sidebarOpen}
           toggleSidebar={() => setSidebarOpen((prev) => !prev)}
         />
 
-        {/* User profile summary display */}
-        <UserProfileSummary userProfile={userProfile} />
+        {/* User profile summary - responsive width */}
+        <div className="mb-6">
+          <UserProfileSummary userProfile={userProfile} />
+        </div>
 
-        {/* Booking summary and calendar cards */}
-        <div className="flex gap-6">
-          <div className="fw-80">
+        <div className="flex flex-col md:flex-row gap-6 mb-6">
+          <div className="w-full md:w-80 lg:w-80 xl:w-96">
             <BookingSummaryCard
               bookingCounts={bookingCounts}
               totalBookings={totalBookingCount}
               loading={bookingStatsLoading}
             />
           </div>
-
-          {/* Calendar with details panel - full width */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <CalendarCard />
           </div>
         </div>
 
-        {/* Booking dashboard and action button */}
         <div className="flex flex-wrap gap-6">
           <BookingDashboard />
-
-          {/* <div className="flex items-center">
-            <button className="px-4 py-2 bg-white rounded-xl shadow border font-semibold text-sm">
-              View All Booking History →
-            </button>
-          </div> */}
         </div>
       </div>
 
-      {/* Sidebar overlay for smaller screens */}
-      <SidebarWrapper
-        sidebarOpen={sidebarOpen}
-        closeSidebar={() => setSidebarOpen(false)}
-      />
-
-      {/* Floating chatbot for user assistance */}
-      <FloatingChatBot />
+      {/* Profile sidebar - only show on large screens when open */}
+      {sidebarOpen && (
+        <div className="hidden lg:block w-80">
+          <SidebarWrapper
+            sidebarOpen={sidebarOpen}
+            closeSidebar={() => setSidebarOpen(false)}
+          />
+        </div>
+      )}
     </div>
-  );
+
+    {/* Mobile sidebar overlay */}
+    <SidebarWrapper
+      sidebarOpen={sidebarOpen}
+      closeSidebar={() => setSidebarOpen(false)}
+    />
+
+    <FloatingChatBot />
+  </div>
+);
 };
 
 export default UserDashboard;

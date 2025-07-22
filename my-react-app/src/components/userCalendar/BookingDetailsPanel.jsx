@@ -45,7 +45,7 @@ const BookingDetailsPanel = ({
 
   if (!selectedDate) {
     return (
-      <div className="bg-white rounded-xl shadow-md p-6 w-full lg:w-[320px]">
+      <div className="bg-white rounded-xl shadow-md p-4 md:p-6 w-full lg:w-[320px] max-h-[500px] md:max-h-[600px] overflow-y-auto">
         <div className="text-center text-gray-500 py-8">
           <FaCalendarAlt className="mx-auto text-4xl mb-3 text-gray-300" />
           <p className="text-sm">
@@ -61,8 +61,8 @@ const BookingDetailsPanel = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">Date Details</h3>
-          <p className="text-sm text-gray-600">{formatDate(selectedDate)}</p>
+          <h3 className="text-base md:text-lg font-semibold text-gray-800">Date Details</h3>
+          <p className="text-xs md:text-sm text-gray-600">{formatDate(selectedDate)}</p>
         </div>
         {onClose && (
           <button
@@ -75,7 +75,7 @@ const BookingDetailsPanel = ({
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
         <div className="bg-blue-50 p-3 rounded-lg text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
             <FaCar className="text-blue-500" />
@@ -103,7 +103,7 @@ const BookingDetailsPanel = ({
             <FaCalendarAlt className="text-purple-500" />
             Events ({events.length})
           </h4>
-          <div className="space-y-2">
+          <div className="space-y-2 md:space-y-3">
             {events.map((event, idx) => (
               <div
                 key={idx}
@@ -134,7 +134,7 @@ const BookingDetailsPanel = ({
             <FaCar className="text-blue-500" />
             Parking Bookings ({parkingBookings.length})
           </h4>
-          <div className="space-y-3">
+          <div className="space-y-2 md:space-y-3">
             {parkingBookings.map((booking, idx) => (
               <div
                 key={idx}
@@ -172,7 +172,7 @@ const BookingDetailsPanel = ({
             <FaChair className="text-green-500" />
             Seating Bookings ({seatBookings.length})
           </h4>
-          <div className="space-y-3">
+          <div className="space-y-2 md:space-y-3">
             {seatBookings.map((booking, idx) => (
               <div
                 key={idx}

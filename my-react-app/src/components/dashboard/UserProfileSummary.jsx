@@ -35,31 +35,9 @@ const UserProfileSummary = ({ userProfile }) => {
       <div className="flex items-center gap-6">
         {/* Profile Photo Section */}
         <div className="relative">
-          {userProfile.profilePhoto ? (
-            <img
-              src={userProfile.profilePhoto}
-              alt="Profile"
-              className="w-20 h-20 rounded-2xl object-cover border-4 border-white shadow-lg"
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center border-4 border-white shadow-lg">
-              <FaUser className="text-white text-2xl" />
-            </div>
-          )}
+          
 
-          {/* Online Status Indicator */}
-          <div className="absolute -bottom-1 -right-1 flex items-center">
-            <FaCircle
-              className={`text-xs ${
-                isOnline ? "text-green-500" : "text-gray-400"
-              }`}
-            />
-            <div
-              className={`w-3 h-3 rounded-full border-2 border-white ${
-                isOnline ? "bg-green-500" : "bg-gray-400"
-              }`}
-            ></div>
-          </div>
+         
         </div>
 
         {/* User Info Section */}

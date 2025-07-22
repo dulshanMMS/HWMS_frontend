@@ -52,7 +52,7 @@ const BookingSummaryCard = ({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 w-full">
+    <div className="bg-white rounded-xl shadow-md p-6 w-full max-w-sm mx-auto md:mx-0">
       {/* Card title */}
       <div className="flex items-center gap-2 mb-4">
         <FaCalendarAlt className="text-blue-500" />
