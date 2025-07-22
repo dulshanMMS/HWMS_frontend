@@ -1,12 +1,14 @@
 // components/Home/HeroSection.jsx - With Your Background Image
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import heroBackground from '../../assets/team2.png'; // Your hero background image
 
 const HeroSection = () => {
   const [titleVisible, setTitleVisible] = useState(false);
   const [subtitleVisible, setSubtitleVisible] = useState(false);
   const [buttonsVisible, setButtonsVisible] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timers = [
@@ -17,11 +19,8 @@ const HeroSection = () => {
     return () => timers.forEach(timer => clearTimeout(timer));
   }, []);
 
-  const scrollToSection = (sectionId) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+  const navigateToLogin = () => {
+    navigate('/');
   };
 
   return (
@@ -70,21 +69,17 @@ const HeroSection = () => {
             </p>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Button */}
           <div className={`transform transition-all duration-1000 ease-out delay-600 ${
             buttonsVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
           }`}>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex justify-center">
               <button 
-                onClick={() => scrollToSection('services')}
+                onClick={navigateToLogin}
                 className="bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-green-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
               >
                 Get Started
                 <ArrowRight className="inline-block ml-2 h-5 w-5" />
-              </button>
-              <button className="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white/10 transform hover:scale-105 transition-all duration-300 backdrop-blur-sm">
-                <Play className="inline-block mr-2 h-5 w-5" />
-                Watch Demo
               </button>
             </div>
           </div>

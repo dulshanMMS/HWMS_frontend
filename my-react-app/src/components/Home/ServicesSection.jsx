@@ -77,9 +77,9 @@ const ServicesSection = () => {
               <p className="text-white/90 mb-6 drop-shadow-md">
                 Explore interactive floor plans and find the perfect desk for your needs. Book instantly and get notified about availability.
               </p>
-              <button className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg">
+              <div className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold shadow-lg inline-block">
                 Book Now
-              </button>
+              </div>
             </div>
           </div>
 
@@ -111,9 +111,9 @@ const ServicesSection = () => {
               <p className="text-white/90 mb-6 drop-shadow-md">
                 Get real-time analytics and insights about office space utilization and team productivity patterns.
               </p>
-              <button className="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-purple-50 transition-colors shadow-lg">
+              <div className="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold shadow-lg inline-block">
                 View Insights
-              </button>
+              </div>
             </div>
           </div>
         </div>

@@ -5,10 +5,10 @@ import React from 'react';
 import Header from '../components/Home/Header';
 import HeroSection from '../components/Home/HeroSection';
 import FeaturesSection from '../components/Home/FeaturesSection';
-import WorldSection from '../components/Home/WorldSection'; // New rotating world section
+import WorldSection from '../components/Home/WorldSection'; 
 import ServicesSection from '../components/Home/ServicesSection';
 import CTASection from '../components/Home/CTASection';
-import Footer from '../components/AboutUs/footer'; // Your friend's footer component
+import Footer from '../components/Home/footer'; 
 
 const HomePage = () => {
   return (
@@ -31,7 +31,7 @@ const HomePage = () => {
       {/* Call to Action Section */}
       <CTASection />
       
-      {/* Footer (Your friend's component) */}
+      {/* Footer */}
       <Footer />
     </div>
   );

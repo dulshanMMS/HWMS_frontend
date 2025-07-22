@@ -1,10 +1,12 @@
 // components/Home/Header.jsx
 import React, { useState, useEffect } from 'react';
 import { Car, Menu, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,6 +32,12 @@ const Header = () => {
     setIsMenuOpen(false);
   };
 
+  // Navigation function
+  const navigateToPage = (path) => {
+    navigate(path);
+    setIsMenuOpen(false);
+  };
+
   // Don't render header at all when not in hero section
   if (!showHeader) {
     return null;
@@ -42,7 +50,7 @@ const Header = () => {
         <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-2xl px-16 py-4 min-w-[800px] max-w-4xl">
           <nav>
             {/* Centered Navigation Links */}
-            <div className="hidden md:flex items-center justify-center space-x-16">
+            <div className="hidden md:flex items-center justify-center space-x-24">
               <button 
                 onClick={() => scrollToSection('home')}
                 className="text-white px-6 py-3 text-sm font-medium transition-all duration-300 hover:text-green-300"
@@ -50,18 +58,15 @@ const Header = () => {
                 Home
               </button>
               <button 
-                onClick={() => scrollToSection('about')}
+                onClick={() => navigateToPage('/user/AboutUsPage')}
                 className="text-white/90 hover:text-white px-6 py-3 text-sm font-medium transition-all duration-300 hover:text-green-300"
               >
                 About Us
               </button>
               <button 
-                onClick={() => scrollToSection('services')}
-                className="text-white/90 hover:text-white px-6 py-3 text-sm font-medium transition-all duration-300 hover:text-green-300"
+                onClick={() => navigateToPage('/')}
+                className="bg-green-600 text-white px-8 py-3 rounded-xl text-sm font-medium hover:bg-green-700 transition-all duration-300 shadow-lg ml-6"
               >
-                Resources
-              </button>
-              <button className="bg-green-600 text-white px-8 py-3 rounded-xl text-sm font-medium hover:bg-green-700 transition-all duration-300 shadow-lg ml-6">
                 Sign In
               </button>
             </div>
@@ -88,18 +93,15 @@ const Header = () => {
                   Home
                 </button>
                 <button 
-                  onClick={() => scrollToSection('about')}
+                  onClick={() => navigateToPage('/user/AboutUsPage')}
                   className="text-white/90 hover:text-green-300 block px-3 py-2 rounded-md text-base font-medium w-full text-center"
                 >
                   About Us
                 </button>
                 <button 
-                  onClick={() => scrollToSection('services')}
-                  className="text-white/90 hover:text-green-300 block px-3 py-2 rounded-md text-base font-medium w-full text-center"
+                  onClick={() => navigateToPage('/')}
+                  className="w-full bg-green-600 text-white px-3 py-2 rounded-md text-base font-medium hover:bg-green-700 transition-colors mt-2"
                 >
-                  Resources
-                </button>
-                <button className="w-full bg-green-600 text-white px-3 py-2 rounded-md text-base font-medium hover:bg-green-700 transition-colors mt-2">
                   Sign In
                 </button>
               </div>

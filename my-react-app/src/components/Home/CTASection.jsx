@@ -1,6 +1,7 @@
 // components/Home/LightCTASection.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import teamOfficeImage from '../../assets/team-office.jpg'; // Your background image
 
 const LightCTASection = () => {
@@ -8,6 +9,7 @@ const LightCTASection = () => {
   const [subtitleVisible, setSubtitleVisible] = useState(false);
   const [buttonVisible, setButtonVisible] = useState(false);
   const sectionRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -30,6 +32,10 @@ const LightCTASection = () => {
 
     return () => observer.disconnect();
   }, []);
+
+  const navigateToLogin = () => {
+    navigate('/');
+  };
 
   return (
     <section ref={sectionRef} className="py-20 bg-gradient-to-br from-green-50 via-green-100 to-emerald-50 relative overflow-hidden">
@@ -73,7 +79,10 @@ const LightCTASection = () => {
         <div className={`transform transition-all duration-1000 ease-out delay-600 ${
           buttonVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
         }`}>
-          <button className="bg-green-600 text-white px-10 py-4 rounded-xl text-lg font-semibold hover:bg-green-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
+          <button 
+            onClick={navigateToLogin}
+            className="bg-green-600 text-white px-10 py-4 rounded-xl text-lg font-semibold hover:bg-green-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+          >
             Get Started Today
             <ArrowRight className="inline-block ml-2 h-5 w-5" />
           </button>
