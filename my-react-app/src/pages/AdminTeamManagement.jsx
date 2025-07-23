@@ -73,8 +73,8 @@ const AdminTeamManagement = () => {
 
   return (
     <AdminSidebar>
-      <div className="w-full px-12 py-6 relative">
-        <div className="flex justify-between items-center mb-4">
+      <div className="w-full px-4 sm:px-6 md:px-8 py-6 relative">
+        <div className="flex flex-row justify-between items-center flex-wrap gap-3 mb-4">
           <h1 className="text-2xl font-semibold">Team Management</h1>
           <button
             onClick={() => {
@@ -82,7 +82,7 @@ const AdminTeamManagement = () => {
               setShowFormModal(true);
             }}
             title="Add a new team"
-            className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded shadow"
+            className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded shadow text-sm sm:text-base"
           >
             + Add Team
           </button>
@@ -106,8 +106,8 @@ const AdminTeamManagement = () => {
         />
 
         {showFormModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 flex items-center justify-center transition-all">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative animate-fade-in">
+          <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 flex items-center justify-center transition-all p-2">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-4 sm:p-6 relative animate-fade-in">
               <h2 className="text-lg font-semibold mb-4">
                 {editTeam ? "Edit Team" : "Add New Team"}
               </h2>
@@ -133,8 +133,8 @@ const AdminTeamManagement = () => {
         )}
 
         {selectedTeam && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-5 relative">
+          <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-2">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4 sm:p-5 relative">
               <h3 className="text-lg font-semibold mb-3">
                 Members of {selectedTeam.teamName}
               </h3>
