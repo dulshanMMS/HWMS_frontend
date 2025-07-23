@@ -10,13 +10,15 @@ import BookingDatesList from '../components/parkingHistory/BookingDatesList';
 import BookingDetailsPopup from '../components/parkingHistory/BookingDetailsPopup';
 import DeleteBookingPopup from '../components/parkingHistory/DeleteBookingPopup';
 import ErrorMessage from '../components/parkingHistory/ErrorMessage';
+import ViewToggle from '../components/parkingHistory/ViewToggle';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
 export default function BookingHistory() {
   
    // State managements
-  const [bookingDates, setBookingDates] = useState([]);
+  const [allBookingDates, setAllBookingDates] = useState([]); // Store all bookings
+  const [displayedBookingDates, setDisplayedBookingDates] = useState([]); // Store filtered bookings
   const [totalBookings, setTotalBookings] = useState(0);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showDetailsPopup, setShowDetailsPopup] = useState(false);
@@ -24,6 +26,7 @@ export default function BookingHistory() {
   const [bookingDetails, setBookingDetails] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showAllBookings, setShowAllBookings] = useState(false); // Toggle state
   
   //profile_side bar wdeta
   //const [sidebarOpen, setSidebarOpen] = useState(true); // or false based on what you want  // * *methn 2
@@ -39,6 +42,48 @@ export default function BookingHistory() {
   const getToken = () => {
     return localStorage.getItem('token');
   };
+
+  // Function to filter dates to show only relevant bookings (future + last 30 days)
+  const filterRelevantDates = (dates) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    
+    // Calculate 30 days ago from today
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    return dates.filter(dateItem => {
+      const bookingDate = new Date(dateItem.date);
+      bookingDate.setHours(0, 0, 0, 0);
+      
+      // Show if booking is:
+      // 1. Future booking (including today)
+      // 2. Past booking within last 30 days
+      return bookingDate >= thirtyDaysAgo;
+    });
+  };
+
+  // Function to sort dates in descending order (most recent first)
+  const sortDatesByMostRecent = (dates) => {
+    return dates.sort((a, b) => {
+      // Convert date strings to Date objects for comparison
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      
+      // Sort in descending order (most recent first)
+      return dateB - dateA;
+    });
+  };
+
+  // Update displayed bookings when toggle changes
+  useEffect(() => {
+    if (showAllBookings) {
+      setDisplayedBookingDates(allBookingDates);
+    } else {
+      const filteredDates = filterRelevantDates(allBookingDates);
+      setDisplayedBookingDates(filteredDates);
+    }
+  }, [showAllBookings, allBookingDates]);
 
   // Fetch history data when component mounts
   useEffect(() => {
@@ -80,8 +125,12 @@ export default function BookingHistory() {
         bookings: [] // already detailed bookings data comes when a date is clicked
       }));
       
+      // Sort all dates by most recent first
+      const sortedDates = sortDatesByMostRecent(formattedDates);
+      
       setTotalBookings(totalBookings);
-      setBookingDates(formattedDates);
+      setAllBookingDates(sortedDates); // Store all bookings
+      // displayedBookingDates will be set by useEffect above
       
     } catch (err) {
       console.error('Error fetching booking history:', err);
@@ -178,6 +227,11 @@ export default function BookingHistory() {
     }
   };
 
+  // Toggle between showing all bookings and filtered bookings
+  const handleToggleView = () => {
+    setShowAllBookings(!showAllBookings);
+  };
+
   const handleDateClick = (date) => {
     setSelectedBooking(date);
     fetchBookingDetails(date.date);
@@ -234,9 +288,17 @@ export default function BookingHistory() {
 
               <BookingStats totalBookings={totalBookings} loading={loading} />
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* View Toggle Component */}
+              <ViewToggle
+                showAllBookings={showAllBookings}
+                onToggle={handleToggleView}
+                filteredCount={filterRelevantDates(allBookingDates).length}
+                totalCount={allBookingDates.length}
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <BookingDatesList
-                  bookingDates={bookingDates}
+                  bookingDates={displayedBookingDates}
                   loading={loading}
                   onDateClick={handleDateClick}
                 />

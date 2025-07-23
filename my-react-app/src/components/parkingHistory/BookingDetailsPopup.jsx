@@ -3,6 +3,31 @@ import React from 'react';
 const BookingDetailsPopup = ({ selectedBooking, bookingDetails, loading, onClose, onDeleteClick }) => {
   if (!selectedBooking) return null;
 
+  // Function to check if a booking is deletable (future only)
+  const isBookingDeletable = (booking) => {
+    const now = new Date();
+    const bookingDate = new Date(booking.date);
+    
+    // If booking is on a future date, it's deletable
+    if (bookingDate.toDateString() !== now.toDateString()) {
+      return bookingDate > now;
+    }
+    
+    // If booking is today, check if current time is before entry time
+    const [entryHour, entryMinute] = booking.entryTime.split(':').map(Number);
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+    const entryTimeInMinutes = entryHour * 60 + entryMinute;
+    
+    // Only deletable if current time is before entry time
+    return currentTimeInMinutes < entryTimeInMinutes;
+  };
+
+  // Check if any booking in the details is deletable
+  const hasDeleteableBooking = bookingDetails.some(booking => isBookingDeletable(booking));
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
@@ -28,6 +53,12 @@ const BookingDetailsPopup = ({ selectedBooking, bookingDetails, loading, onClose
                 
                 <p className="text-gray-600">Exit Time:</p>
                 <p className="font-medium">{booking.exitTime}</p>
+                
+                {/* Show booking status */}
+                <p className="text-gray-600">Status:</p>
+                <p className={`font-medium ${isBookingDeletable(booking) ? 'text-green-600' : 'text-red-600'}`}>
+                  {isBookingDeletable(booking) ? 'Future Booking' : 'Past'}
+                </p>
               </div>
             </div>
           ))
@@ -36,7 +67,8 @@ const BookingDetailsPopup = ({ selectedBooking, bookingDetails, loading, onClose
         )}
        </div> 
         <div className="flex justify-end mt-4 space-x-2">
-          {bookingDetails.length > 0 && (
+          {/* Only show delete button if there are deletable bookings */}
+          {bookingDetails.length > 0 && hasDeleteableBooking && (
             <button
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               onClick={onDeleteClick}
