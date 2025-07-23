@@ -31,22 +31,18 @@ const timesOverlap = (start1, end1, start2, end2) => {
   return s1 < e2 && s2 < e1;
 };
 
-// Helper function to check if user is admin
 const isUserAdmin = () => {
   try {
     const token = localStorage.getItem("token");
     if (!token) return false;
     
     const decoded = jwtDecode(token);
-    // Check if user has admin role - adjust this based on your token structure
     return decoded.role === 'admin' || decoded.isAdmin === true;
   } catch (error) {
-    console.error("Error checking admin status:", error);
     return false;
   }
 };
 
-// Helper function to get current user's userName from token
 const getCurrentUserName = () => {
   try {
     const token = localStorage.getItem("token");
@@ -55,7 +51,6 @@ const getCurrentUserName = () => {
     const decoded = jwtDecode(token);
     return decoded.userName || decoded.username;
   } catch (error) {
-    console.error("Error getting username:", error);
     return null;
   }
 };
@@ -63,19 +58,19 @@ const getCurrentUserName = () => {
 // API functions
 const api = {
   async fetchBookings(date, floor) {
-    const response = await fetch(`http://localhost:5000/api/bookings/filtered?date=${date}&floor=${floor}`);
+    const response = await fetch(`http://localhost:6001/api/bookings/filtered?date=${date}&floor=${floor}`);
     if (!response.ok) throw new Error('Failed to fetch bookings');
     return response.json();
   },
 
   async fetchUser(userId) {
-    const response = await fetch(`http://localhost:5000/api/bookings/users/${userId}`);
+    const response = await fetch(`http://localhost:6001/api/bookings/users/${userId}`);
     if (!response.ok) throw new Error('User not found');
     return response.json();
   },
 
   async fetchTeam(teamId) {
-    const response = await fetch(`http://localhost:5000/api/teams`);
+    const response = await fetch(`http://localhost:6001/api/teams`);
     if (!response.ok) throw new Error('Failed to fetch teams');
     
     const teams = await response.json();
@@ -85,18 +80,15 @@ const api = {
     return team;
   },
 
-  // UPDATED: Use current user's actual userName (admin uses their own name)
   async bookSeat(chairId, bookingDetails) {
     const isAdmin = isUserAdmin();
-    const currentUserName = getCurrentUserName(); // Get admin's actual userName
+    const currentUserName = getCurrentUserName();
     
     const endpoint = isAdmin 
-      ? `/api/bookings/admin/${currentUserName}/seat/${chairId}`    // Admin's own userName
-      : `/api/bookings/member/${currentUserName}/seat/${chairId}`;  // User's userName
+      ? `/api/bookings/admin/${currentUserName}/seat/${chairId}`
+      : `/api/bookings/member/${currentUserName}/seat/${chairId}`;
     
-    console.log(`🎯 Using ${isAdmin ? 'ADMIN' : 'USER'} booking route:`, endpoint);
-    
-    const response = await fetch(`http://localhost:5000${endpoint}`, {
+    const response = await fetch(`http://localhost:6001${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bookingDetails),
@@ -109,16 +101,13 @@ const api = {
     return response.json();
   },
 
-  // UPDATED: Choose unbooking route based on user role
   async unbookSeat(tableId, chairId, floor, date) {
     const isAdmin = isUserAdmin();
     const endpoint = isAdmin 
       ? `/api/bookings/admin/unbook/${tableId}/${chairId}/${floor}/${date}`
       : `/api/bookings/unbook/${tableId}/${chairId}/${floor}/${date}`;
     
-    console.log(`🎯 Using ${isAdmin ? 'ADMIN' : 'USER'} unbooking route:`, endpoint);
-    
-    const response = await fetch(`http://localhost:5000${endpoint}`, {
+    const response = await fetch(`http://localhost:6001${endpoint}`, {
       method: 'DELETE',
     });
     
@@ -148,7 +137,6 @@ const useAuth = () => {
       setMemberId(decoded.userName || decoded.username);
       setUserRole(decoded.role || 'user');
     } catch (e) {
-      console.error("Invalid token", e);
       navigate('/');
     }
   }, [navigate]);
@@ -156,7 +144,6 @@ const useAuth = () => {
   return { memberId, userRole };
 };
 
-// SIMPLIFIED: No role/leader logic - everyone is a member for self-booking
 const useUserData = (memberId) => {
   const [memberDetails, setMemberDetails] = useState(null);
   const [teamName, setTeamName] = useState('');
@@ -210,7 +197,7 @@ const PopUp = ({ message, onClose, children }) => (
 );
 
 // Table component
-const TableComponent = ({ tableId, index, seatSize = "normal", bookedChairs, onChairClick, userBooking, disabled }) => {
+const TableComponent = ({ tableId, index, seatSize = "normal", bookedChairs, onChairClick, userBooking, disabled, selectedSeat }) => {
   const sizeClasses = {
     small: { seat: "w-12 h-6", table: "p-1", gap: "gap-1" },
     medium: { seat: "w-14 h-7", table: "p-1", gap: "gap-1" },
@@ -230,7 +217,7 @@ const TableComponent = ({ tableId, index, seatSize = "normal", bookedChairs, onC
             bookedChairs={bookedChairs}
             onClick={disabled ? () => {} : () => onChairClick(chairId, tableId)}
             label={`Seat-${startIndex + i}`}
-            isUserBooked={!disabled && userBooking?.chairId === chairId}
+            isUserBooked={!disabled && (userBooking?.chairId === chairId || selectedSeat === chairId)}
             seatSize={seatSize}
           />
         </div>
@@ -268,9 +255,9 @@ export default function FloorLayout() {
     floor: state?.floor || null,
   }), [state]);
 
-  // State
   const [bookedChairs, setBookedChairs] = useState({});
   const [userBooking, setUserBooking] = useState(null);
+  const [selectedSeat, setSelectedSeat] = useState(null);
   const [message, setMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [bookingSubmitted, setBookingSubmitted] = useState(false);
@@ -282,12 +269,20 @@ export default function FloorLayout() {
     return () => { document.body.style.overflow = originalOverflow; };
   }, []);
 
-  // Clear localStorage on mount
+  // Initialize component state
   useEffect(() => {
-    Object.keys(localStorage)
-      .filter(key => key.startsWith('booking_submitted_'))
-      .forEach(key => localStorage.removeItem(key));
+    if (!memberId || !bookingInfo.date || !bookingInfo.floor) return;
+    
     setBookingSubmitted(false);
+    setSelectedSeat(null);
+    setUserBooking(null);
+    
+    Object.keys(localStorage)
+      .filter(key => key.startsWith('booking_submitted_') && 
+              !key.includes(`${memberId}_${bookingInfo.date}_${bookingInfo.floor}`))
+      .forEach(key => localStorage.removeItem(key));
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Main booking fetch effect
@@ -301,87 +296,204 @@ export default function FloorLayout() {
 
     if (userLoading) return;
 
-    const fetchBookings = async (showAll = false) => {
+    const fetchBookings = async () => {
       try {
         const data = await api.fetchBookings(bookingInfo.date, bookingInfo.floor);
         const filteredChairs = {};
 
         if (data.chairs) {
           Object.entries(data.chairs).forEach(([chairId, booking]) => {
-            const shouldInclude = showAll || timesOverlap(
-              booking.entryTime, booking.exitTime,
-              bookingInfo.entryTime, bookingInfo.exitTime
-            );
-
-            if (shouldInclude) {
-              filteredChairs[chairId] = {
-                ...booking,
-                userName: booking.userName,
-                teamColor: ensureHexColor(booking.teamColor),
-                timeSlot: booking.timeSlot || `${booking.entryTime} - ${booking.exitTime}`,
-                isFromDatabase: true
-              };
-            }
+            filteredChairs[chairId] = {
+              ...booking,
+              userName: booking.userName,
+              teamColor: ensureHexColor(booking.teamColor),
+              timeSlot: booking.timeSlot || `${booking.entryTime} - ${booking.exitTime}`,
+              isFromDatabase: true
+            };
           });
         }
 
         setBookedChairs(prev => {
-          const merged = { ...prev, ...filteredChairs };
-          // Preserve user bookings
-          Object.entries(prev).forEach(([chairId, booking]) => {
-            if (!filteredChairs[chairId] && booking.userName === memberDetails?.userName) {
-              merged[chairId] = booking;
-            }
-          });
+          const merged = { ...filteredChairs };
+          
+          if (!bookingSubmitted) {
+            Object.entries(prev).forEach(([chairId, booking]) => {
+              if (!filteredChairs[chairId] && booking.isVisualOnly) {
+                merged[chairId] = booking;
+              }
+            });
+          }
+          
           return merged;
         });
+
+        // Check submission state with 30-second timeout
+        const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
+        const justSubmitted = localStorage.getItem(submissionKey);
+        const submissionTime = localStorage.getItem(`${submissionKey}_time`);
+        
+        if (justSubmitted && submissionTime) {
+          const timeDiff = Date.now() - parseInt(submissionTime);
+          if (timeDiff < 30000) { // 30 seconds - CHANGE THIS VALUE TO MODIFY TIMEOUT
+            setBookingSubmitted(true);
+          } else {
+            localStorage.removeItem(submissionKey);
+            localStorage.removeItem(`${submissionKey}_time`);
+            setBookingSubmitted(false);
+          }
+        }
+        
       } catch (err) {
-        console.error("Failed to fetch bookings:", err);
         setMessage('Failed to fetch bookings: ' + err.message);
       }
     };
 
     setIsLoading(true);
-    fetchBookings(bookingSubmitted).finally(() => setIsLoading(false));
+    fetchBookings().finally(() => setIsLoading(false));
 
-    const interval = setInterval(() => fetchBookings(bookingSubmitted), 30000);
+    const interval = setInterval(() => fetchBookings(), 10000);
     return () => clearInterval(interval);
-  }, [bookingInfo, navigate, bookingSubmitted, memberDetails?.userName, userLoading]);
+  }, [bookingInfo, navigate, memberDetails?.userName, userLoading, memberId, bookingSubmitted]);
 
   // Event handlers
   const showMessage = (msg) => setMessage(msg);
   const closeMessage = () => setMessage(null);
 
-  // UPDATED: No popup messages when clicking seats, only silent booking/unbooking
   const handleChairClick = async (chairId, tableId) => {
-    if (bookingSubmitted || !memberDetails) {
-      return; // Silent return, no popup
-    }
+    if (bookingSubmitted || !memberDetails) return;
 
+    const userDatabaseBookings = Object.entries(bookedChairs).filter(([seatId, booking]) => 
+      booking.userName === memberDetails.userName && 
+      booking.isFromDatabase === true
+    );
+    
     const booking = bookedChairs[chairId];
     
     if (booking) {
       if (booking.userName === memberDetails.userName) {
-        try {
-          // Silent unbooking - no popup message
-          await api.unbookSeat(tableId, chairId, bookingInfo.floor, bookingInfo.date);
+        if (booking.isVisualOnly) {
+          setSelectedSeat(null);
           setUserBooking(null);
           setBookedChairs(prev => {
             const updated = { ...prev };
             delete updated[chairId];
             return updated;
           });
-          console.log(`✅ Seat ${chairId} unbooked silently`);
-        } catch (err) {
-          console.error('Failed to unbook seat:', err.message);
-          // Could add error handling here if needed
+        } else {
+          try {
+            await api.unbookSeat(tableId, chairId, bookingInfo.floor, bookingInfo.date);
+            setUserBooking(null);
+            setSelectedSeat(null);
+            setBookedChairs(prev => {
+              const updated = { ...prev };
+              delete updated[chairId];
+              return updated;
+            });
+          } catch (err) {
+            showMessage('Failed to unbook seat: ' + err.message);
+          }
         }
       } else {
-        // Silent return - seat is taken by someone else
-        console.log(`❌ Seat ${chairId} is booked by ${booking.userName}`);
         return;
       }
     } else {
+      if (userDatabaseBookings.length > 0) {
+        const existingBooking = userDatabaseBookings[0];
+        showMessage(`You already have a booking saved on this floor (${existingBooking[0]}). Please unbook your existing seat first before selecting a new one.`);
+        return;
+      }
+      
+      const userVisualBookings = Object.entries(bookedChairs).filter(([seatId, booking]) => 
+        booking.userName === memberDetails.userName && 
+        booking.isVisualOnly === true
+      );
+      
+      if (userVisualBookings.length > 0) {
+        const existingVisual = userVisualBookings[0];
+        showMessage(`You already have a seat selected (${existingVisual[0]}). Please unbook or submit your current selection first.`);
+        return;
+      }
+      
+      setSelectedSeat(chairId);
+      setUserBooking({ chairId, tableId });
+      
+      const visualChairData = {
+        userName: memberDetails.userName,
+        teamColor: ensureHexColor(memberDetails.teamColor),
+        teamName,
+        teamId: memberDetails.teamId,
+        entryTime: bookingInfo.entryTime,
+        exitTime: bookingInfo.exitTime,
+        timeSlot: `${bookingInfo.entryTime} - ${bookingInfo.exitTime}`,
+        date: bookingInfo.date,
+        floor: bookingInfo.floor,
+        isVisualOnly: true
+      };
+      
+      setBookedChairs(prev => ({ ...prev, [chairId]: visualChairData }));
+    }
+  };
+
+  const handleUnbook = async () => {
+    if (!memberDetails?.userName) return;
+
+    const userBookedSeat = Object.keys(bookedChairs).find(chairId => 
+      bookedChairs[chairId]?.userName === memberDetails.userName
+    );
+    
+    if (!userBookedSeat) return;
+
+    const booking = bookedChairs[userBookedSeat];
+    const tableId = userBookedSeat.split('-')[0];
+    
+    if (booking.isVisualOnly) {
+      setSelectedSeat(null);
+      setUserBooking(null);
+      setBookedChairs(prev => {
+        const updated = { ...prev };
+        delete updated[userBookedSeat];
+        return updated;
+      });
+    } else {
+      try {
+        await api.unbookSeat(tableId, userBookedSeat, bookingInfo.floor, bookingInfo.date);
+        setUserBooking(null);
+        setSelectedSeat(null);
+        setBookedChairs(prev => {
+          const updated = { ...prev };
+          delete updated[userBookedSeat];
+          return updated;
+        });
+      } catch (err) {
+        showMessage('Failed to unbook seat: ' + err.message);
+      }
+    }
+  };
+
+  const hasBookedSeat = () => {
+    return memberDetails?.userName && (
+      userBooking?.chairId || 
+      Object.keys(bookedChairs).some(chairId => bookedChairs[chairId]?.userName === memberDetails.userName) ||
+      selectedSeat
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!memberDetails?.userName) {
+      showMessage('No user logged in for submission.');
+      return;
+    }
+
+    if (!selectedSeat && !Object.keys(bookedChairs).some(chairId => 
+        bookedChairs[chairId]?.userName === memberDetails.userName && 
+        !bookedChairs[chairId]?.isVisualOnly
+      )) {
+      showMessage('Please select a seat before submitting.');
+      return;
+    }
+
+    if (selectedSeat) {
+      const tableId = selectedSeat.split('-')[0];
       const bookingDetails = {
         roomId: tableId,
         teamName,
@@ -394,11 +506,9 @@ export default function FloorLayout() {
       };
 
       try {
-        // Silent booking - no popup message
-        const result = await api.bookSeat(chairId, bookingDetails);
-        setUserBooking({ chairId, tableId });
+        const result = await api.bookSeat(selectedSeat, bookingDetails);
         
-        const chairData = {
+        const realChairData = {
           userName: memberDetails.userName,
           teamColor: ensureHexColor(memberDetails.teamColor),
           teamName,
@@ -409,76 +519,42 @@ export default function FloorLayout() {
           bookingId: result.bookingId,
           bookedAt: new Date(),
           floor: bookingInfo.floor,
-          date: bookingInfo.date
+          date: bookingInfo.date,
+          isFromDatabase: true
         };
         
-        setBookedChairs(prev => ({ ...prev, [chairId]: chairData }));
-        console.log(`✅ ${userRole === 'admin' ? 'Admin' : 'User'} booking successful for ${chairId}`);
+        setBookedChairs(prev => ({ ...prev, [selectedSeat]: realChairData }));
+        setSelectedSeat(null);
       } catch (err) {
-        console.error(`Booking error for ${chairId}:`, err.message);
-        // Could add error handling here if needed
+        showMessage('Booking failed: ' + err.message);
+        return;
       }
-    }
-  };
-
-  // SIMPLIFIED: Self-booking only unbook
-  const handleUnbook = async () => {
-    if (!memberDetails?.userName) {
-      return; // Silent return
-    }
-
-    const chairId = Object.keys(bookedChairs).find(id => bookedChairs[id]?.userName === memberDetails.userName);
-    if (!chairId) {
-      return; // Silent return
-    }
-
-    const tableId = chairId.split('-')[0];
-    
-    try {
-      await api.unbookSeat(tableId, chairId, bookingInfo.floor, bookingInfo.date);
-      setUserBooking(null);
-      setBookedChairs(prev => {
-        const updated = { ...prev };
-        delete updated[chairId];
-        return updated;
-      });
-      console.log('✅ Seat unbooked via button');
-    } catch (err) {
-      console.error(`Unbooking error:`, err.message);
-    }
-  };
-
-  // SIMPLIFIED: Check if current user has booked seat
-  const hasBookedSeat = () => {
-    return memberDetails?.userName && (
-      userBooking?.chairId || 
-      Object.keys(bookedChairs).some(chairId => bookedChairs[chairId]?.userName === memberDetails.userName)
-    );
-  };
-
-  // UPDATED: Only show popup message when submitting
-  const handleSubmit = () => {
-    if (!memberDetails?.userName) {
-      showMessage('No user logged in for submission.');
-      return;
-    }
-
-    if (!hasBookedSeat()) {
-      showMessage('Please book a seat before submitting.');
-      return;
     }
 
     setBookingSubmitted(true);
     const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
     localStorage.setItem(submissionKey, 'true');
+    localStorage.setItem(`${submissionKey}_time`, Date.now().toString());
     
-    // ONLY popup message for successful submission
     showMessage('Booking submitted successfully!');
   };
 
   const handleCancel = () => {
     if (bookingSubmitted) return;
     
+    if (selectedSeat) {
+      setBookedChairs(prev => {
+        const updated = { ...prev };
+        if (updated[selectedSeat]?.isVisualOnly) {
+          delete updated[selectedSeat];
+        }
+        return updated;
+      });
+      setSelectedSeat(null);
+      setUserBooking(null);
+      return;
+    }
+
     const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
     localStorage.removeItem(submissionKey);
     
@@ -486,7 +562,6 @@ export default function FloorLayout() {
     navigate('/datebooking');
   };
 
-  // Render loading state
   if (isLoading || userLoading) {
     return (
       <div className="w-full h-screen bg-green-50 flex items-center justify-center">
@@ -495,7 +570,6 @@ export default function FloorLayout() {
     );
   }
 
-  // Render incomplete booking state
   if (!memberDetails && !bookingSubmitted) {
     return (
       <div className="w-full h-screen bg-green-50 flex items-center justify-center p-4">
@@ -519,7 +593,6 @@ export default function FloorLayout() {
       <div className="h-full overflow-y-auto">
         <div className="flex flex-col items-center justify-center gap-6 w-full min-h-screen py-8">
           
-          {/* Booking Info Header */}
           <div className="bg-blue-100 border border-blue-300 rounded-xl p-4 text-center w-full max-w-2xl shadow-sm">
             <p className="text-base font-semibold text-blue-800">
               📅 Booking for: {bookingInfo.date}  | 🕐 Time: {bookingInfo.entryTime} - {bookingInfo.exitTime} | 🏢 Floor {bookingInfo.floor}
@@ -527,9 +600,7 @@ export default function FloorLayout() {
             </p>
           </div>
 
-          {/* Floor Layout - Responsive */}
           <div className="w-full flex justify-center">
-            {/* Mobile */}
             <div className="block md:hidden w-full max-w-sm px-4">
               <div className="flex flex-col gap-4 mb-8">
                 {tableIds.slice(0, 4).map((tableId, index) => (
@@ -541,6 +612,7 @@ export default function FloorLayout() {
                     bookedChairs={bookedChairs}
                     onChairClick={handleChairClick}
                     userBooking={userBooking}
+                    selectedSeat={selectedSeat}
                     disabled={bookingSubmitted}
                   />
                 ))}
@@ -560,13 +632,13 @@ export default function FloorLayout() {
                     bookedChairs={bookedChairs}
                     onChairClick={handleChairClick}
                     userBooking={userBooking}
+                    selectedSeat={selectedSeat}
                     disabled={bookingSubmitted}
                   />
                 ))}
               </div>
             </div>
 
-            {/* Tablet */}
             <div className="hidden md:block lg:hidden w-full max-w-4xl px-6">
               <div className="flex flex-col items-center gap-8">
                 <div className="grid grid-cols-2 gap-6 w-full max-w-3xl">
@@ -579,6 +651,7 @@ export default function FloorLayout() {
                       bookedChairs={bookedChairs}
                       onChairClick={handleChairClick}
                       userBooking={userBooking}
+                      selectedSeat={selectedSeat}
                       disabled={bookingSubmitted}
                     />
                   ))}
@@ -598,6 +671,7 @@ export default function FloorLayout() {
                       bookedChairs={bookedChairs}
                       onChairClick={handleChairClick}
                       userBooking={userBooking}
+                      selectedSeat={selectedSeat}
                       disabled={bookingSubmitted}
                     />
                   ))}
@@ -605,7 +679,6 @@ export default function FloorLayout() {
               </div>
             </div>
 
-            {/* Desktop */}
             <div className="hidden lg:flex items-center justify-center w-full max-w-7xl px-8">
               <div className="flex items-center gap-12">
                 <div className="flex flex-col gap-5">
@@ -617,6 +690,7 @@ export default function FloorLayout() {
                       bookedChairs={bookedChairs}
                       onChairClick={handleChairClick}
                       userBooking={userBooking}
+                      selectedSeat={selectedSeat}
                       disabled={bookingSubmitted}
                     />
                   ))}
@@ -635,6 +709,7 @@ export default function FloorLayout() {
                       bookedChairs={bookedChairs}
                       onChairClick={handleChairClick}
                       userBooking={userBooking}
+                      selectedSeat={selectedSeat}
                       disabled={bookingSubmitted}
                     />
                   ))}
@@ -643,7 +718,6 @@ export default function FloorLayout() {
             </div>
           </div>
 
-          {/* Control Buttons */}
           {!bookingSubmitted && (
             <div className="bg-green-100 border border-green-300 rounded-xl p-6 w-full max-w-md shadow-sm">
               <div className="flex gap-3 justify-center">
@@ -670,7 +744,6 @@ export default function FloorLayout() {
             </div>
           )}
 
-          {/* Success Message */}
           {bookingSubmitted && (
             <div className="bg-green-100 border border-green-300 rounded-xl p-6 text-center w-full max-w-md shadow-sm">
               <p className="text-green-800 font-semibold text-lg mb-4">✅ Booking Submitted Successfully!</p>
@@ -686,7 +759,6 @@ export default function FloorLayout() {
         </div>
       </div>
 
-      {/* Popups - Only for submission messages */}
       {message && <PopUp message={message} onClose={closeMessage} />}
     </div>
   );

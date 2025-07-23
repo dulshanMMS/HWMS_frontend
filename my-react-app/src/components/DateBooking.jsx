@@ -39,8 +39,7 @@ export default function DateBooking() {
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        // UPDATED: Use userName instead of username from JWT
-        setUser(decoded.userName || decoded.username); // Fallback to username for backward compatibility
+        setUser(decoded.userName || decoded.username);
       } catch (e) {
         console.error("Invalid token");
       }
@@ -50,7 +49,7 @@ export default function DateBooking() {
   // Helper to pad numbers <10 with a leading zero for display
   const pad = (num) => (num < 10 ? "0" + num : num);
 
-  // UPDATED: Validate booking date and time - REMOVED ALL TIME RESTRICTIONS
+  // UPDATED: Validate booking date and time - NOW INCLUDES PAST TIME VALIDATION
   const validateBookingDateTime = () => {
     const selectedDate = new Date(date);
     selectedDate.setHours(0, 0, 0, 0);
@@ -58,35 +57,29 @@ export default function DateBooking() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Only check if date is in the past (not today, only past dates like yesterday)
+    // Check if date is in the past
     if (selectedDate < today) {
       return {
         isValid: false,
-        message: "Can't Book for past dates"
+        message: "Can't book for past dates"
       };
     }
     
-    // REMOVED: ALL time-based validations for today's bookings
-    // Users can now book any time slot for today or future dates
-    
-    // REMOVED: Business hours restriction - uncomment if you want to keep it
-    /*
-    if (entryHour < 6 || entryHour >= 22) {
-      return {
-        isValid: false,
-        message: "Bookings are only allowed between 6:00 AM and 10:00 PM"
-      };
+    // NEW: Check if booking is for today and time has already passed
+    if (selectedDate.getTime() === today.getTime()) {
+      const now = new Date();
+      const entryTime = new Date();
+      entryTime.setHours(entryHour, entryMinute, 0, 0);
+      
+      if (entryTime < now) {
+        const currentTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        const requestedTime = `${pad(entryHour)}:${pad(entryMinute)}`;
+        return {
+          isValid: false,
+          message: `Can't book for past times. Current time is ${currentTime}, but you're trying to book for ${requestedTime}.`
+        };
+      }
     }
-    */
-    
-    // Check weekend (optional - uncomment if needed)
-    // const dayOfWeek = selectedDate.getDay();
-    // if (dayOfWeek === 0 || dayOfWeek === 6) {
-    //   return {
-    //     isValid: false,
-    //     message: "Weekend bookings are not allowed"
-    //   };
-    // }
     
     return { isValid: true };
   };
@@ -109,12 +102,12 @@ export default function DateBooking() {
       return;
     }
 
-    // UPDATED: Date and time validation (now without 1-hour restriction)
+    // UPDATED: Date and time validation (now includes past time checking)
     const dateTimeValidation = validateBookingDateTime();
     if (!dateTimeValidation.isValid) {
       setMessage(dateTimeValidation.message);
       setShowPopup(true);
-      return; // Stop here - don't proceed to FloorLayout
+      return;
     }
 
     // All validations passed - format date and navigate
@@ -125,12 +118,6 @@ export default function DateBooking() {
     const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
     const day = String(selectedDate.getDate()).padStart(2, '0');
     const formattedDate = `${year}-${month}-${day}`;
-    
-    console.log("📅 DateBooking - Validation passed, sending date:", {
-      originalDate: date,
-      formattedDate: formattedDate,
-      selectedDate: selectedDate
-    });
 
     // Navigate to FloorLayout with booking info + user
     navigate("/floorlayout", {
@@ -139,7 +126,7 @@ export default function DateBooking() {
         entryTime: `${pad(entryHour)}:${pad(entryMinute)}`,
         exitTime: `${pad(exitHour)}:${pad(exitMinute)}`,
         floor,
-        user, // This now contains userName
+        user,
       },
     });
   };
@@ -210,7 +197,6 @@ export default function DateBooking() {
     );
   };
 
-  // FIXED: Main component JSX rendering - Light green background for component and outer area
   return (
     <div className="w-full h-screen bg-green-100 flex items-center justify-center overflow-hidden m-0 p-0">
       <div className="w-full max-w-md mx-auto flex flex-col justify-center items-center h-[90%] overflow-hidden px-4 bg-green-100 rounded-xl shadow-md">
@@ -225,7 +211,7 @@ export default function DateBooking() {
           </p>
         </div>
 
-        {/* Main Booking Card - with curved borders and white background */}
+        {/* Main Booking Card */}
         <div className="bg-white rounded-xl shadow-md p-6 flex flex-col space-y-4 flex-1 min-h-0 overflow-hidden border border-gray-200">
           {/* Selected Date Display */}
           <div className="text-center text-sm font-medium text-gray-700 bg-green-50 rounded-xl py-3 px-4 flex-shrink-0">
@@ -393,11 +379,10 @@ export default function DateBooking() {
           </div>
         </div>
 
-        {/* Updated Popup with better styling */}
+        {/* Updated Popup */}
         {showPopup && (
           <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50">
             <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 transform transition-all">
-              {/* Icon and Title */}
               <div className="text-center mb-4">
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-3">
                   <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -409,14 +394,12 @@ export default function DateBooking() {
                 </h3>
               </div>
               
-              {/* Message */}
               <div className="text-center mb-6">
                 <p className="text-sm text-gray-600">
                   {message}
                 </p>
               </div>
               
-              {/* Button */}
               <div className="flex justify-center">
                 <button
                   onClick={handleClosePopup}

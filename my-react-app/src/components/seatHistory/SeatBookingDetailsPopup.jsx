@@ -1,12 +1,38 @@
 import React from 'react';
 
+// Helper function to check if booking date is in the past
+const isBookingDateInPast = (bookingDate) => {
+  try {
+    const booking = new Date(bookingDate);
+    booking.setHours(0, 0, 0, 0);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return booking < today; // Return true if booking date is before today
+  } catch (error) {
+    return false; // If error parsing date, allow deletion
+  }
+};
+
 const SeatBookingDetailsPopup = ({ selectedBooking, bookingDetails, loading, onClose, onDeleteClick }) => {
   if (!selectedBooking) return null;
+
+  // Check if any booking is for a past date
+  const hasPastDateBookings = bookingDetails.some(booking => isBookingDateInPast(booking.date));
+  const showDeleteButton = bookingDetails.length > 0 && !hasPastDateBookings;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">Seat Booking Details for {selectedBooking.date}</h2>
+        
+        {/* Show info message for past dates */}
+        {hasPastDateBookings && (
+          <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded-md text-sm">
+            ⚠️ Expired bookings cannot be deleted
+          </div>
+        )}
         
         {loading ? (
           <div className="text-center py-4">Loading booking details...</div>
@@ -27,7 +53,12 @@ const SeatBookingDetailsPopup = ({ selectedBooking, bookingDetails, loading, onC
                 <p className="font-medium">{booking.floor}</p>
                 
                 <p className="text-gray-600">Date:</p>
-                <p className="font-medium">{booking.date}</p>
+                <p className="font-medium flex items-center">
+                  {booking.date}
+                  {isBookingDateInPast(booking.date) && (
+                    <span className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-1 rounded">Expired</span>
+                  )}
+                </p>
                 
                 <p className="text-gray-600">Entry Time:</p>
                 <p className="font-medium">{booking.entryTime}</p>
@@ -68,7 +99,8 @@ const SeatBookingDetailsPopup = ({ selectedBooking, bookingDetails, loading, onC
         )}
 
         <div className="flex justify-end mt-4 space-x-2">
-          {bookingDetails.length > 0 && (
+          {/* Only show delete button if there are bookings and none are for past dates */}
+          {showDeleteButton && (
             <button
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               onClick={onDeleteClick}
