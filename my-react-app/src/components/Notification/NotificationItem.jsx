@@ -134,7 +134,7 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
         <div className="w-full">
           {isAnnouncement ? (
             <>
-              <h3 className={`text-base font-bold ${isRead ? 'text-gray-900' : 'text-black'}`}>
+              <h3 className={`text-base font-bold ${isRead ? 'text-black' : 'text-black'}`}>
                 📢 Announcement
               </h3>
               <p
