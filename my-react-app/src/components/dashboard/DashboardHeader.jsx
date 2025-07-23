@@ -1,27 +1,42 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { FaChartLine, FaBell, FaSearch, FaCog } from "react-icons/fa";
 
 /**
  * DashboardHeader component displays the main page title ("Dashboard")
  * and a hamburger toggle button for the sidebar on smaller screens
- * with modern styling and additional features.
+ * with modern styling and real-time updates.
  *
  * Props:
  * - sidebarOpen (boolean): current open/close state of sidebar.
  * - toggleSidebar (function): callback to toggle sidebar visibility.
  */
 const DashboardHeader = ({ sidebarOpen, toggleSidebar }) => {
-  // Get current date and time for display
-  const currentDate = new Date().toLocaleDateString("en-US", {
+  // State for current time that updates every second
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(timer);
+  }, []);
+
+  // Get current date (doesn't need to update frequently)
+  const currentDate = currentTime.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-  const currentTime = new Date().toLocaleTimeString("en-US", {
+  // Format current time (updates every second)
+  const formattedTime = currentTime.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit", // Added seconds for real-time feel
   });
 
   return (
@@ -76,21 +91,25 @@ const DashboardHeader = ({ sidebarOpen, toggleSidebar }) => {
 
       {/* Right Section - Actions and Time */}
       <div className="flex items-center gap-4">
-        {/* Current Time Display */}
-        <div className="hidden md:flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl">
+        {/* Current Time Display with live updates */}
+        <div className="hidden md:flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-sm font-semibold text-gray-700">
-            {currentTime}
+          <span className="text-sm font-semibold text-gray-700 font-mono">
+            {formattedTime}
           </span>
         </div>
 
-        {/* Quick Stats Badge */}
-        <div className="hidden lg:flex items-center gap-3 bg-gradient-to-r from-green-50 to-blue-50 px-4 py-2 rounded-xl border border-green-100">
+        {/* Enhanced Quick Stats Badge */}
+        <div className="hidden lg:flex items-center gap-3 bg-gradient-to-r from-green-50 to-blue-50 px-4 py-2 rounded-xl border border-green-100 shadow-sm">
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             <span className="text-xs font-medium text-green-700">
               System Online
             </span>
+          </div>
+          <div className="h-4 w-px bg-gray-300"></div>
+          <div className="flex items-center gap-1">
+            
           </div>
         </div>
       </div>

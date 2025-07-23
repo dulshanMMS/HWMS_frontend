@@ -24,7 +24,7 @@ const App = () => {
   const location = useLocation();
 
   // List of routes that need simple green background (without center)
-  const greenPages = ["/user/parking-booking", "/history", "/user/AboutUsPage"]; //  "/history"
+  const greenPages = ["/user/parking-booking", "/history", "/user/AboutUsPage", "/messaging"]; //  "/history"
 
   // Check if current page matches
 
