@@ -1,18 +1,13 @@
+
+
+import React from 'react';
 import NotificationItem from './NotificationItem';
 
-const NotificationList = ({ notifications, markAsRead, markAsUnread, deleteNotification, error, unreadCount }) => {
+const NotificationList = ({ notifications, markAsRead, markAsUnread, deleteNotification, error, unreadCount, bulkReadState }) => {
   return (
     <div className="divide-y divide-gray-200">
-      {error && (
-        <div className="p-4 bg-red-100 text-red-700 rounded-lg mb-4">
-          {error}
-        </div>
-      )}
-      
       {notifications.length === 0 ? (
-        <div className="p-4 text-center text-gray-500">
-          No notifications available
-        </div>
+        <div className="p-4 text-center text-gray-500">No notifications found.</div>
       ) : (
         notifications.map(notification => (
           <NotificationItem
@@ -21,6 +16,7 @@ const NotificationList = ({ notifications, markAsRead, markAsUnread, deleteNotif
             markAsRead={markAsRead}
             markAsUnread={markAsUnread}
             deleteNotification={deleteNotification}
+            onBulkReadChange={bulkReadState}
           />
         ))
       )}
