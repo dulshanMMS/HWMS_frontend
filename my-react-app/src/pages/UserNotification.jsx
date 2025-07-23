@@ -49,6 +49,7 @@ const UserNotification = () => {
   const [showDeleteAllSuccess, setShowDeleteAllSuccess] = useState(false);
   const deleteAllButtonRef = useRef(null);
   const notificationsPerPage = 10;
+  
 
   const notificationCache = useMemo(() => new Map(), []);
 
@@ -419,6 +420,11 @@ const UserNotification = () => {
       setShowDeleteAllConfirm(false);
     }
   };
+
+
+ 
+
+
 
   const undoDeleteAll = async () => {
     try {
