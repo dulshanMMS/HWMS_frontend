@@ -1,193 +1,67 @@
-// import React, { useState, useEffect } from 'react';
-// import axios from 'axios';
-
-// const RecentBookingsTable = ({ bookings }) => {
-//   const [teams, setTeams] = useState([]);
-//   const [loading, setLoading] = useState(true);
-  
-//   // Limit to the most recent 10 bookings
-//   const recentBookings = bookings.slice(0, 10);
-
-//   // Fetch team colors on component mount
-//   useEffect(() => {
-//     fetchTeams();
-//   }, []);
-
-//   const fetchTeams = async () => {
-//     try {
-//       const response = await axios.get('/api/teams');
-//       setTeams(response.data);
-//     } catch (error) {
-//       console.error('Failed to fetch team colors:', error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // Function to get team display name without color dot
-//   const renderTeamName = (booking) => {
-//     const teamName = getTeamName(booking);
-    
-//     if (!teamName || teamName === 'No Team') {
-//       return (
-//         <span className="text-sm font-medium text-gray-500">No Team</span>
-//       );
-//     }
-    
-//     return (
-//       <span className="text-sm font-medium">{teamName}</span>
-//     );
-//   };
-
-//   // Function to get username from booking data
-//   const getUsername = (booking) => {
-//     if (booking.user?.fullName) return booking.user.fullName;
-//     if (booking.user?.name) return booking.user.name;
-//     if (booking.user?.username) return booking.user.username;
-//     if (booking.userName) return booking.userName;
-//     return 'Unknown User';
-//   };
-
-//   // Function to get team name from booking data
-//   const getTeamName = (booking) => {
-//     if (booking.team && booking.team !== 'No Team') return booking.team;
-//     if (booking.user?.team && booking.user.team !== 'No Team') return booking.user.team;
-//     return 'No Team';
-//   };
-
-//   console.log('Recent Bookings Sample:', recentBookings[0]);
-//   console.log('Teams:', teams);
-
-//   if (loading) {
-//     return (
-//       <div className="bg-white rounded-lg shadow p-4 mb-6">
-//         <h2 className="text-xl font-bold mb-4">Recent Bookings</h2>
-//         <div className="flex justify-center items-center h-32">
-//           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="bg-white rounded-lg shadow p-4 mb-6">
-//       <h2 className="text-xl font-bold mb-4">Recent Bookings</h2>
-      
-//       {recentBookings.length === 0 ? (
-//         <div className="text-center py-8 text-gray-500">
-//           No recent bookings found
-//         </div>
-//       ) : (
-//         <div className="overflow-x-auto">
-//           <table className="min-w-full divide-y divide-gray-200">
-//             <thead className="bg-gray-50">
-//               <tr>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   USER
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   TEAM
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   TYPE
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   DATE
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   SLOT
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   TIME
-//                 </th>
-//               </tr>
-//             </thead>
-//             <tbody className="bg-white divide-y divide-gray-200">
-//               {recentBookings.map((booking, index) => (
-//                 <tr key={booking._id} className="hover:bg-gray-50">
-
-//                   <td className="px-6 py-4 whitespace-nowrap">
-//                     <div className="text-sm font-medium text-gray-900">
-//                       {getUsername(booking)}
-//                     </div>
-//                   </td>
-//                   <td className="px-6 py-4 whitespace-nowrap">
-//                     {renderTeamName(booking)}
-//                   </td>
-//                   <td className="px-6 py-4 whitespace-nowrap">
-//                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-//                       booking.type === 'seat' 
-//                         ? 'bg-cyan-100 text-cyan-800' 
-//                         : 'bg-purple-100 text-purple-800'
-//                     }`}>
-//                       {booking.type}
-//                     </span>
-//                   </td>
-//                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-//                     {new Date(booking.date).toLocaleDateString('en-US', {
-//                       year: 'numeric',
-//                       month: 'short',
-//                       day: 'numeric'
-//                     })}
-//                   </td>
-//                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-//                     {booking.slot ? 
-//                       `${booking.slot.slotNumber} (Floor ${booking.slot.floor})` : 
-//                       'N/A'
-//                     }
-//                   </td>
-//                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-//                     {booking.entryTime} - {booking.exitTime}
-//                   </td>
-//                 </tr>
-//               ))}
-//             </tbody>
-//           </table>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default RecentBookingsTable;
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { RefreshCw } from 'lucide-react';
 
-const RecentBookingsTable = ({ bookings }) => {
+const RecentBookingsTable = ({ bookings, refreshTrigger }) => {
   const [teams, setTeams] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  // Limit to the most recent 10 bookings
-  const recentBookings = bookings.slice(0, 10);
+  const [teamsLoading, setTeamsLoading] = useState(true);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [lastRefreshed, setLastRefreshed] = useState(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Fetch team colors on component mount
   useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const response = await axios.get('/api/teams');
+        setTeams(response.data);
+      } catch (error) {
+        console.error('Failed to fetch team colors:', error);
+      } finally {
+        setTeamsLoading(false);
+      }
+    };
     fetchTeams();
   }, []);
 
-  const fetchTeams = async () => {
+  // Update bookings loading state and refresh timestamp
+  useEffect(() => {
+    setBookingsLoading(true);
+    const timer = setTimeout(() => {
+      setBookingsLoading(false);
+      setLastRefreshed(new Date());
+    }, 500); // Simulate loading delay
+    return () => clearTimeout(timer);
+  }, [refreshTrigger, bookings]);
+
+  // Handle manual refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
     try {
-      const response = await axios.get('/api/teams');
-      setTeams(response.data);
+      const response = await axios.get('/api/reports/recent');
+      setLastRefreshed(new Date());
     } catch (error) {
-      console.error('Failed to fetch team colors:', error);
+      console.error('Failed to refresh bookings:', error);
     } finally {
-      setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  // Function to get team display name without color dot
+  // Calculate time since last refresh
+  const getTimeSinceRefresh = () => {
+    const now = new Date();
+    const diffMs = now - lastRefreshed;
+    const diffMins = Math.round(diffMs / 60000);
+    return diffMins === 0 ? 'just now' : `${diffMins} min${diffMins === 1 ? '' : 's'} ago`;
+  };
+
+  // Function to get team display name
   const renderTeamName = (booking) => {
     const teamName = getTeamName(booking);
-    
-    if (!teamName || teamName === 'No Team') {
-      return (
-        <span className="text-sm font-medium text-gray-500">No Team</span>
-      );
-    }
-    
     return (
-      <span className="text-sm font-medium">{teamName}</span>
+      <span className={`text-sm font-medium ${teamName === 'No Team' ? 'text-gray-500' : ''}`}>
+        {teamName || 'No Team'}
+      </span>
     );
   };
 
@@ -201,22 +75,12 @@ const RecentBookingsTable = ({ bookings }) => {
     return 'Unknown User';
   };
 
-  // Function to get team name from booking data - Updated to handle multiple data structures
+  // Function to get team name from booking data
   const getTeamName = (booking) => {
-    // Check direct team property first
     if (booking.team && booking.team !== 'No Team') return booking.team;
-    
-    // Check booking.booking.team (for recent bookings API response)
     if (booking.booking?.team && booking.booking.team !== 'No Team') return booking.booking.team;
-    
-    // Check user.team
     if (booking.user?.team && booking.user.team !== 'No Team') return booking.user.team;
-    
-    // Check booking.booking object for team info
-    if (booking.booking?.user?.team && booking.booking.user.team !== 'No Team') {
-      return booking.booking.user.team;
-    }
-    
+    if (booking.booking?.user?.team && booking.booking.user.team !== 'No Team') return booking.booking.user.team;
     return 'No Team';
   };
 
@@ -230,38 +94,68 @@ const RecentBookingsTable = ({ bookings }) => {
   // Function to get booking date
   const getBookingDate = (booking) => {
     const date = booking.date || booking.booking?.date;
-    return date ? new Date(date) : new Date();
+    if (!date || isNaN(new Date(date))) {
+      console.warn('Invalid or missing date in booking:', date);
+      return new Date();
+    }
+    return new Date(date);
   };
 
   // Function to get slot info
   const getSlotInfo = (booking) => {
     const slotNumber = booking.slot?.slotNumber || booking.slotNumber;
     const floor = booking.slot?.floor || booking.floor;
-    
-    if (slotNumber && floor) {
-      return `${slotNumber} (Floor ${floor})`;
-    }
-    return 'N/A';
+    return slotNumber && floor ? `${slotNumber} (Floor ${floor})` : 'N/A';
   };
 
   // Function to get time info
   const getTimeInfo = (booking) => {
     const entryTime = booking.entryTime || booking.booking?.entryTime;
     const exitTime = booking.exitTime || booking.booking?.exitTime;
-    
-    if (entryTime && exitTime) {
-      return `${entryTime} - ${exitTime}`;
-    }
-    return 'N/A';
+    return entryTime && exitTime ? `${entryTime} - ${exitTime}` : 'N/A';
   };
 
-  console.log('Recent Bookings Sample:', recentBookings[0]);
-  console.log('Teams:', teams);
+  // Filter and sort bookings for today or future, limit to 10 nearest
+  const today = new Date('2025-07-20T00:00:00+05:30'); // Set to July 20, 2025, in local timezone (+05:30)
+  const upcomingBookings = bookings
+    .filter(booking => {
+      const bookingDate = getBookingDate(booking);
+      return bookingDate >= today;
+    })
+    .sort((a, b) => getBookingDate(a) - getBookingDate(b))
+    .slice(0, 10);
 
-  if (loading) {
+  console.log('Upcoming Bookings Data:', {
+    allBookingsCount: bookings.length,
+    filteredBookingsCount: upcomingBookings.length,
+    sampleBooking: upcomingBookings[0] ? {
+      id: upcomingBookings[0]._id,
+      date: getBookingDate(upcomingBookings[0]),
+      createdAt: upcomingBookings[0].createdAt,
+      type: getBookingType(upcomingBookings[0]),
+      user: getUsername(upcomingBookings[0]),
+      team: getTeamName(upcomingBookings[0]),
+      slot: getSlotInfo(upcomingBookings[0]),
+      time: getTimeInfo(upcomingBookings[0])
+    } : null
+  });
+
+  if (teamsLoading || bookingsLoading) {
     return (
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <h2 className="text-xl font-bold mb-4">Recent Bookings</h2>
+      <div className="bg-white rounded-lg shadow p-4 mb-6 relative">
+        <h2 className="text-xl font-bold mb-4">Upcoming Bookings</h2>
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <span className="text-sm text-gray-500">Last refreshed: {getTimeSinceRefresh()}</span>
+          <button
+            onClick={handleRefresh}
+            className="p-1 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+            disabled={isRefreshing}
+          >
+            <RefreshCw
+              className={`h-5 w-5 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`}
+            />
+          </button>
+        </div>
         <div className="flex justify-center items-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
         </div>
@@ -270,12 +164,23 @@ const RecentBookingsTable = ({ bookings }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 mb-6">
-      <h2 className="text-xl font-bold mb-4">Recent Bookings</h2>
-      
-      {recentBookings.length === 0 ? (
+    <div className="bg-white rounded-lg shadow p-4 mb-6 relative">
+      <h2 className="text-xl font-bold mb-4">Upcoming Bookings</h2>
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <span className="text-sm text-gray-500">Last refreshed: {getTimeSinceRefresh()}</span>
+        <button
+          onClick={handleRefresh}
+          className="p-1 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+          disabled={isRefreshing}
+        >
+          <RefreshCw
+            className={`h-5 w-5 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`}
+          />
+        </button>
+      </div>
+      {upcomingBookings.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          No recent bookings found
+          No upcoming bookings found
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -303,11 +208,11 @@ const RecentBookingsTable = ({ bookings }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {recentBookings.map((booking, index) => (
-                <tr key={booking._id || booking.id || index} className="hover:bg-gray-50">
+              {upcomingBookings.map((booking, index) => (
+                <tr key={booking._id || booking.id || `booking-${index}`} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {getUsername(booking)}
+                      {getUsername(booking) || 'N/A'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -319,15 +224,15 @@ const RecentBookingsTable = ({ bookings }) => {
                         ? 'bg-cyan-100 text-cyan-800' 
                         : 'bg-purple-100 text-purple-800'
                     }`}>
-                      {getBookingType(booking)}
+                      {getBookingType(booking) || 'N/A'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {getBookingDate(booking).toLocaleDateString('en-US', {
+                    {getBookingDate(booking)?.toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric'
-                    })}
+                    }) || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {getSlotInfo(booking)}

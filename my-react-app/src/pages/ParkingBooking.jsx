@@ -6,6 +6,8 @@ import AvailableSlots from "../components/parking/Availableslots";
 import BookButton from "../components/parking/Bookbutton";
 import MessageBox from "../components/parking/Messagebox";
 import LeftSidebar from "../components/LeftSidebar";
+import RatingModal from "../components/ratingModal"; // Importing the RatingModal component
+import { getProfile } from "../api/userApi"; // Import userApi for ratingModal
 
 //import SidebarWrapper from '../components/profilesidebar/SidebarWrapper';
 //methn1
@@ -20,8 +22,36 @@ const ParkingBooking = () => {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isRatingOpen, setIsRatingOpen] = useState(false);//ratingModal original
+  // const [isRatingOpen, setIsRatingOpen] = useState(false);//ratingModal test button
+  const [userId, setUserId] = useState(null); // State for userId for ratingModal
 
   useEffect(() => {
+  //for ratingmodal
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error('No token found in localStorage');
+          setMessage('Please log in to submit ratings.');
+          return;
+        }
+        const profile = await getProfile(token);
+        if (!profile._id) {
+          console.error('No userId found in profile:', profile);
+          setMessage('Unable to fetch user profile.');
+          return;
+        }
+        setUserId(profile._id);
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error.message);
+        setMessage('Failed to fetch user profile. Please log in again.');
+      }
+    };
+
+    fetchUserProfile();
+//for ratingmodal
+
     const timer = setTimeout(() => setLoadingScreen(false), 2000);
     return () => clearTimeout(timer);
   }, []);
@@ -37,6 +67,7 @@ const ParkingBooking = () => {
     
     return selected < today;
   };
+
 
   // Function to check if entry time is in the past for today's bookings
   const isEntryTimeInPast = (selectedDate, entryTime) => {
@@ -57,6 +88,7 @@ const ParkingBooking = () => {
     
     return false; // For future dates, no time restriction
   };
+
 
   const handleCheckAvailability = async () => {
     setLoading(true);
@@ -97,6 +129,7 @@ const ParkingBooking = () => {
       return;
     }
 
+
     // Check if entry time is in the past for today's booking
     if (isEntryTimeInPast(date, entryTime)) {
       setMessage("You cannot select a past time for today's booking. Please select a future time.");
@@ -127,6 +160,8 @@ const ParkingBooking = () => {
       setMessage(result.message || "Booking completed!");
       setSelectedSlot(null);
       setAvailableSlots([]);
+      if (Math.random() < 1) setIsRatingOpen(true); // Randomly open rating modal 50% chance
+      
     } catch {
       setMessage("Failed to book the slot.");
     } finally {
@@ -178,6 +213,35 @@ const ParkingBooking = () => {
         sidebarOpen={sidebarOpen}
         closeSidebar={() => setSidebarOpen(false)}
       /> */}
+
+     {/* <button   //ratingmodal test button
+       onClick={() => setIsRatingOpen(true)}
+       className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+      >
+           Test Seating Rating
+     </button> */}
+      
+    
+
+   <RatingModal
+        isOpen={isRatingOpen}
+        onClose={() => setIsRatingOpen(false)}
+        onSubmit={async (data) => {
+          try {
+            const response = await fetch('/api/ratings/submit-rating', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId, bookingType: 'parking', ...data }),
+            });
+            return response; // Ensure response is returned
+          } catch (error) {
+            console.error('Fetch error in onSubmit:', error.message);
+            throw error; // Rethrow to be caught in handleSubmit
+          }
+        }}
+        userId={userId}
+      />
+
     </div>
   );
 };
