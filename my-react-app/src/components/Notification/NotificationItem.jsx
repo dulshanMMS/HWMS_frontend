@@ -1,6 +1,7 @@
+
 import { useState, useRef, useEffect } from 'react';
 
-const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotification }) => {
+const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotification, onBulkReadChange }) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isRead, setIsRead] = useState(notification.read);
   const [error, setError] = useState(null);
@@ -18,23 +19,18 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
     return text.substring(0, lastSpace > 0 ? lastSpace : maxLength) + '...';
   };
 
-  const handleMarkAsRead = async () => {
+  const handleToggleRead = async () => {
     try {
-      await markAsRead(notification._id, isAnnouncement);
-      setIsRead(true);
+      if (isRead) {
+        await markAsUnread(notification._id, isAnnouncement);
+        setIsRead(false);
+      } else {
+        await markAsRead(notification._id, isAnnouncement);
+        setIsRead(true);
+      }
       setError(null);
     } catch (err) {
-      setError('Failed to mark as read');
-    }
-  };
-
-  const handleMarkAsUnread = async () => {
-    try {
-      await markAsUnread(notification._id, isAnnouncement);
-      setIsRead(false);
-      setError(null);
-    } catch (err) {
-      setError('Failed to mark as unread');
+      setError(`Failed to mark as ${isRead ? 'unread' : 'read'}`);
     }
   };
 
@@ -81,6 +77,11 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
     };
   }, []);
 
+  // Update isRead state when parent signals bulk read/unread change
+  useEffect(() => {
+    setIsRead(notification.read);
+  }, [notification.read]);
+
   return (
     <div
       className={`p-4 hover:bg-gray-50 transition-colors duration-100 relative ${
@@ -117,7 +118,7 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
           <div className="flex gap-2 mt-2">
             <button
               onClick={confirmDelete}
-              className="px-2 py-1 bg-red-400 text-white rounded text-xs"
+              className="px-2 py-1 bg-red-600 text-white rounded text-xs"
             >
               OK
             </button>
@@ -134,7 +135,7 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
         <div className="w-full">
           {isAnnouncement ? (
             <>
-              <h3 className={`text-base font-bold ${isRead ? 'text-gray-900' : 'text-black'}`}>
+              <h3 className={`text-base font-bold ${isRead ? 'text-black' : 'text-black'}`}>
                 📢 Announcement
               </h3>
               <p
@@ -158,21 +159,16 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
         </div>
         {!isAnnouncement && (
           <div className="flex gap-2 items-center">
-            {isRead ? (
-              <button
-                onClick={handleMarkAsUnread}
-                className="px-2 py-0.5 text-[10px] font-semibold bg-green-60 text-green-800 rounded-lg w-16 border border-green-200 shadow hover:bg-green-200 hover:scale-110 transition-transform duration-200"
-              >
-                Mark as Unread
-              </button>
-            ) : (
-              <button
-                onClick={handleMarkAsRead}
-                className="px-2 py-0.5 text-[10px] font-semibold bg-green-700 text-white rounded-lg w-16 border border-green-700 shadow hover:bg-green-900 hover:scale-110 transition-transform duration-200"
-              >
-                Mark as Read
-              </button>
-            )}
+            <button
+              onClick={handleToggleRead}
+              className={`px-2 py-0.5 text-[10px] font-semibold rounded-lg w-16 border shadow hover:scale-110 transition-transform duration-200 ${
+                isRead
+                  ? 'bg-green-60 text-green-800 border-green-200 hover:bg-green-200'
+                  : 'bg-green-700 text-white border-green-700 hover:bg-green-900'
+              }`}
+            >
+              {isRead ? 'Mark Unread' : 'Mark Read'}
+            </button>
             <button
               onClick={handleDelete}
               className="text-red-600 hover:text-red-800 text-xl"
