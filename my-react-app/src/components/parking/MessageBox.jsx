@@ -8,6 +8,7 @@ const MessageBox = ({ message }) => {
                   message.toLowerCase().includes('failed') || 
                   message.toLowerCase().includes('incorrect') ||
                   message.toLowerCase().includes('past date') ||
+                  message.toLowerCase().includes('past time') ||
                   message.toLowerCase().includes('please select') ||
                   message.toLowerCase().includes('must be after') ||
                   message.toLowerCase().includes('required');

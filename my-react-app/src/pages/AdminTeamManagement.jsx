@@ -11,6 +11,9 @@ const AdminTeamManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showFormModal, setShowFormModal] = useState(false);
   const [memberCounts, setMemberCounts] = useState({});
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(false);
 
   const fetchTeams = async () => {
     try {
@@ -49,6 +52,19 @@ const AdminTeamManagement = () => {
     setShowFormModal(true);
   };
 
+  const handleTeamClick = async (team) => {
+    setMembersLoading(true);
+    try {
+      const res = await axios.get(`/api/user?teamId=${team.teamId}`);
+      setTeamMembers(res.data || []);
+      setSelectedTeam(team);
+    } catch (err) {
+      console.error("Failed to fetch members:", err);
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
   const filteredTeams = teams.filter(
     (team) =>
       team.teamName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -57,8 +73,8 @@ const AdminTeamManagement = () => {
 
   return (
     <AdminSidebar>
-      <div className="p-6 max-w-5xl mx-auto relative">
-        <div className="flex justify-between items-center mb-4">
+      <div className="w-full px-4 sm:px-6 md:px-8 py-6 relative">
+        <div className="flex flex-row justify-between items-center flex-wrap gap-3 mb-4">
           <h1 className="text-2xl font-semibold">Team Management</h1>
           <button
             onClick={() => {
@@ -66,7 +82,7 @@ const AdminTeamManagement = () => {
               setShowFormModal(true);
             }}
             title="Add a new team"
-            className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded shadow"
+            className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded shadow text-sm sm:text-base"
           >
             + Add Team
           </button>
@@ -86,16 +102,15 @@ const AdminTeamManagement = () => {
           onDelete={fetchTeams}
           loading={loading}
           memberCounts={memberCounts}
+          onTeamClick={handleTeamClick}
         />
 
-        {/* Modal for TeamForm */}
         {showFormModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 flex items-center justify-center transition-all">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative animate-fade-in">
+          <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 flex items-center justify-center transition-all p-2">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-4 sm:p-6 relative animate-fade-in">
               <h2 className="text-lg font-semibold mb-4">
                 {editTeam ? "Edit Team" : "Add New Team"}
               </h2>
-
               <TeamForm
                 existingTeam={editTeam}
                 onSuccess={handleTeamAddedOrUpdated}
@@ -104,13 +119,43 @@ const AdminTeamManagement = () => {
                   setShowFormModal(false);
                 }}
               />
-
               <button
                 onClick={() => {
                   setEditTeam(null);
                   setShowFormModal(false);
                 }}
                 className="absolute top-2 right-3 text-gray-500 hover:text-red-600 text-xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+          </div>
+        )}
+
+        {selectedTeam && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-2">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4 sm:p-5 relative">
+              <h3 className="text-lg font-semibold mb-3">
+                Members of {selectedTeam.teamName}
+              </h3>
+              {membersLoading ? (
+                <p>Loading members...</p>
+              ) : teamMembers.length > 0 ? (
+                <ul className="list-disc pl-5 space-y-1 text-sm text-gray-800 max-h-60 overflow-y-auto">
+                  {teamMembers.map((member, idx) => (
+                    <li key={idx}>
+                      {(member.firstName || member.lastName)
+                        ? `${member.firstName || ''} ${member.lastName || ''}`.trim()
+                        : member.userName || 'Unnamed Member'}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">No members in this team.</p>
+              )}
+              <button
+                onClick={() => setSelectedTeam(null)}
+                className="absolute top-2 right-3 text-gray-500 hover:text-black text-xl font-bold"
               >
                 &times;
               </button>

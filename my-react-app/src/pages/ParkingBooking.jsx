@@ -68,6 +68,28 @@ const ParkingBooking = () => {
     return selected < today;
   };
 
+
+  // Function to check if entry time is in the past for today's bookings
+  const isEntryTimeInPast = (selectedDate, entryTime) => {
+    const today = new Date();
+    const selected = new Date(selectedDate);
+    
+    // Only check if booking is for today
+    if (selected.toDateString() === today.toDateString()) {
+      const currentHour = today.getHours();
+      const currentMinute = today.getMinutes();
+      const currentTimeInMinutes = currentHour * 60 + currentMinute;
+      
+      const [entryHour, entryMinute] = entryTime.split(':').map(Number);
+      const entryTimeInMinutes = entryHour * 60 + entryMinute;
+      
+      return entryTimeInMinutes <= currentTimeInMinutes;
+    }
+    
+    return false; // For future dates, no time restriction
+  };
+
+
   const handleCheckAvailability = async () => {
     setLoading(true);
     setMessage("");
@@ -107,6 +129,16 @@ const ParkingBooking = () => {
       return;
     }
 
+
+    // Check if entry time is in the past for today's booking
+    if (isEntryTimeInPast(date, entryTime)) {
+      setMessage("You cannot select a past time for today's booking. Please select a future time.");
+      setLoading(false);
+      setAvailableSlots([]); // Clear any existing slots
+      setSelectedSlot(null); // Clear selected slot
+      return;
+    }
+
     try {
       const slots = await fetchAvailableSlots({ date, entryTime, exitTime, floor: Number(floor) });
       setAvailableSlots(slots);
@@ -128,7 +160,7 @@ const ParkingBooking = () => {
       setMessage(result.message || "Booking completed!");
       setSelectedSlot(null);
       setAvailableSlots([]);
-      if (Math.random() < 0.5) setIsRatingOpen(true); // Randomly open rating modal 50% chance
+      if (Math.random() < 1) setIsRatingOpen(true); // Randomly open rating modal 50% chance
       
     } catch {
       setMessage("Failed to book the slot.");

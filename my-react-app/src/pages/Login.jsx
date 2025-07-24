@@ -33,7 +33,7 @@ const Login = () => {
 
     const endpoint = currentState === 'Sign In'
       ? 'http://localhost:5173/api/auth/signin'
-      : 'http://localhost:6001/api/auth/signup';
+      : 'http://localhost:5000/api/auth/signup';
 
     const requestData = currentState === 'Sign In'
       ? {
