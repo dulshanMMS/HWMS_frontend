@@ -111,14 +111,16 @@ const AdminTeamManagement = () => {
               <h2 className="text-lg font-semibold mb-4">
                 {editTeam ? "Edit Team" : "Add New Team"}
               </h2>
-              <TeamForm
-                existingTeam={editTeam}
-                onSuccess={handleTeamAddedOrUpdated}
-                onCancel={() => {
-                  setEditTeam(null);
-                  setShowFormModal(false);
-                }}
-              />
+              <div className="max-h-[90vh] overflow-y-auto w-full max-w-xl">
+                <TeamForm
+                  existingTeam={editTeam}
+                  onSuccess={handleTeamAddedOrUpdated}
+                  onCancel={() => {
+                    setEditTeam(null);
+                    setShowFormModal(false);
+                  }}
+                />
+              </div>
               <button
                 onClick={() => {
                   setEditTeam(null);
@@ -145,8 +147,8 @@ const AdminTeamManagement = () => {
                   {teamMembers.map((member, idx) => (
                     <li key={idx}>
                       {(member.firstName || member.lastName)
-                        ? `${member.firstName || ''} ${member.lastName || ''}`.trim()
-                        : member.userName || 'Unnamed Member'}
+                        ? `${member.firstName || ''} ${member.lastName || ''}`.trim() + (member.username ? ` (${member.username})` : '')
+                        : member.username || 'Unnamed Member'}
                     </li>
                   ))}
                 </ul>
