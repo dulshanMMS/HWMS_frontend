@@ -59,7 +59,7 @@ const AdminSidebar = ({ children }) => {
               active={isActive("/admin")}
             />
             <SidebarLink
-              to="/seat-booking"
+              to="/datebooking"
               icon={<FaExchangeAlt />}
               label="Seat Booking"
             />

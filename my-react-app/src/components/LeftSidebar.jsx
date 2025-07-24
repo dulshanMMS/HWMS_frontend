@@ -233,7 +233,7 @@ const LeftSidebar = ({ children }) => {
           <ul>
             <SidebarLink to="/user" icon={<FaHome />} label="Dashboard" />
             <SidebarLink
-              to="/seat-booking"
+              to="/datebooking"
               icon={<FaExchangeAlt />}
               label="Seat Booking"
             />
@@ -245,7 +245,7 @@ const LeftSidebar = ({ children }) => {
 
             {/* Seat Booking History with layered icons */}
             <SidebarLink
-              to="/seat-booking"
+              to="/seathistory"
               icon={
                 <div className="relative w-4 h-4">
                   {/* Larger faded undo icon */}
