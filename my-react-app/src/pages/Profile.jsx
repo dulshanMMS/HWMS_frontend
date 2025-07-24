@@ -143,12 +143,10 @@ const Profile = () => {
 
   // NEW: Debug logging for team colors - helps troubleshoot color display issues
   useEffect(() => {
-    console.log("Teams loaded:", teams);
-    console.log("Selected teamId:", formData.teamId);
+    
     if (formData.teamId) {
       const selectedTeam = teams.find(t => t.teamId === formData.teamId);
-      console.log("Selected team:", selectedTeam);
-      console.log("Team color:", selectedTeam?.color);
+ 
     }
   }, [teams, formData.teamId]);
 

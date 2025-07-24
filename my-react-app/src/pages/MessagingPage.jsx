@@ -33,7 +33,6 @@ const MessagingPage = () => {
       }).join(''));
       
       const decoded = JSON.parse(jsonPayload);
-      console.log('Decoded user from token:', decoded);
       
       return {
         id: decoded.id,
@@ -87,64 +86,100 @@ const MessagingPage = () => {
     }
   }, [token]);
 
-  // FIXED: Handle page focus - removed conversations.length dependency
+  // Real-time messaging socket connection
   useEffect(() => {
-    const handleFocus = () => {
-      // Refresh status when user returns to page
-      if (token) {
-        axios.get('http://localhost:5000/api/messages/conversations', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        .then(response => {
-          if (response.data.success) {
-            setConversations(response.data.conversations || []);
-          }
-        })
-        .catch(error => console.error('Error refreshing:', error));
-      }
-    };
+    if (!token || conversations.length === 0) return;
 
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [token]); // FIXED: Only depend on token
+    // Create socket connection with authentication
+    const socket = io('http://localhost:5000', {
+      auth: { token }
+    });
 
-  // FIXED: Real-time status updates - proper dependencies
-  useEffect(() => {
-    // Only set up socket if we have conversations and token
-    if (!token || conversations.length === 0) {
-      return;
-    }
-
-    // Set up socket listeners for status updates
-    const socket = io('http://localhost:5000');
-    
-    // Authenticate the socket connection
+    // Authenticate for messaging
     socket.emit('authenticateMessaging', token);
-    
+
+    // Listen for authentication confirmation
+    socket.on('messagingAuthenticated', (data) => {
+      console.log('Messaging authenticated:', data);
+    });
+
     // Listen for user status updates
     socket.on('messagingUserStatusUpdate', (statusUpdate) => {
       setConversations(prev => prev.map(conv => {
-        // Check if this conversation includes the user whose status changed
-        const participantMatch = conv.participants.some(p => 
-          p.userId._id === statusUpdate.userId || p.userId === statusUpdate.userId
+        // Update conversation participants' online status
+        const updatedParticipants = conv.participants?.map(p => {
+          if (p.userId._id === statusUpdate.userId || p.userId === statusUpdate.userId) {
+            return { ...p, isOnline: statusUpdate.isOnline, lastSeen: statusUpdate.lastSeen };
+          }
+          return p;
+        });
+
+        // Update conversation-level online status
+        const hasOnlineParticipants = updatedParticipants?.some(p => 
+          p.userId._id !== currentUser.id && p.isOnline
         );
-        
-        if (participantMatch) {
-          return {
-            ...conv,
-            isOnline: statusUpdate.isOnline,
-            participants: conv.participants.map(p => 
-              (p.userId._id === statusUpdate.userId || p.userId === statusUpdate.userId)
-                ? { ...p, isOnline: statusUpdate.isOnline, lastSeen: statusUpdate.lastSeen }
-                : p
-            )
-          };
-        }
-        return conv;
+
+        return {
+          ...conv,
+          participants: updatedParticipants,
+          isOnline: hasOnlineParticipants
+        };
       }));
+
+      // Update active conversation if it matches
+      if (activeConversation && 
+          (activeConversation.participants?.some(p => 
+            p.userId._id === statusUpdate.userId || p.userId === statusUpdate.userId))) {
+        setActiveConversation(prev => ({
+          ...prev,
+          participants: prev.participants?.map(p => {
+            if (p.userId._id === statusUpdate.userId || p.userId === statusUpdate.userId) {
+              return { ...p, isOnline: statusUpdate.isOnline, lastSeen: statusUpdate.lastSeen };
+            }
+            return p;
+          }),
+          isOnline: statusUpdate.userId !== currentUser.id ? statusUpdate.isOnline : prev.isOnline
+        }));
+      }
     });
 
-    // Join all conversation rooms
+    // Listen for new messages to update conversation order
+    socket.on('newMessagingMessage', (data) => {
+      const { conversationId, message } = data;
+      
+      setConversations(prev => {
+        const updated = prev.map(conv => {
+          if (conv._id === conversationId) {
+            return {
+              ...conv,
+              lastMessage: {
+                content: message.content,
+                sender: message.senderName,
+                timestamp: message.createdAt
+              },
+              updatedAt: message.createdAt
+            };
+          }
+          return conv;
+        });
+        
+        // Sort by most recent activity
+        return updated.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      });
+
+      // Add message to active conversation if it's the same
+      if (activeConversation?._id === conversationId) {
+        setMessages(prev => [...prev, message]);
+      }
+    });
+
+    // Listen for typing indicators
+    socket.on('userTypingInMessaging', (data) => {
+      // Handle typing indicators if needed
+      console.log('User typing:', data);
+    });
+
+    // Join conversation rooms
     conversations.forEach(conv => {
       socket.emit('joinMessagingConversation', conv._id);
     });
@@ -155,7 +190,7 @@ const MessagingPage = () => {
       });
       socket.disconnect();
     };
-  }, [token, conversations]); // FIXED: Depend on both token and conversations array
+  }, [token, conversations.length, currentUser.id, activeConversation?._id]);
 
   const selectConversation = async (conversation) => {
     setActiveConversation(conversation);
@@ -325,6 +360,7 @@ const MessagingPage = () => {
               onNewChat={() => setShowNewChat(true)}
               showConversationList={showConversationList}
               isMobile={isMobile}
+              currentUser={currentUser}
             />
             
             <ChatArea
@@ -352,6 +388,7 @@ const MessagingPage = () => {
           token={token}
         />
       )}
+      
     </div>
   );
 };

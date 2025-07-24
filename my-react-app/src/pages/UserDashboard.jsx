@@ -13,6 +13,7 @@ import SidebarWrapper from "../components/profilesidebar/SidebarWrapper";
 import axios from "axios";
 import { getProfile } from "../api/userApi";
 import useTokenExpiration from "../hooks/useTokenExpiration";
+import MessagingButton from '../components/MessagingButton';
 
 
 const UserDashboard = () => {
@@ -170,6 +171,7 @@ const clearSensitiveData = () => {
         <DashboardHeader
           sidebarOpen={sidebarOpen}
           toggleSidebar={() => setSidebarOpen((prev) => !prev)}
+          userProfile={userProfile} // ← Admin return prop
         />
 
         {/* User profile summary - responsive width */}
@@ -211,7 +213,11 @@ const clearSensitiveData = () => {
       sidebarOpen={sidebarOpen}
       closeSidebar={() => setSidebarOpen(false)}
     />
-
+      <MessagingButton 
+      position="fixed" 
+      size="lg"
+      className="bottom-6 right-24 z-50" 
+    />
     <FloatingChatBot />
   </div>
 );

@@ -1,5 +1,5 @@
 import React from "react";
-import { FaUser, FaUsers, FaCar, FaCircle } from "react-icons/fa";
+import { FaUser, FaUsers, FaCar, FaComments } from "react-icons/fa";
 import MessagingButton from "../MessagingButton";
 
 /**
@@ -27,19 +27,9 @@ const UserProfileSummary = ({ userProfile }) => {
     );
   }
 
-  // Determine online status (you can replace this with real logic)
-  const isOnline = true; // This would come from your backend/socket connection
-
   return (
     <div className="bg-gradient-to-br from-white via-blue-50 to-green-50 rounded-2xl shadow-lg border border-gray-100 p-6 transition-all duration-300 hover:shadow-xl">
       <div className="flex items-center gap-6">
-        {/* Profile Photo Section */}
-        <div className="relative">
-          
-
-         
-        </div>
-
         {/* User Info Section */}
         <div className="flex-1 space-y-3">
           {/* Welcome Message */}
@@ -74,28 +64,10 @@ const UserProfileSummary = ({ userProfile }) => {
               </div>
             )}
 
-            {/*Messaging Access */}
+            {/* Messaging Access */}
             <MessagingButton position="relative" size="sm" />
-
-            {/* Status Badge */}
-            <div className="flex items-center gap-2 bg-green-100 px-3 py-2 rounded-xl border border-green-200">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-green-700 font-medium text-xs">
-                {isOnline ? "Active Now" : "Away"}
-              </span>
-            </div>
           </div>
         </div>
-
-        {/* Quick Actions */}
-        {/* <div className="hidden lg:flex flex-col gap-2">
-          <button className="p-2 bg-white bg-opacity-80 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 group">
-            <FaUser className="text-gray-600 group-hover:text-blue-500 transition-colors" />
-          </button>
-          <button className="p-2 bg-white bg-opacity-80 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105 group">
-            <FaUsers className="text-gray-600 group-hover:text-green-500 transition-colors" />
-          </button>
-        </div> */}
       </div>
 
       {/* Bottom Border Animation */}

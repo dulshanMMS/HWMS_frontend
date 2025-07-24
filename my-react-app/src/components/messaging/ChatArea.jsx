@@ -1,31 +1,245 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaComments } from 'react-icons/fa';
+import { FaComments, FaCircle, FaEllipsisV } from 'react-icons/fa';
 import { FiArrowLeft } from 'react-icons/fi';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
+import io from 'socket.io-client';
 
 const ChatArea = ({ 
   activeConversation, 
-  messages, 
+  messages: initialMessages, 
   onSendMessage, 
   onBackToList,
   showConversationList,
   isMobile,
-  currentUser
+  currentUser,
+  onMessagesUpdate // New prop to update parent component's messages
 }) => {
   const [replyingTo, setReplyingTo] = useState(null);
+  const [messages, setMessages] = useState(initialMessages || []);
+  const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
+  // Update local messages when prop changes
+  useEffect(() => {
+    setMessages(initialMessages || []);
+  }, [initialMessages]);
+
+  // Initialize socket connection for real-time messaging
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token || !activeConversation) return;
+
+    console.log('Initializing socket for conversation:', activeConversation._id);
+
+    // Create socket connection
+    const newSocket = io('http://localhost:5000', {
+      auth: { token }
+    });
+
+    setSocket(newSocket);
+
+    // Authenticate for messaging
+    newSocket.emit('authenticateMessaging', token);
+
+    // Handle authentication
+    newSocket.on('messagingAuthenticated', (data) => {
+      if (data.success) {
+        setIsConnected(true);
+        console.log('Chat area authenticated:', data.user);
+        
+        // Join the conversation room
+        newSocket.emit('joinMessagingConversation', activeConversation._id);
+      }
+    });
+
+    newSocket.on('messagingAuthError', (error) => {
+      console.error('Chat area auth error:', error);
+      setIsConnected(false);
+    });
+
+    // Handle real-time message updates
+    newSocket.on('newMessagingMessage', (data) => {
+      console.log('New message received in chat area:', data);
+      
+      // Only add message if it's for the current conversation
+      if (data.conversationId === activeConversation._id) {
+        setMessages(prevMessages => {
+          // Check if message already exists to prevent duplicates
+          const messageExists = prevMessages.some(msg => msg._id === data.message._id);
+          if (messageExists) {
+            console.log('Message already exists, skipping duplicate');
+            return prevMessages;
+          }
+          
+          const newMessages = [...prevMessages, data.message];
+          
+          // Update parent component if callback provided
+          if (onMessagesUpdate) {
+            onMessagesUpdate(newMessages);
+          }
+          
+          return newMessages;
+        });
+
+        // Show message received animation
+        if (data.message.sender._id !== currentUser?.id) {
+          showMessageReceivedAnimation();
+        }
+      }
+    });
+
+    // Handle typing indicators
+    newSocket.on('userTypingInMessaging', (data) => {
+      if (data.conversationId === activeConversation._id && data.userId !== currentUser?.id) {
+        setTypingUsers(prev => {
+          if (data.isTyping) {
+            return [...prev.filter(u => u.userId !== data.userId), data];
+          } else {
+            return prev.filter(u => u.userId !== data.userId);
+          }
+        });
+
+        // Clear typing indicator after 3 seconds
+        if (data.isTyping) {
+          setTimeout(() => {
+            setTypingUsers(prev => prev.filter(u => u.userId !== data.userId));
+          }, 3000);
+        }
+      }
+    });
+
+    // Handle user status updates
+    newSocket.on('messagingUserStatusUpdate', (data) => {
+      setOnlineUsers(prev => {
+        const newSet = new Set(prev);
+        if (data.isOnline) {
+          newSet.add(data.userId);
+        } else {
+          newSet.delete(data.userId);
+        }
+        return newSet;
+      });
+    });
+
+    // Handle connection status
+    newSocket.on('connect', () => {
+      setIsConnected(true);
+      console.log('Chat area connected to server');
+    });
+
+    newSocket.on('disconnect', () => {
+      setIsConnected(false);
+      console.log('Chat area disconnected from server');
+    });
+
+    // Handle successful message send
+    newSocket.on('messageSuccessfullySent', (message) => {
+      console.log('Message sent successfully:', message);
+      // Message should already be added via newMessagingMessage event
+    });
+
+    newSocket.on('messagingError', (error) => {
+      console.error('Messaging error:', error);
+      // You could show an error toast here
+    });
+
+    // Cleanup on unmount or conversation change
+    return () => {
+      if (activeConversation) {
+        newSocket.emit('leaveMessagingConversation', activeConversation._id);
+      }
+      newSocket.disconnect();
+    };
+  }, [activeConversation?._id, currentUser?.id]);
+
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = async (messageContent) => {
-    const success = await onSendMessage(messageContent, replyingTo);
-    if (success) {
-      setReplyingTo(null);
+  // Clean up typing users when conversation changes
+  useEffect(() => {
+    setTypingUsers([]);
+    setIsTyping(false);
+  }, [activeConversation?._id]);
+
+  const showMessageReceivedAnimation = () => {
+    // Add a subtle animation to indicate new message
+    const chatContainer = document.querySelector('[data-chat-container]');
+    if (chatContainer) {
+      chatContainer.classList.add('animate-pulse');
+      setTimeout(() => {
+        chatContainer.classList.remove('animate-pulse');
+      }, 500);
     }
-    return success;
+  };
+
+  // ✅ SOCKET-ONLY MESSAGE SENDING
+  const handleSendMessage = async (messageContent) => {
+    if (!socket || !isConnected || !activeConversation) {
+      console.error('Cannot send message: socket not connected or no active conversation');
+      return false;
+    }
+
+    try {
+      // Send ONLY via socket for real-time delivery
+      socket.emit('sendMessageViaSocket', {
+        conversationId: activeConversation._id,
+        content: messageContent,
+        messageType: 'text',
+        replyTo: replyingTo?._id,
+        bookingContext: null
+      });
+
+      // Clear reply state and stop typing
+      setReplyingTo(null);
+      stopTyping();
+      
+      return true;
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      return false;
+    }
+  };
+
+  const handleTyping = () => {
+    if (!socket || !isConnected || !activeConversation) return;
+
+    // Send typing indicator
+    if (!isTyping) {
+      setIsTyping(true);
+      socket.emit('messagingTyping', {
+        conversationId: activeConversation._id,
+        isTyping: true
+      });
+    }
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set timeout to stop typing indicator
+    typingTimeoutRef.current = setTimeout(() => {
+      stopTyping();
+    }, 2000);
+  };
+
+  const stopTyping = () => {
+    if (socket && isConnected && activeConversation && isTyping) {
+      setIsTyping(false);
+      socket.emit('messagingTyping', {
+        conversationId: activeConversation._id,
+        isTyping: false
+      });
+    }
   };
 
   const determineOwnership = (message) => {
@@ -85,8 +299,11 @@ const ChatArea = ({
   }
 
   return (
-    <div className={`${!showConversationList || !isMobile ? 'flex-1' : 'hidden md:flex md:flex-1'} flex flex-col h-full bg-gradient-to-b from-white to-gray-50 overflow-hidden`}>
-      {/* Simplified Chat Header */}
+    <div 
+      className={`${!showConversationList || !isMobile ? 'flex-1' : 'hidden md:flex md:flex-1'} flex flex-col h-full bg-gradient-to-b from-white to-gray-50 overflow-hidden`}
+      data-chat-container
+    >
+      {/* Enhanced Chat Header with connection status */}
       <div className="bg-white/90 backdrop-blur-md border-b border-gray-200/50 p-3 sm:p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 sm:space-x-4">
@@ -105,7 +322,9 @@ const ChatArea = ({
                   {activeConversation.displayName ? activeConversation.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : '?'}
                 </span>
               </div>
-              {activeConversation.isOnline && (
+              
+              {/* Enhanced online status with real-time updates */}
+              {activeConversation.isOnline && isConnected && (
                 <div className="absolute -bottom-1 -right-1 flex items-center justify-center">
                   <div className="w-2.5 h-2.5 sm:w-4 sm:h-4 bg-green-500 rounded-full border-2 border-white"></div>
                   <div className="absolute w-2.5 h-2.5 sm:w-4 sm:h-4 bg-green-400 rounded-full animate-ping"></div>
@@ -118,17 +337,28 @@ const ChatArea = ({
                 {activeConversation.displayName}
               </h3>
               <div className="flex items-center gap-1 sm:gap-2">
-                <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${activeConversation.isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
+                  isConnected && activeConversation.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                }`}></div>
                 <p className="text-xs sm:text-sm text-gray-500 font-medium">
-                  {activeConversation.isOnline ? 'Active now' : 'Last seen recently'}
+                  {!isConnected ? 'Connecting...' : 
+                   activeConversation.isOnline ? 'Active now' : 'Last seen recently'}
                 </p>
               </div>
             </div>
           </div>
+
+          {/* Connection status indicator */}
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+            <span className="text-xs text-gray-500 hidden sm:block">
+              {isConnected ? 'Connected' : 'Reconnecting...'}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Messages Container */}
+      {/* Messages Container with real-time updates */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 sm:space-y-6 bg-gradient-to-b from-gray-50/30 to-white scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-8 sm:py-12">
@@ -144,6 +374,12 @@ const ChatArea = ({
             <p className="text-gray-500 max-w-xs sm:max-w-md leading-relaxed text-sm sm:text-base px-2">
               Send your first message to {activeConversation.displayName} and begin collaborating on workspace bookings.
             </p>
+            
+            {/* Real-time connection status for empty chat */}
+            <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
+              <span>{isConnected ? 'Ready to send messages' : 'Connecting to chat server...'}</span>
+            </div>
           </div>
         ) : (
           <div className="space-y-4 sm:space-y-6">
@@ -180,17 +416,54 @@ const ChatArea = ({
                 </div>
               );
             })}
+
+            {/* Typing Indicators */}
+            {typingUsers.length > 0 && (
+              <div className="flex justify-start">
+                <div className="max-w-xs lg:max-w-md xl:max-w-lg">
+                  <div className="bg-gradient-to-br from-gray-100 to-gray-50 text-gray-600 p-3 rounded-2xl rounded-bl-md shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                      <span className="text-sm">
+                        {typingUsers.length === 1 
+                          ? `${typingUsers[0].username} is typing...`
+                          : `${typingUsers.length} people are typing...`
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
+      {/* Enhanced Message Input with real-time features */}
       <MessageInput
         onSendMessage={handleSendMessage}
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
+        onTyping={handleTyping}
+        onStopTyping={stopTyping}
+        isConnected={isConnected}
+        disabled={!isConnected}
       />
+
+      {/* Connection status banner for disconnections */}
+      {!isConnected && (
+        <div className="bg-yellow-100 border-t border-yellow-200 px-4 py-2 text-center">
+          <div className="flex items-center justify-center gap-2 text-yellow-800">
+            <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm font-medium">Reconnecting to chat server...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
