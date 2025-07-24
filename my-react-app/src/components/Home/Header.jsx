@@ -51,7 +51,7 @@ const Header = () => {
                 Home
               </button>
               <button 
-                onClick={() => navigateToPage('/user/AboutUsPage')}
+                onClick={() => navigateToPage('/about/us')}
                 className="text-white/90 hover:text-white px-4 xl:px-6 py-2 xl:py-3 text-sm font-medium transition-all duration-300 hover:text-green-300"
               >
                 About Us
@@ -74,7 +74,7 @@ const Header = () => {
                   Home
                 </button>
                 <button 
-                  onClick={() => navigateToPage('/user/AboutUsPage')}
+                  onClick={() => navigateToPage('/about/us')}
                   className="text-white/90 hover:text-white px-3 py-2 text-sm font-medium transition-all duration-300 hover:text-green-300"
                 >
                   About Us
@@ -110,7 +110,7 @@ const Header = () => {
                   Home
                 </button>
                 <button 
-                  onClick={() => navigateToPage('/user/AboutUsPage')}
+                  onClick={() => navigateToPage('/about/us')}
                   className="text-white/90 hover:text-green-300 block px-3 py-2 rounded-md text-base font-medium w-full text-center transition-colors"
                 >
                   About Us
