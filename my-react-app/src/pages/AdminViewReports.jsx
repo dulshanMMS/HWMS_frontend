@@ -153,21 +153,6 @@ const fetchUserBookings = async (query) => {
     setTeamStatsError(null);
   };
 
-  
-
-
-
-// const fetchAllBookings = async () => {
-//   try {
-//     const response = await api.get('/api/reports/all-bookings');
-//     setAllBookings(response.data);
-//   } catch (err) {
-//     console.error('Error fetching all bookings:', err);
-//     setError('Failed to fetch recent bookings. Please try again later.');
-//     setAllBookings([]);
-//   }
-// };
-
 
   const fetchAllBookings = async () => {
     try {
