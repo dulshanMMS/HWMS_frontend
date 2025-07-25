@@ -1,28 +1,50 @@
-import React from "react";
-import { FaChartLine, FaBell, FaSearch, FaCog } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import { FaChartLine, FaBell, FaSearch, FaCog, FaUserShield } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import BackendStatusIndicator from "../BackendStatusIndicator";
 
 /**
  * DashboardHeader component displays the main page title ("Dashboard")
  * and a hamburger toggle button for the sidebar on smaller screens
- * with modern styling and additional features.
+ * with modern styling and real-time updates.
  *
  * Props:
  * - sidebarOpen (boolean): current open/close state of sidebar.
  * - toggleSidebar (function): callback to toggle sidebar visibility.
+ * - userProfile (object): user profile data to check admin role.
  */
-const DashboardHeader = ({ sidebarOpen, toggleSidebar }) => {
-  // Get current date and time for display
-  const currentDate = new Date().toLocaleDateString("en-US", {
+const DashboardHeader = ({ sidebarOpen, toggleSidebar, userProfile }) => {
+  // State for current time that updates every second
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const navigate = useNavigate();
+
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(timer);
+  }, []);
+
+  // Get current date (doesn't need to update frequently)
+  const currentDate = currentTime.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-  const currentTime = new Date().toLocaleTimeString("en-US", {
+  // Format current time (updates every second)
+  const formattedTime = currentTime.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit", // Added seconds for real-time feel
   });
+
+  // Check if user is admin
+  const isAdmin = userProfile?.role === 'admin';
 
   return (
     <div className="flex items-center justify-between border border-gray-100 p-6 mb-6">
@@ -74,24 +96,32 @@ const DashboardHeader = ({ sidebarOpen, toggleSidebar }) => {
         </button>
       </div>
 
-      {/* Right Section - Actions and Time */}
+      {/* Right Section - Admin Button, Actions and Time */}
       <div className="flex items-center gap-4">
-        {/* Current Time Display */}
-        <div className="hidden md:flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-sm font-semibold text-gray-700">
-            {currentTime}
+        {/* ✅ ADMIN RETURN BUTTON - Option 1 */}
+        {isAdmin && (
+          <button
+            onClick={() => navigate('/admin')}
+            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105 font-medium"
+            title="Return to Admin Dashboard"
+          >
+            <FaUserShield className="text-sm" />
+            <span className="hidden sm:inline">Back to Admin</span>
+            <span className="sm:hidden">Admin</span>
+          </button>
+        )}
+
+        {/* Current Time Display with live updates */}
+        <div className="hidden md:flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+          <span className="text-sm font-semibold text-gray-700 font-mono">
+            {formattedTime}
           </span>
         </div>
 
-        {/* Quick Stats Badge */}
-        <div className="hidden lg:flex items-center gap-3 bg-gradient-to-r from-green-50 to-blue-50 px-4 py-2 rounded-xl border border-green-100">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span className="text-xs font-medium text-green-700">
-              System Online
-            </span>
-          </div>
+        {/* Backend Status - Replaces hardcoded system status */}
+        <div className="hidden lg:flex items-center gap-3 bg-gradient-to-r from-gray-50 to-blue-50 px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+          <BackendStatusIndicator size="sm" />
         </div>
       </div>
     </div>

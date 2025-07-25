@@ -3,9 +3,10 @@ import { FaComments, FaCircle } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { userApi } from "../api/messageApi";
 import { getProfile } from "../api/userApi";
+import io from 'socket.io-client';
 
 /**
- * MessagingButton - A floating action button for accessing messaging
+ * MessagingButton - A floating action button for accessing messaging with real-time updates
  * Displays unread message count and provides quick access to messaging page
  *
  * Props:
@@ -20,6 +21,8 @@ const MessagingButton = ({
 }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [socket, setSocket] = useState(null);
+  const [isOnline, setIsOnline] = useState(false);
   const navigate = useNavigate();
 
   // Size configurations
@@ -46,12 +49,73 @@ const MessagingButton = ({
 
   const config = sizeConfig[size];
 
-  // Fetch unread count on component mount
+  // Initialize socket connection and real-time updates
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Create socket connection
+    const newSocket = io('http://localhost:5000', {
+      auth: { token }
+    });
+
+    setSocket(newSocket);
+
+    // Authenticate for messaging
+    newSocket.emit('authenticateMessaging', token);
+
+    // Handle authentication response
+    newSocket.on('messagingAuthenticated', (data) => {
+      if (data.success) {
+        setIsOnline(true);
+        console.log('Messaging authenticated for button:', data.user);
+      }
+    });
+
+    // Handle authentication errors
+    newSocket.on('messagingAuthError', (error) => {
+      console.error('Messaging auth error:', error);
+      setIsOnline(false);
+    });
+
+    // Real-time message updates
+    newSocket.on('newMessagingMessage', (data) => {
+      console.log('New message received in button:', data);
+      // Update unread count when new message arrives
+      fetchUnreadCount();
+      
+      // Show notification animation
+      showNewMessageAnimation();
+    });
+
+    // Handle user status updates
+    newSocket.on('messagingUserStatusUpdate', (data) => {
+      console.log('User status update:', data);
+    });
+
+    // Handle connection status
+    newSocket.on('connect', () => {
+      setIsOnline(true);
+      console.log('Messaging button connected to server');
+    });
+
+    newSocket.on('disconnect', () => {
+      setIsOnline(false);
+      console.log('Messaging button disconnected from server');
+    });
+
+    // Cleanup on unmount
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
+  // Fetch initial unread count and set up periodic checks
   useEffect(() => {
     fetchUnreadCount();
 
-    // Set up interval to check for new messages
-    const interval = setInterval(fetchUnreadCount, 30000); // Check every 30 seconds
+    // Set up interval to check for new messages every 30 seconds as fallback
+    const interval = setInterval(fetchUnreadCount, 30000);
 
     return () => clearInterval(interval);
   }, []);
@@ -67,6 +131,18 @@ const MessagingButton = ({
     }
   };
 
+  // Animation for new message arrival
+  const showNewMessageAnimation = () => {
+    // Add a subtle animation class temporarily
+    const button = document.querySelector('[data-messaging-button]');
+    if (button) {
+      button.classList.add('animate-bounce');
+      setTimeout(() => {
+        button.classList.remove('animate-bounce');
+      }, 1000);
+    }
+  };
+
   const handleClick = () => {
     navigate("/messaging");
   };
@@ -77,6 +153,7 @@ const MessagingButton = ({
   return (
     <button
       onClick={handleClick}
+      data-messaging-button
       className={`
         ${positionClasses}
         ${config.button}
@@ -90,15 +167,16 @@ const MessagingButton = ({
         flex items-center justify-center
         group
         ${className}
+        ${!isOnline ? 'opacity-75' : ''}
       `}
-      title="Open Messaging"
+      title={`Open Messaging ${!isOnline ? '(Connecting...)' : ''}`}
     >
       {/* Main Icon */}
       <FaComments
         className={`${config.icon} group-hover:scale-110 transition-transform duration-200`}
       />
 
-      {/* Unread Badge */}
+      {/* Unread Badge with real-time updates */}
       {!isLoading && unreadCount > 0 && (
         <div
           className={`
@@ -117,16 +195,23 @@ const MessagingButton = ({
         </div>
       )}
 
-      {/* Online Indicator */}
-      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white">
-        <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75"></div>
+      {/* Online Indicator with real-time status */}
+      <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+        isOnline ? 'bg-green-500' : 'bg-gray-400'
+      }`}>
+        {isOnline && (
+          <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75"></div>
+        )}
       </div>
 
-      {/* Tooltip */}
+      {/* Enhanced Tooltip with real-time info */}
       <div className="absolute bottom-full right-0 mb-2 px-3 py-1 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-        {unreadCount > 0 ? `${unreadCount} new messages` : "Messages"}
+        {!isOnline ? 'Connecting to chat...' : 
+         unreadCount > 0 ? `${unreadCount} new messages` : 'Messages'}
         <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800"></div>
       </div>
+
+      
     </button>
   );
 };
@@ -148,22 +233,54 @@ export const MessagingInlineButton = ({ className = "", size = "sm" }) => {
 };
 
 /**
- * MessagingQuickAccess - A more detailed messaging access component
+ * MessagingQuickAccess - A more detailed messaging access component with real-time updates
  * Can be used in sidebars or navigation areas
  */
 export const MessagingQuickAccess = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentMessages, setRecentMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [socket, setSocket] = useState(null);
+  const [isOnline, setIsOnline] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchMessagingData();
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Create socket connection
+    const newSocket = io('http://localhost:5000', {
+      auth: { token }
+    });
+
+    setSocket(newSocket);
+
+    // Authenticate for messaging
+    newSocket.emit('authenticateMessaging', token);
+
+    // Handle real-time updates
+    newSocket.on('messagingAuthenticated', (data) => {
+      if (data.success) {
+        setIsOnline(true);
+        fetchMessagingData();
+      }
+    });
+
+    newSocket.on('newMessagingMessage', (data) => {
+      fetchMessagingData(); // Refresh data when new message arrives
+    });
+
+    newSocket.on('connect', () => setIsOnline(true));
+    newSocket.on('disconnect', () => setIsOnline(false));
+
+    return () => {
+      newSocket.disconnect();
+    };
   }, []);
 
   const fetchMessagingData = async () => {
     try {
-      const [unreadResponse, conversationsResponse] = await Promise.all([
+      const [unreadResponse] = await Promise.all([
         userApi.getUnreadCount(),
         // You might want to add a quick conversations endpoint
         // conversationApi.getRecentConversations(3)
@@ -193,9 +310,12 @@ export const MessagingQuickAccess = () => {
         <h3 className="font-semibold text-gray-800 flex items-center gap-2">
           <FaComments className="text-green-500" />
           Messages
+          {!isOnline && (
+            <span className="text-xs text-orange-500">(Connecting...)</span>
+          )}
         </h3>
         {unreadCount > 0 && (
-          <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+          <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -207,14 +327,22 @@ export const MessagingQuickAccess = () => {
             You have {unreadCount} unread message{unreadCount !== 1 ? "s" : ""}
           </p>
         ) : (
-          <p className="text-sm text-gray-500">All caught up! 🎉</p>
+          <p className="text-sm text-gray-500 flex items-center gap-1">
+            All caught up! 🎉
+            {isOnline && <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>}
+          </p>
         )}
 
         <button
           onClick={() => navigate("/messaging")}
-          className="w-full py-2 px-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+          disabled={!isOnline}
+          className={`w-full py-2 px-4 rounded-lg transition-colors text-sm font-medium ${
+            isOnline 
+              ? 'bg-green-500 text-white hover:bg-green-600' 
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
         >
-          Open Messages
+          {isOnline ? 'Open Messages' : 'Connecting...'}
         </button>
       </div>
     </div>
@@ -226,8 +354,20 @@ export const MessagingQuickAccess = () => {
  */
 export const MessagingStatusIndicator = ({ className = "" }) => {
   const [unreadCount, setUnreadCount] = useState(0);
+  const [socket, setSocket] = useState(null);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const newSocket = io('http://localhost:5000', {
+      auth: { token }
+    });
+
+    setSocket(newSocket);
+    newSocket.emit('authenticateMessaging', token);
+
+    // Real-time unread count updates
     const fetchUnreadCount = async () => {
       try {
         const response = await userApi.getUnreadCount();
@@ -237,16 +377,22 @@ export const MessagingStatusIndicator = ({ className = "" }) => {
       }
     };
 
+    newSocket.on('messagingAuthenticated', fetchUnreadCount);
+    newSocket.on('newMessagingMessage', fetchUnreadCount);
+
+    // Initial fetch
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
+
+    return () => {
+      newSocket.disconnect();
+    };
   }, []);
 
   return (
     <div className={`relative inline-flex items-center ${className}`}>
       <FaComments className="text-gray-600" />
       {unreadCount > 0 && (
-        <div className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+        <div className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
           {unreadCount > 9 ? "9+" : unreadCount}
         </div>
       )}
