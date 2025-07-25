@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
@@ -49,6 +47,7 @@ const UserNotification = () => {
   const [showDeleteAllSuccess, setShowDeleteAllSuccess] = useState(false);
   const deleteAllButtonRef = useRef(null);
   const notificationsPerPage = 10;
+  
 
   const notificationCache = useMemo(() => new Map(), []);
 
@@ -106,7 +105,7 @@ const UserNotification = () => {
 
           if (notificationResponse.status === 401) {
             localStorage.removeItem('token');
-            navigate('/userdashboard');
+            navigate('/');
             return;
           }
 
@@ -420,6 +419,11 @@ const UserNotification = () => {
     }
   };
 
+
+ 
+
+
+
   const undoDeleteAll = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -437,6 +441,53 @@ const UserNotification = () => {
       setError('Failed to undo delete all notifications');
     }
   };
+
+  // const deleteNotification = async (notificationId, isAnnouncement = false) => {
+  //   try {
+  //     const token = localStorage.getItem('token');
+  //     const endpoint = isAnnouncement
+  //       ? `${ANNOUNCEMENT_API_URL}/${notificationId}`
+  //       : `/api/notifications/${notificationId}`;
+  //     const response = await fetch(endpoint, {
+  //       method: 'DELETE',
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+
+  //     if (!response.ok) throw new Error(`Failed to delete ${isAnnouncement ? 'announcement' : 'notification'}`);
+
+  //     setNotifications(prev => {
+  //       const updated = {
+  //         ...prev,
+  //         [filter]: prev[filter].filter(n => n._id !== notificationId),
+  //       };
+  //       const cacheKey = `${filter}-${pagination[filter].currentPage}`;
+  //       if (notificationCache.has(cacheKey)) {
+  //         const cached = notificationCache.get(cacheKey);
+  //         notificationCache.set(cacheKey, {
+  //           ...cached,
+  //           notifications: cached.notifications.filter(n => n._id !== notificationId),
+  //           total: cached.total - 1,
+  //         });
+  //       }
+  //       return updated;
+  //     });
+  //     if (!notifications[filter].find(n => n._id === notificationId)?.read) {
+  //       setUnreadCount(prev => Math.max(0, prev - 1));
+  //     }
+
+  //     const updatedNotifications = notifications[filter].filter(n => n._id !== notificationId);
+  //     if (updatedNotifications.length < notificationsPerPage && pagination[filter].currentPage < pagination[filter].totalPages) {
+  //       setPagination(prev => ({
+  //         ...prev,
+  //         [filter]: { ...prev[filter], currentPage: prev[filter].currentPage + 1 },
+  //       }));
+  //     } else {
+  //       await fetchNotifications(filter, pagination[filter].currentPage);
+  //     }
+  //   } catch (error) {
+  //     setError(`Failed to delete ${isAnnouncement ? 'announcement' : 'notification'}`);
+  //   }
+  // };
 
   const deleteNotification = async (notificationId, isAnnouncement = false) => {
     try {
@@ -470,16 +521,7 @@ const UserNotification = () => {
       if (!notifications[filter].find(n => n._id === notificationId)?.read) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
-
-      const updatedNotifications = notifications[filter].filter(n => n._id !== notificationId);
-      if (updatedNotifications.length < notificationsPerPage && pagination[filter].currentPage < pagination[filter].totalPages) {
-        setPagination(prev => ({
-          ...prev,
-          [filter]: { ...prev[filter], currentPage: prev[filter].currentPage + 1 },
-        }));
-      } else {
-        await fetchNotifications(filter, pagination[filter].currentPage);
-      }
+      await fetchNotifications(filter, pagination[filter].currentPage);
     } catch (error) {
       setError(`Failed to delete ${isAnnouncement ? 'announcement' : 'notification'}`);
     }

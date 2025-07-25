@@ -18,6 +18,9 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
     const lastSpace = text.lastIndexOf(' ', maxLength);
     return text.substring(0, lastSpace > 0 ? lastSpace : maxLength) + '...';
   };
+  
+  // NotificationItem.jsx
+
 
   const handleToggleRead = async () => {
     try {
@@ -43,7 +46,7 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
       setIsDeleting(true);
       await deleteNotification(notification._id, isAnnouncement);
       setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      setTimeout(() => setShowSuccess(false), 6000);
     } catch (err) {
       setError('Failed to delete');
     } finally {
