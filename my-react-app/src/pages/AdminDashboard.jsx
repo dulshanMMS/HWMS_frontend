@@ -1,10 +1,9 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import AdminSidebar from "../components/AdminSidebar";
-import useAuthGuard from "../components/AuthGuard";
 import { toast } from "react-toastify";
 import api from "../api/axiosInstance";
-
+import AdminSidebar from "../components/AdminSidebar";
+import useAuthGuard from "../components/AuthGuard";
 import AdminHeader from "../components/AdminDashboard/AdminHeader";
 import AnnouncementBox from "../components/AdminDashboard/AnnouncementBox";
 import BookingChart from "../components/AdminDashboard/BookingChart";
@@ -44,42 +43,56 @@ const AdminDashboard = () => {
 
   const handleSendAnnouncement = async () => {
     if (!announcement.trim()) return toast.warning("Please enter an announcement.");
-
-    const token = localStorage.getItem("token");
-
     try {
-      const res = await fetch("/api/announcements", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ message: announcement }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
+      const res = await api.post("/announcements", { message: announcement });
+      if (res.data) {
         toast.success("📢 Announcement sent!");
         setAnnouncement("");
-      } else {
-        toast.error(data?.message || "Failed to send announcement.");
       }
     } catch (error) {
-      console.error("Error sending announcement:", error);
-      toast.error("Something went wrong!");
+      toast.error("❌ Failed to send announcement.");
     }
   };
 
-  const fetchEventsForDate = async (selectedDate) => {
+  const fetchCoreData = async () => {
     try {
-      const formattedDate = formatDateToYMD(selectedDate);
-      const res = await axios.get(`/api/events/${formattedDate}`);
-      if (res.data.success) {
-        setEvents(res.data.events);
+      const [teamBookingRes, bookingCountRes, allEventRes, floorStatsRes, teamColorsRes] = await Promise.all([
+        api.get("/bookings/count-by-team/today"),
+        api.get("/bookings/count/today"),
+        api.get("/events"),
+        api.get("/bookings/count-by-floor"),
+        api.get("/teams"),
+      ]);
+
+      if (teamBookingRes.data.success) setTeamBookings(teamBookingRes.data.teams);
+      if (bookingCountRes.data.success) setTodayBookingCount(bookingCountRes.data.count);
+
+      const allEv = allEventRes.data.events;
+      const todayStr = formatDateToYMD(new Date());
+      setAllEvents(allEv);
+      setEventDates(allEv.map(e => e.date));
+      setTodayEvents(allEv.filter(e => e.date === todayStr));
+      setEvents(allEv.filter(e => e.date === formatDateToYMD(date)));
+
+      setParkingStats(floorStatsRes.data.parking);
+      setSeatingStats(floorStatsRes.data.seating);
+
+      const colorMap = {};
+      teamColorsRes.data.forEach(team => colorMap[team.teamName] = team.teamColor);
+      setTeamColors(colorMap);
+
+      const token = localStorage.getItem("token");
+      if (token) {
+        const profile = await getProfile(token);
+        setUserProfile({ firstName: profile.firstName || "Admin", profilePhoto: profile.profileImage || null });
+
+        const msgRes = await api.get("/support/grouped");
+        const allRequests = msgRes.data.groupedRequests.flatMap(group => group.requests);
+        const unread = allRequests.filter(r => r.status === "pending");
+        setUnreadCount(unread.length);
       }
     } catch (err) {
-      console.error("Error fetching events:", err);
+      console.error("❌ Error fetching dashboard data:", err);
     }
   };
 
@@ -88,21 +101,13 @@ const AdminDashboard = () => {
 
     try {
       const formattedDate = formatDateToYMD(date);
-      const res = await axios.post("/api/events", { ...newEvent, date: formattedDate });
+      const res = await api.post("/events", { ...newEvent, date: formattedDate });
 
       if (res.data.success) {
         toast.success("✅ Event added!");
         setShowEventModal(false);
         setNewEvent({ title: "", description: "", time: "" });
-
-        const updated = await axios.get("/api/events");
-        if (updated.data.success) {
-          const updatedEvents = updated.data.events;
-          setAllEvents(updatedEvents);
-          setEventDates(updatedEvents.map(e => e.date));
-          setEvents(updatedEvents.filter(e => e.date === formattedDate));
-          setTodayEvents(updatedEvents.filter(e => e.date === formatDateToYMD(new Date())));
-        }
+        fetchCoreData();
       } else {
         toast.error("❌ Failed to add event.");
       }
@@ -116,18 +121,10 @@ const AdminDashboard = () => {
     if (!window.confirm("Are you sure you want to delete this event?")) return;
 
     try {
-      const res = await axios.delete(`/api/events/${eventId}`);
+      const res = await api.delete(`/events/${eventId}`);
       if (res.data.success) {
         toast.success("🗑️ Event deleted");
-
-        const updated = await axios.get("/api/events");
-        if (updated.data.success) {
-          const updatedEvents = updated.data.events;
-          setAllEvents(updatedEvents);
-          setEventDates(updatedEvents.map(e => e.date));
-          setEvents(updatedEvents.filter(e => e.date === formatDateToYMD(date)));
-          setTodayEvents(updatedEvents.filter(e => e.date === formatDateToYMD(new Date())));
-        }
+        fetchCoreData();
       } else {
         toast.error("❌ Failed to delete event.");
       }
@@ -138,69 +135,6 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    const fetchCoreData = async () => {
-      try {
-        const [
-          teamBookingRes,
-          bookingCountRes,
-          allEventRes,
-          floorStatsRes,
-          teamColorsRes
-        ] = await Promise.all([
-          axios.get("/api/bookings/count-by-team/today"),
-          axios.get("/api/bookings/count/today"),
-          axios.get("/api/events"),
-          axios.get("/api/bookings/count-by-floor"),
-          axios.get("/api/teams"),
-        ]);
-
-        if (teamBookingRes.data.success) setTeamBookings(teamBookingRes.data.teams);
-        if (bookingCountRes.data.success) setTodayBookingCount(bookingCountRes.data.count);
-
-        if (allEventRes.data.success) {
-          const allEvents = allEventRes.data.events;
-          setAllEvents(allEvents);
-          setEventDates(allEvents.map(e => e.date));
-
-          const todayStr = formatDateToYMD(new Date());
-          setTodayEvents(allEvents.filter(e => e.date === todayStr));
-          setEvents(allEvents.filter(e => e.date === formatDateToYMD(date)));
-        }
-
-        if (floorStatsRes.data.success) {
-          setParkingStats(floorStatsRes.data.parking);
-          setSeatingStats(floorStatsRes.data.seating);
-        }
-
-        const colorMap = {};
-        teamColorsRes.data.forEach(team => {
-          colorMap[team.teamName] = team.teamColor;
-        });
-        setTeamColors(colorMap);
-
-        const token = localStorage.getItem("token");
-        if (token) {
-          const profile = await getProfile(token);
-          setUserProfile({
-            firstName: profile.firstName || "User",
-            profilePhoto: profile.profileImage || null,
-          });
-
-          const res = await api.get("/support/grouped");
-
-          if (res.data.success) {
-            const grouped = res.data.groupedRequests;
-            const allRequests = grouped.flatMap(group => group.requests);
-
-            const unread = allRequests.filter((req) => req.status === "pending");
-            setUnreadCount(unread.length);
-          }
-        }
-      } catch (err) {
-        console.error("❌ Error fetching dashboard data:", err);
-      }
-    };
-
     fetchCoreData();
     const interval = setInterval(fetchCoreData, 30000);
     return () => clearInterval(interval);
@@ -208,21 +142,17 @@ const AdminDashboard = () => {
 
   return (
     <AdminSidebar>
-      <div className="bg-gray-100 overflow-y-auto p-4 sm:p-6 md:p-8 lg:p-10 min-h-screen">
+      <div className="bg-gradient-to-br from-gray-100 to-gray-200 p-6 min-h-screen">
+        <div className="mb-6 animate-fade-in">
+          <AdminHeader userProfile={userProfile} />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          <div className="space-y-4 order-3 md:order-3 xl:order-1">
-            <div className="hidden xl:block">
-              <AdminHeader />
-            </div>
-            <AnnouncementBox
-              announcement={announcement}
-              setAnnouncement={setAnnouncement}
-              onSend={handleSendAnnouncement}
-            />
+          <div className="space-y-6 order-3 md:order-3 xl:order-1">
+            <AnnouncementBox announcement={announcement} setAnnouncement={setAnnouncement} onSend={handleSendAnnouncement} />
             <TodayTeamStats topTeams={teamBookings} />
           </div>
 
-          <div className="space-y-4 order-2 md:order-2 xl:order-2">
+          <div className="space-y-6 order-2 md:order-2 xl:order-2">
             <EventCalendar
               date={date}
               setDate={setDate}
@@ -230,15 +160,14 @@ const AdminDashboard = () => {
               todayEvents={todayEvents}
               onDayClick={(day) => {
                 setDate(day);
-                fetchEventsForDate(day);
                 setShowEventModal(true);
               }}
             />
             <TeamColorPalette teamColors={teamColors} />
           </div>
 
-          <div className="space-y-4 order-1 md:order-1 xl:order-3">
-            <div className="relative bg-white rounded-xl shadow-md p-6 w-full">
+          <div className="space-y-6 order-1 md:order-1 xl:order-3">
+            <div className="bg-white rounded-2xl shadow-xl p-6 animate-slide-up">
               <ProfileGreeting userProfile={userProfile} />
             </div>
             <QuickStats todayBookingCount={todayBookingCount} />
@@ -258,29 +187,46 @@ const AdminDashboard = () => {
           />
         )}
 
-        {showMessageBox && (
-          <MessageDrawer onClose={() => setShowMessageBox(false)} />
-        )}
+        {showMessageBox && <MessageDrawer onClose={() => setShowMessageBox(false)} />}
 
         <div
-          className="fixed bottom-6 right-6 z-50 cursor-pointer bg-green-500 hover:bg-green-600 p-4 rounded-full shadow-lg"
-          onClick={() => setShowMessageBox(true)}
+          className="fixed bottom-6 right-6 z-50 cursor-pointer group"
+          onClick={() => setShowMessageBox(!showMessageBox)}
         >
-          <div className="relative">
+          <div className="relative bg-green-700 shadow-2xl hover:scale-105 hover:bg-green-900 transition-all duration-300 ease-in-out p-4 rounded-full ring-2 ring-green-600 ring-offset-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="w-6 h-6 text-white"
+              className="w-7 h-7 text-white group-hover:text-white transition duration-300"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8s-9-3.582-9-8 4.03-8 9-8 9 3.582 9 8z" />
+              {!showMessageBox ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8s-9-3.582-9-8 4.03-8 9-8 9 3.582 9 8z"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              )}
             </svg>
-            {unreadCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">
+
+            {unreadCount > 0 && !showMessageBox && (
+              <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full animate-pulse shadow-md">
                 {unreadCount}
               </span>
             )}
+
+            {/* <div className="absolute bottom-full right-1/2 translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity text-sm bg-green-900 text-white px-3 py-1 rounded-lg shadow">
+              {showMessageBox ? "Close Messages" : "Open Messages"}
+            </div> */}
           </div>
         </div>
       </div>

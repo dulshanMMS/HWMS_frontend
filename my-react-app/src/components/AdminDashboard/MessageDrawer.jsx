@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../api/axiosInstance"; 
 import { FaUserCircle } from "react-icons/fa";
 
-// Chat window interface (replaces dropdown view)
+// Chat window interface
 const ChatWindow = ({ user, messages, onBack }) => {
   return (
-    <div className="flex flex-col h-full">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between p-3 bg-green-600 text-white">
+    <div className="flex flex-col h-full bg-gray-50 animate-fade-in">
+      <div className="flex items-center justify-between p-3 bg-green-700 text-white shadow">
         <div className="flex items-center gap-2">
           <FaUserCircle className="text-2xl" />
           <span className="font-semibold">
@@ -19,23 +18,25 @@ const ChatWindow = ({ user, messages, onBack }) => {
         </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-2 bg-gray-50">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {messages.map((msg) => (
-          <div key={msg._id} className="mb-3 bg-white p-2 rounded shadow-sm text-sm text-gray-800">
-            <p className="mb-1 font-medium">{msg.subject}</p>
-            <p>{msg.message}</p>
-    
-            <div className="flex justify-between items-center mt-2">
+          <div
+            key={msg._id}
+            className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm text-sm text-gray-800"
+          >
+            <p className="font-semibold text-green-800">{msg.subject}</p>
+            <p className="mt-1">{msg.message}</p>
+            <div className="flex justify-between items-center mt-3">
               <span className="text-xs text-gray-400">
                 {new Date(msg.createdAt).toLocaleString()}
               </span>
-
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                msg.status === "replied"
-                  ? "bg-green-100 text-green-600"
-                  : "bg-yellow-100 text-yellow-600"
-              }`}>
+              <span
+                className={`text-xs px-2 py-1 rounded-full font-medium ${
+                  msg.status === "replied"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-yellow-100 text-yellow-600"
+                }`}
+              >
                 {msg.status}
               </span>
             </div>
@@ -43,9 +44,8 @@ const ChatWindow = ({ user, messages, onBack }) => {
         ))}
       </div>
 
-      {/* Footer */}
-      <div className="p-3 border-t text-center text-sm text-gray-400">
-        Reply feature coming soon 💬
+      <div className="p-3 border-t text-center text-xs text-gray-500 italic">
+        ✉️ Reply feature coming soon...
       </div>
     </div>
   );
@@ -55,25 +55,19 @@ const MessageDrawer = ({ onClose }) => {
   const [groups, setGroups] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedMessages, setSelectedMessages] = useState([]);
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
     const fetchGrouped = async () => {
       try {
-        const token = localStorage.getItem("token");
-
-        const res = await axios.get("/api/support/grouped", {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
+        const res = await api.get("/support/grouped");
         if (res.data.success) {
           setGroups(res.data.groupedRequests);
         }
       } catch (err) {
-        console.error("Error fetching grouped support requests", err);
+        console.error("❌ Error fetching grouped support requests", err);
       }
     };
+
     fetchGrouped();
   }, []);
 
@@ -81,31 +75,19 @@ const MessageDrawer = ({ onClose }) => {
     setSelectedUser(user);
     setSelectedMessages(requests);
 
-    // Optional: filter requests that are still pending
     const unreadIds = requests
       .filter((r) => r.status === "pending")
       .map((r) => r._id);
 
     if (unreadIds.length > 0) {
       try {
-        await axios.post(
-          "/api/support/mark-as-read",
-          { requestIds: unreadIds },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        // 🔁 Refresh the grouped requests after marking as read
-        const res = await axios.get("/api/support/grouped", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (res.data.success) {
+        await api.post("/support/mark-as-read", { requestIds: unreadIds });
+        const res = await api.get("/support/grouped");
+        if (res.data?.success && Array.isArray(res.data.groupedRequests)) {
           setGroups(res.data.groupedRequests);
+        } else {
+          setGroups([]);
+          console.warn("No grouped support requests found.");
         }
       } catch (err) {
         console.error("❌ Failed to mark requests as read:", err);
@@ -114,11 +96,10 @@ const MessageDrawer = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed right-4 bottom-20 w-[360px] h-[500px] bg-white rounded-xl shadow-xl z-50 overflow-hidden flex flex-col border border-gray-200">
-      {/* Header */}
+    <div className="fixed right-4 bottom-20 w-[370px] h-[510px] bg-white rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col border border-gray-300 animate-slide-up">
       {!selectedUser && (
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-bold">Inbox</h2>
+        <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+          <h2 className="text-lg font-bold text-gray-800">📬 Admin Inbox</h2>
           <button
             className="text-sm text-gray-400 hover:text-red-500"
             onClick={onClose}
@@ -128,7 +109,6 @@ const MessageDrawer = ({ onClose }) => {
         </div>
       )}
 
-      {/* Chat List or Chat Window */}
       <div className="flex-1 overflow-y-auto">
         {selectedUser ? (
           <ChatWindow
@@ -137,24 +117,32 @@ const MessageDrawer = ({ onClose }) => {
             onBack={() => setSelectedUser(null)}
           />
         ) : (
-          <div className="px-3 py-2">
-            {groups.map((group) => (
-              <button
-                key={group.sender.email}
-                onClick={() => openChat(group.sender, group.requests)}
-                className="w-full flex items-center gap-3 p-3 mb-2 rounded bg-gray-100 hover:bg-gray-200 transition"
-              >
-                <FaUserCircle className="text-2xl text-green-600" />
-                <div className="flex-1 text-left">
-                  <p className="font-semibold">
-                    {group.sender.firstName || group.sender.email}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {group.requests.filter(r => r.status === "pending").length} new message(s)
-                  </p>
-                </div>
-              </button>
-            ))}
+          <div className="px-3 py-2 space-y-2">
+            {groups.length === 0 ? (
+              <p className="text-sm text-center text-gray-500 mt-8">
+                No messages found.
+              </p>
+            ) : (
+              groups.map((group) => (
+                <button
+                  key={group.sender.email}
+                  onClick={() => openChat(group.sender, group.requests)}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg bg-white border hover:shadow transition"
+                >
+                  <FaUserCircle className="text-2xl text-green-600" />
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-gray-800">
+                      {group.sender.firstName || group.sender.email}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {group.requests.filter((r) => r.status === "pending")
+                        .length || 0}{" "}
+                      new message(s)
+                    </p>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         )}
       </div>

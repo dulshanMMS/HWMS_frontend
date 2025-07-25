@@ -1,17 +1,41 @@
+import { useEffect, useState } from "react";
 
-/**
- * Shows today booking count and link to reports.
- * @param {number|null} todayBookingCount - Today's booking count.
- */
+const QuickStats = ({ todayBookingCount }) => {
+  const [count, setCount] = useState(0);
 
-const QuickStats = ({ todayBookingCount }) => (
-  <div className="bg-white p-6 rounded-lg shadow">
-    <h2 className="font-semibold mb-2">Today Quick Stats</h2>
-    <p className="text-3xl font-bold text-black-600">
-      {todayBookingCount !== null ? todayBookingCount : "Loading..."}
-    </p>
-    <button className="text-green-600 font-medium mt-2">View Reports →</button>
-  </div>
-);
+  useEffect(() => {
+    if (todayBookingCount !== null) {
+      const start = count;
+      const end = todayBookingCount;
+      const duration = 500;
+
+      let startTime;
+      const animate = (timestamp) => {
+        if (!startTime) startTime = timestamp;
+        const progress = timestamp - startTime;
+        const value = Math.min(
+          start + (end - start) * (progress / duration),
+          end
+        );
+        setCount(Math.floor(value));
+        if (progress < duration) requestAnimationFrame(animate);
+      };
+
+      requestAnimationFrame(animate);
+    }
+  }, [todayBookingCount]);
+
+  return (
+    <div className="bg-gradient-to-r from-white to-gray-50 p-6 rounded-2xl shadow-xl ring-1 ring-gray-200 animate-fade-in">
+      <h2 className="text-lg font-semibold text-gray-700 mb-2">📈 Today’s Total Bookings</h2>
+      <p className="text-4xl font-extrabold text-green-600 tracking-wide">
+        {todayBookingCount !== null ? count : "Loading..."}
+      </p>
+      <button className="mt-3 inline-block text-sm text-green-700 font-semibold hover:text-green-900 transition-all hover:underline">
+        View Reports →
+      </button>
+    </div>
+  );
+};
 
 export default QuickStats;
