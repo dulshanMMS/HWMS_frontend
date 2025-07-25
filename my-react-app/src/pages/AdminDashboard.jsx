@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import AdminSidebar from "../components/AdminSidebar";
 import useAuthGuard from "../components/AuthGuard";
 import { toast } from "react-toastify";
+import api from "../api/axiosInstance";
 
 import AdminHeader from "../components/AdminDashboard/AdminHeader";
-//import AdminHeader from "../components/dashboard/DashboardHeader";
 import AnnouncementBox from "../components/AdminDashboard/AnnouncementBox";
 import BookingChart from "../components/AdminDashboard/BookingChart";
 import EventCalendar from "../components/AdminDashboard/EventCalendar";
@@ -15,6 +15,7 @@ import { getProfile } from "../api/userApi";
 import QuickStats from "../components/AdminDashboard/QuickStats";
 import TodayTeamStats from "../components/AdminDashboard/TodayTeamStats";
 import TeamColorPalette from "../components/shared/TeamColorPalette";
+import MessageDrawer from "../components/AdminDashboard/MessageDrawer";
 
 const formatDateToYMD = (date) => {
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
@@ -38,6 +39,8 @@ const AdminDashboard = () => {
   const [parkingStats, setParkingStats] = useState([]);
   const [seatingStats, setSeatingStats] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
+  const [showMessageBox, setShowMessageBox] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleSendAnnouncement = async () => {
     if (!announcement.trim()) return toast.warning("Please enter an announcement.");
@@ -182,6 +185,16 @@ const AdminDashboard = () => {
             firstName: profile.firstName || "User",
             profilePhoto: profile.profileImage || null,
           });
+
+          const res = await api.get("/support/grouped");
+
+          if (res.data.success) {
+            const grouped = res.data.groupedRequests;
+            const allRequests = grouped.flatMap(group => group.requests);
+
+            const unread = allRequests.filter((req) => req.status === "pending");
+            setUnreadCount(unread.length);
+          }
         }
       } catch (err) {
         console.error("❌ Error fetching dashboard data:", err);
@@ -244,6 +257,32 @@ const AdminDashboard = () => {
             onDelete={deleteEvent}
           />
         )}
+
+        {showMessageBox && (
+          <MessageDrawer onClose={() => setShowMessageBox(false)} />
+        )}
+
+        <div
+          className="fixed bottom-6 right-6 z-50 cursor-pointer bg-green-500 hover:bg-green-600 p-4 rounded-full shadow-lg"
+          onClick={() => setShowMessageBox(true)}
+        >
+          <div className="relative">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-6 h-6 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8s-9-3.582-9-8 4.03-8 9-8 9 3.582 9 8z" />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">
+                {unreadCount}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </AdminSidebar>
   );
