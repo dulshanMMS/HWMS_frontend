@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { uploadProfileImage } from "../api/firebaseUpload";
+import { uploadProfileImage } from "../api/cloudinaryUpload";
 import { getProfile, updateProfile } from "../api/userApi";
 import LeftSidebar from "../components/LeftSidebar";
 import useTokenExpiration from "../hooks/useTokenExpiration";
@@ -20,6 +20,12 @@ const Profile = () => {
     email: "",
     profilePhoto: "",
   });
+
+  // FIXED: Moved previewImage state to proper location
+  const [previewImage, setPreviewImage] = useState(null);
+  
+  // NEW: State to hold the pending profile photo that hasn't been saved yet
+  const [pendingProfilePhoto, setPendingProfilePhoto] = useState("");
 
   // Toggles edit mode for the form (view vs edit)
   const [editMode, setEditMode] = useState(false);
@@ -94,6 +100,8 @@ const Profile = () => {
     setSuccessMsg("");
     setEditMode(false);
     setLoading(false);
+    setPreviewImage(null);
+    setPendingProfilePhoto("");
   };
 
   // NEW: Use token expiration hook for automatic logout
@@ -143,10 +151,8 @@ const Profile = () => {
 
   // NEW: Debug logging for team colors - helps troubleshoot color display issues
   useEffect(() => {
-    
     if (formData.teamId) {
       const selectedTeam = teams.find(t => t.teamId === formData.teamId);
- 
     }
   }, [teams, formData.teamId]);
 
@@ -231,7 +237,27 @@ const Profile = () => {
 
       // If currently editing, attempt to save updated profile data
       try {
-        await updateProfile(token, formData);
+        // NEW: Handle profile photo changes including removal
+        let finalProfilePhoto = formData.profilePhoto; // Default to current
+        
+        if (pendingProfilePhoto === "REMOVE") {
+          finalProfilePhoto = ""; // Remove the photo
+        } else if (pendingProfilePhoto && pendingProfilePhoto !== "REMOVE") {
+          finalProfilePhoto = pendingProfilePhoto; // Use new photo
+        }
+        
+        const updateData = {
+          ...formData,
+          profilePhoto: finalProfilePhoto
+        };
+        
+        await updateProfile(token, updateData);
+        
+        // Update formData with the saved photo
+        setFormData(updateData);
+        setPendingProfilePhoto(""); // Clear pending photo
+        setPreviewImage(null); // Clear preview
+        
         setDisplayName(`${formData.firstName} ${formData.lastName}`);
         setIsError(false); // Ensure error state is cleared on success
         setSuccessMsg("Profile updated successfully!");
@@ -256,40 +282,90 @@ const Profile = () => {
     }
     // Toggle edit mode state
     setEditMode(!editMode);
+    
+    // NEW: If canceling edit mode, reset pending changes
+    if (editMode) {
+      // We're switching from edit to view mode - keep changes
+    } else {
+      // We're switching from view to edit mode - clear any pending changes
+      setPendingProfilePhoto("");
+      setPreviewImage(null);
+    }
   };
 
-  // Handler for uploading profile image to Firebase storage
+  // FIXED: Handler for uploading profile image - now stores as pending until save
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
+    
+    // Check if file exists (handles cancel case)
     if (!file) return;
-
+    
     try {
-      // Compose userId from email (or use actual user ID if available)
-      const userId = "user_" + formData.email;
-      // Upload image file and get back URL
-      const url = await uploadProfileImage(file, userId);
-      // Update profile photo URL in form data state
-      setFormData({ ...formData, profilePhoto: url });
-
-      setIsError(false); // Ensure error state is cleared on success
-      setSuccessMsg("Profile image uploaded!");
+      // Show preview immediately
+      const previewUrl = URL.createObjectURL(file);
+      setPreviewImage(previewUrl);
       
-      // Clear message after 3 seconds with progress animation
+      // Upload to Cloudinary
+      const userId = "user_" + formData.email;
+      const url = await uploadProfileImage(file, userId);
+      
+      // NEW: Store as pending instead of immediately updating formData
+      setPendingProfilePhoto(url);
+      
+      setIsError(false);
+      setSuccessMsg("Image uploaded! Click SAVE to apply changes.");
       setTimeout(() => {
         setSuccessMsg("");
         setProgressWidth(100);
       }, 3000);
     } catch (err) {
-      console.error("Image upload failed:", err);
-      setIsError(true); // Set error state for red styling
+      // On error, clear preview and keep original
+      setPreviewImage(null);
+      setPendingProfilePhoto("");
+      setIsError(true);
       setSuccessMsg("Image upload failed. Please try again.");
-      
       setTimeout(() => {
         setSuccessMsg("");
         setProgressWidth(100);
         setIsError(false);
       }, 3000);
     }
+  };
+
+  // NEW: Remove profile picture completely (set to empty)
+  const handleRemoveProfilePicture = () => {
+    // Set pending photo to empty string to indicate removal
+    setPendingProfilePhoto("REMOVE");
+    setPreviewImage(null);
+    
+    // Clear the file input
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = '';
+    
+    setIsError(false);
+    setSuccessMsg("Profile picture will be removed. Click SAVE to apply.");
+    setTimeout(() => {
+      setSuccessMsg("");
+      setProgressWidth(100);
+    }, 3000);
+  };
+
+  // NEW: Cancel any pending image changes
+  const handleCancelImageChanges = () => {
+    // Clear both pending and preview to revert to original
+    setPendingProfilePhoto("");
+    setPreviewImage(null);
+    
+    // Clear the file input
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = '';
+    
+    setIsError(false);
+    setSuccessMsg("Image changes cancelled.");
+    setTimeout(() => {
+      setSuccessMsg("");
+      setProgressWidth(100);
+    }, 3000);
   };
 
   // Show loading indicator while fetching profile
@@ -333,16 +409,36 @@ const Profile = () => {
 
           {/* Enhanced profile header with picture and name */}
           <div className="flex flex-col sm:flex-row items-center gap-6 md:gap-8 lg:gap-10 mb-8 md:mb-10 p-6 bg-gradient-to-r from-green-50 via-blue-50 to-purple-50 rounded-2xl shadow-lg border-l-4 border-green-500">
-            <img
-              src={formData.profilePhoto || "https://i.pravatar.cc/150?img=32"}
-              alt="Profile"
-              className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl ring-4 ring-green-100"
-            />
+            <div className="relative">
+              <img
+                src={
+                  // Show preview first, then pending photo, then saved photo, then default
+                  previewImage || 
+                  (pendingProfilePhoto && pendingProfilePhoto !== "REMOVE" ? pendingProfilePhoto : null) ||
+                  (pendingProfilePhoto === "REMOVE" ? "https://i.pravatar.cc/150?img=32" : formData.profilePhoto) ||
+                  "https://i.pravatar.cc/150?img=32"
+                }
+                alt="Profile"
+                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl ring-4 ring-green-100"
+              />
+              {/* Show indicator if there are pending changes */}
+              {(pendingProfilePhoto || previewImage) && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center border-2 border-white">
+                  <span className="text-white text-xs font-bold">!</span>
+                </div>
+              )}
+            </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-800">
                 Hello, <span>{displayName}</span>
               </h2>
               <p className="text-gray-600">{formData.email}</p>
+              {/* Show pending changes indicator */}
+              {(pendingProfilePhoto || previewImage) && (
+                <p className="text-orange-600 text-sm font-medium mt-1">
+                  {pendingProfilePhoto === "REMOVE" ? "🗑️ Picture will be removed - click SAVE to apply" : "📷 Picture updated - click SAVE to apply"}
+                </p>
+              )}
             </div>
           </div>
 
@@ -358,25 +454,29 @@ const Profile = () => {
                   label: "Gender",
                   name: "gender",
                   type: "select",
-                  options: ["Male", "Female", "Other"],
+                  options: ["", "Male", "Female", "Other"],
+                  placeholder: "Select Gender"
                 },
                 {
                   label: "Country",
                   name: "country",
                   type: "select",
-                  options: ["Sri Lanka", "India", "USA"],
+                  options: ["", "Sri Lanka", "India", "USA"],
+                  placeholder: "Select Country"
                 },
                 {
                   label: "Language",
                   name: "language",
                   type: "select",
-                  options: ["sinhala", "english", "tamil"],
+                  options: ["", "Sinhala", "English", "Tamil"],
+                  placeholder: "Select Language"
                 },
                 {
                   label: "Time Zone",
                   name: "timeZone",
                   type: "select",
-                  options: ["GMT+5:30", "GMT+0"],
+                  options: ["", "GMT+5:30", "GMT+0"],
+                  placeholder: "Select Time Zone"
                 },
                 { label: "Vehicle No", name: "vehicleNumber", type: "text" },
               ].map((field, idx) => (
@@ -392,7 +492,10 @@ const Profile = () => {
                       disabled={!editMode}
                       className="p-4 rounded-xl bg-white border-2 border-gray-200 text-sm focus:ring-4 focus:ring-green-100 focus:border-green-500 transition-all duration-300 shadow-sm hover:shadow-md"
                     >
-                      {field.options.map((opt, i) => (
+                      <option value="" disabled>
+                        {field.placeholder || `Select ${field.label}`}
+                      </option>
+                      {field.options.slice(1).map((opt, i) => (
                         <option key={i} value={opt}>
                           {opt}
                         </option>
@@ -476,18 +579,62 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Profile image upload section */}
-            <div className="flex flex-col lg:col-span-2 xl:col-span-3 mt-6">
-              <label className="text-sm font-semibold text-gray-600 mb-1">
-                Upload Profile Image
+            {/* FIXED: Profile image upload section - simplified with clear messaging */}
+            <div className="mt-8 md:mt-10">
+              <label className="text-sm font-semibold text-gray-600 mb-3 block">
+                Profile Image
               </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                disabled={!editMode}
-                className="p-2 text-sm bg-gray-100 rounded"
-              />
+              
+             
+              
+              {/* Upload controls */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={!editMode}
+                  className="p-3 text-sm bg-white border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-100 focus:border-green-500 transition-all duration-300 shadow-sm hover:shadow-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+                
+                {/* Remove profile picture button - always show in edit mode */}
+                {editMode && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveProfilePicture}
+                    className="px-4 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 text-sm font-medium transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105"
+                  >
+                    Remove Picture
+                  </button>
+                )}
+                
+                {/* Cancel pending changes button - only show if there are pending changes */}
+                {(pendingProfilePhoto || previewImage) && editMode && (
+                  <button
+                    type="button"
+                    onClick={handleCancelImageChanges}
+                    className="px-4 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 text-sm font-medium transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105"
+                  >
+                    Cancel Changes
+                  </button>
+                )}
+              </div>
+              
+              {/* Upload hints */}
+              <div className="mt-3 text-xs text-gray-500">
+                <p>• Supported formats: JPG, PNG, WebP</p>
+                <p>• Maximum size: 10MB</p>
+                <p>• Recommended: Square images (400x400px or larger)</p>
+              </div>
+              
+              {/* Status indicator for pending changes */}
+              {(pendingProfilePhoto || previewImage) && (
+                <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p className="text-sm text-orange-800 font-medium flex items-center gap-2">
+                    ⏳ Preview shown above - Click SAVE to keep this image
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Enhanced email display section */}
