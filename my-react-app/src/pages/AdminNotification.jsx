@@ -435,71 +435,7 @@ const AdminNotification = () => {
     }
   };
 
-  const undoDeleteAll = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/notifications/mark-all-unread', {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
 
-      if (!response.ok) throw new Error('Failed to undo delete all notifications');
-
-      await fetchNotifications(filter, pagination[filter].currentPage);
-      setShowDeleteAllSuccess(false);
-      window.dispatchEvent(new Event('notification-updated')); // Trigger sidebar update
-    } catch (error) {
-      setError('Failed to undo delete all notifications');
-    }
-  };
-
-  // const deleteNotification = async (notificationId, isAnnouncement = false) => {
-  //   try {
-  //     const token = localStorage.getItem('token');
-  //     const endpoint = isAnnouncement
-  //       ? `${ANNOUNCEMENT_API_URL}/${notificationId}`
-  //       : `/api/notifications/${notificationId}`;
-  //     const response = await fetch(endpoint, {
-  //       method: 'DELETE',
-  //       headers: { Authorization: `Bearer ${token}` },
-  //     });
-
-  //     if (!response.ok) throw new Error(`Failed to delete ${isAnnouncement ? 'announcement' : 'notification'}`);
-
-  //     setNotifications(prev => {
-  //       const updated = {
-  //         ...prev,
-  //         [filter]: prev[filter].filter(n => n._id !== notificationId),
-  //       };
-  //       const cacheKey = `${filter}-${pagination[filter].currentPage}`;
-  //       if (notificationCache.has(cacheKey)) {
-  //         const cached = notificationCache.get(cacheKey);
-  //         notificationCache.set(cacheKey, {
-  //           ...cached,
-  //           notifications: cached.notifications.filter(n => n._id !== notificationId),
-  //           total: cached.total - 1,
-  //         });
-  //       }
-  //       return updated;
-  //     });
-  //     if (!notifications[filter].find(n => n._id === notificationId)?.read) {
-  //       setUnreadCount(prev => Math.max(0, prev - 1));
-  //     }
-
-  //     const updatedNotifications = notifications[filter].filter(n => n._id !== notificationId);
-  //     if (updatedNotifications.length < notificationsPerPage && pagination[filter].currentPage < pagination[filter].totalPages) {
-  //       setPagination(prev => ({
-  //         ...prev,
-  //         [filter]: { ...prev[filter], currentPage: prev[filter].currentPage + 1 },
-  //       }));
-  //     } else {
-  //       await fetchNotifications(filter, pagination[filter].currentPage);
-  //     }
-  //     window.dispatchEvent(new Event('notification-updated')); // Trigger sidebar update
-  //   } catch (error) {
-  //     setError(`Failed to delete ${isAnnouncement ? 'announcement' : 'notification'}`);
-  //   }
-  // };
 
     const deleteNotification = async (notificationId, isAnnouncement = false) => {
     try {
@@ -606,7 +542,7 @@ const AdminNotification = () => {
           <div className="flex gap-2 mt-2">
             <button
               onClick={deleteAllNotifications}
-              className="px-2 py-1 bg-red-400 text-white rounded text-xs"
+              className="px-2 py-1 bg-red-600 text-white rounded text-xs"
             >
               OK
             </button>
@@ -632,12 +568,7 @@ const AdminNotification = () => {
       {showDeleteAllSuccess && (
         <div className="p-2 mb-2 bg-green-100 text-green-800 rounded mx-8">
           All notifications deleted successfully!
-          <button
-            onClick={undoDeleteAll}
-            className="ml-2 text-blue-600 hover:underline"
-          >
-            Undo
-          </button>
+          
         </div>
       )}
       {error && (
@@ -707,7 +638,6 @@ const AdminNotification = () => {
 };
 
 export default AdminNotification;
-
 
 
 
