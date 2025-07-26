@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Seat from './Seat';
 import { jwtDecode } from "jwt-decode";
+import RatingModal from "./ratingModal"; // Importing the RatingModal component
 
 // Utility functions
 const TAILWIND_COLORS = {
