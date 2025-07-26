@@ -220,11 +220,11 @@ const BookingDetailsPanel = ({
             <span>
               Total: {totalBookings} bookings, {totalEvents} events
             </span>
-            {totalBookings > 0 && (
+            {/* {totalBookings > 0 && (
               <button className="text-blue-500 hover:text-blue-600 font-medium">
                 View All →
               </button>
-            )}
+            )} */}
           </div>
         </div>
       )}

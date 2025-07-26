@@ -16,7 +16,7 @@ const ProfileSidebar = ({ isOpen }) => {
   const [userProfile, setUserProfile] = useState(null);
 
   // Stores the next upcoming booking (after today)
-  const [nextUpcomingBooking, setNextUpcomingBooking] = useState(null);
+const [nextUpcomingBooking, setNextUpcomingBooking] = useState([]);
 
   // Number of bookings for the current day
   const [todaysBookingCount, setTodaysBookingCount] = useState(0);
@@ -63,9 +63,7 @@ const ProfileSidebar = ({ isOpen }) => {
           .sort((a, b) => (a.date > b.date ? 1 : -1));
 
         // Set next upcoming booking or null if none
-        setNextUpcomingBooking(
-          upcomingBookings.length > 0 ? upcomingBookings[0] : null
-        );
+        setNextUpcomingBooking(upcomingBookings.length > 0 ? upcomingBookings.slice(0, 5) : []);
 
         console.log("Today's bookings count:", todayFiltered.length);
       })

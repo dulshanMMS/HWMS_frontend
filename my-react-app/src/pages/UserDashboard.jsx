@@ -14,6 +14,7 @@ import axios from "axios";
 import { getProfile } from "../api/userApi";
 import useTokenExpiration from "../hooks/useTokenExpiration";
 import MessagingButton from '../components/MessagingButton';
+import { FaUser, FaTimes } from "react-icons/fa"; // Add these icons
 
 
 const UserDashboard = () => {
@@ -161,6 +162,17 @@ const clearSensitiveData = () => {
 
  useTokenExpiration(clearSensitiveData);
 
+ // Simple Floating Profile Button Component (like left sidebar)
+ const SimpleFloatingProfileButton = () => (
+   <button
+     onClick={() => setSidebarOpen((prev) => !prev)}
+     className={`fixed top-4 right-4 z-[1100] bg-[#052E19] text-white p-2 rounded w-10 h-10 flex items-center justify-center text-xl hover:bg-[#331108] transition-colors duration-300`}
+     aria-label={sidebarOpen ? "Close profile sidebar" : "Open profile sidebar"}
+   >
+     {sidebarOpen ? <FaTimes /> : <FaUser />}
+   </button>
+ );
+
  return (
   <div className="w-full min-h-screen flex bg-green-100">
     <LeftSidebar />
@@ -169,8 +181,6 @@ const clearSensitiveData = () => {
       {/* Main content area */}
       <div className="flex-1 p-4 md:p-6 lg:pr-0 max-w-full overflow-hidden">
         <DashboardHeader
-          sidebarOpen={sidebarOpen}
-          toggleSidebar={() => setSidebarOpen((prev) => !prev)}
           userProfile={userProfile} // ← Admin return prop
         />
 
@@ -199,7 +209,7 @@ const clearSensitiveData = () => {
 
       {/* Profile sidebar - only show on large screens when open */}
       {sidebarOpen && (
-        <div className="hidden lg:block w-80">
+        <div className="hidden lg:block w-96">
           <SidebarWrapper
             sidebarOpen={sidebarOpen}
             closeSidebar={() => setSidebarOpen(false)}
@@ -213,7 +223,11 @@ const clearSensitiveData = () => {
       sidebarOpen={sidebarOpen}
       closeSidebar={() => setSidebarOpen(false)}
     />
-      <MessagingButton 
+
+    {/* Simple Floating Profile Button (like left sidebar) */}
+    <SimpleFloatingProfileButton />
+
+    <MessagingButton 
       position="fixed" 
       size="lg"
       className="bottom-6 right-24 z-50" 

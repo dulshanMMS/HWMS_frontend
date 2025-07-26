@@ -5,15 +5,13 @@ import BackendStatusIndicator from "../BackendStatusIndicator";
 
 /**
  * DashboardHeader component displays the main page title ("Dashboard")
- * and a hamburger toggle button for the sidebar on smaller screens
  * with modern styling and real-time updates.
+ * Sidebar toggle removed - now handled by floating button.
  *
  * Props:
- * - sidebarOpen (boolean): current open/close state of sidebar.
- * - toggleSidebar (function): callback to toggle sidebar visibility.
  * - userProfile (object): user profile data to check admin role.
  */
-const DashboardHeader = ({ sidebarOpen, toggleSidebar, userProfile }) => {
+const DashboardHeader = ({ userProfile }) => {
   // State for current time that updates every second
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
@@ -66,34 +64,7 @@ const DashboardHeader = ({ sidebarOpen, toggleSidebar, userProfile }) => {
           </div>
         </div>
 
-        {/* Sidebar toggle button - only visible on small screens */}
-        <button
-          onClick={toggleSidebar}
-          className="lg:hidden relative p-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-100 group"
-          aria-label="Toggle Sidebar"
-        >
-          {/* Hamburger icon with smooth animation */}
-          <div className="space-y-1.5 w-6 h-6 flex flex-col justify-center">
-            <span
-              className={`block h-0.5 w-6 bg-gray-700 transform transition-all duration-300 ease-in-out ${
-                sidebarOpen ? "rotate-45 translate-y-2" : ""
-              }`}
-            />
-            <span
-              className={`block h-0.5 w-6 bg-gray-700 transition-all duration-300 ease-in-out ${
-                sidebarOpen ? "opacity-0" : ""
-              }`}
-            />
-            <span
-              className={`block h-0.5 w-6 bg-gray-700 transform transition-all duration-300 ease-in-out ${
-                sidebarOpen ? "-rotate-45 -translate-y-2" : ""
-              }`}
-            />
-          </div>
-
-          {/* Ripple effect on click */}
-          <div className="absolute inset-0 rounded-xl bg-blue-200 opacity-0 group-active:opacity-30 transition-opacity duration-150"></div>
-        </button>
+        {/* Sidebar toggle button removed - now handled by floating button */}
       </div>
 
       {/* Right Section - Admin Button, Actions and Time */}
