@@ -14,7 +14,6 @@ const Navbar = () => {
   const navLinks = [
     { label: "Home", path: "/homepage" },
     { label: "About Us", path: "/about/us" },
-    { label: "Resources", path: "#" },
   ];
 
   return (

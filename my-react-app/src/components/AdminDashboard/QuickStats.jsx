@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 const QuickStats = ({ todayBookingCount }) => {
   const [count, setCount] = useState(0);
@@ -31,9 +32,11 @@ const QuickStats = ({ todayBookingCount }) => {
       <p className="text-4xl font-extrabold text-green-600 tracking-wide">
         {todayBookingCount !== null ? count : "Loading..."}
       </p>
-      <button className="mt-3 inline-block text-sm text-green-700 font-semibold hover:text-green-900 transition-all hover:underline">
-        View Reports →
-      </button>
+      <Link to="/admin-reports">
+        <button className="mt-3 inline-block text-sm text-green-700 font-semibold hover:text-green-900 transition-all hover:underline">
+          View Reports →
+        </button>
+      </Link>
     </div>
   );
 };

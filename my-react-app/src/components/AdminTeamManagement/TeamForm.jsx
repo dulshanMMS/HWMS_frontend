@@ -44,7 +44,7 @@ const TeamForm = ({ existingTeam, onSuccess, onCancel }) => {
     const fetchTeamMembers = async () => {
       if (!existingTeam?.teamId) return;
       try {
-        const res = await axios.get(`/api/user?teamId=${existingTeam.teamId}`);
+        const res = await axios.get(`/api/user/by-team?teamId=${existingTeam.teamId}`);
         setTeamMembers(res.data || []);
       } catch (err) {
         console.error('Failed to fetch team members', err);

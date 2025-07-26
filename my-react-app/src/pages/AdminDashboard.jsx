@@ -38,8 +38,8 @@ const AdminDashboard = () => {
   const [parkingStats, setParkingStats] = useState([]);
   const [seatingStats, setSeatingStats] = useState([]);
   const [userProfile, setUserProfile] = useState(null);
-  const [showMessageBox, setShowMessageBox] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showMessageBox, setShowMessageBox] = useState(false);
 
   const handleSendAnnouncement = async () => {
     if (!announcement.trim()) return toast.warning("Please enter an announcement.");
@@ -146,10 +146,11 @@ const AdminDashboard = () => {
         <div className="mb-6 animate-fade-in">
           <AdminHeader userProfile={userProfile} />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
           <div className="space-y-6 order-3 md:order-3 xl:order-1">
-            <AnnouncementBox announcement={announcement} setAnnouncement={setAnnouncement} onSend={handleSendAnnouncement} />
+            <BookingChart />
             <TodayTeamStats topTeams={teamBookings} />
+                             
           </div>
 
           <div className="space-y-6 order-2 md:order-2 xl:order-2">
@@ -163,15 +164,15 @@ const AdminDashboard = () => {
                 setShowEventModal(true);
               }}
             />
-            <TeamColorPalette teamColors={teamColors} />
+            <AnnouncementBox announcement={announcement} setAnnouncement={setAnnouncement} onSend={handleSendAnnouncement} />
           </div>
 
           <div className="space-y-6 order-1 md:order-1 xl:order-3">
             <div className="bg-white rounded-2xl shadow-xl p-6 animate-slide-up">
-              <ProfileGreeting userProfile={userProfile} />
+              <ProfileGreeting userProfile={userProfile} />             
             </div>
             <QuickStats todayBookingCount={todayBookingCount} />
-            <BookingChart />
+            <TeamColorPalette teamColors={teamColors} />
           </div>
         </div>
 
@@ -187,7 +188,12 @@ const AdminDashboard = () => {
           />
         )}
 
-        {showMessageBox && <MessageDrawer onClose={() => setShowMessageBox(false)} />}
+        {showMessageBox && (
+          <MessageDrawer
+            onClose={() => setShowMessageBox(false)}
+            setUnreadCount={setUnreadCount}
+          />
+        )}
 
         <div
           className="fixed bottom-6 right-6 z-50 cursor-pointer group"

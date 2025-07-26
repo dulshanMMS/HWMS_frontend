@@ -87,19 +87,27 @@ const EventCalendar = ({ date, setDate, eventDates, todayEvents, onDayClick }) =
 
       {/* Dates */}
       <div className="grid grid-cols-7 gap-2 text-sm">
-        {Array.from({ length: daysInMonth }, (_, i) => {
-          const currentDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), i + 1);
-          return (
-            <div
-              key={i}
-              className={`h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer transition-all ${getDateClass(currentDate)}`}
-              onClick={() => onDayClick(currentDate)}
-              title={currentDate.toDateString()}
-            >
-              <span>{i + 1}</span>
-            </div>
-          );
-        })}
+        {(() => {
+          const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay(); // 0=Sun, ..., 6=Sat
+          const totalSlots = daysInMonth + startDay;
+          return Array.from({ length: totalSlots }, (_, i) => {
+            if (i < startDay) {
+              return <div key={`empty-${i}`} className="h-10 w-10" />; // empty slot
+            }
+            const day = i - startDay + 1;
+            const currentDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+            return (
+              <div
+                key={i}
+                className={`h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer transition-all ${getDateClass(currentDate)}`}
+                onClick={() => onDayClick(currentDate)}
+                title={currentDate.toDateString()}
+              >
+                <span>{day}</span>
+              </div>
+            );
+          });
+        })()}
       </div>
 
       {/* Today's Events */}

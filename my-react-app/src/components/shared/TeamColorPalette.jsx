@@ -73,7 +73,7 @@ const TeamColorPalette = () => {
   const fetchTeamMembers = async (teamId) => {
     setMembersLoading(true);
     try {
-      const res = await axios.get(`/api/user?teamId=${teamId}`);
+      const res = await axios.get(`/api/user/by-team?teamId=${teamId}`);
       setTeamMembers(res.data || []);
       setSelectedTeam(teamId);
     } catch (error) {

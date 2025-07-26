@@ -55,7 +55,7 @@ const AdminTeamManagement = () => {
   const handleTeamClick = async (team) => {
     setMembersLoading(true);
     try {
-      const res = await axios.get(`/api/user?teamId=${team.teamId}`);
+      const res = await axios.get(`/api/user/by-team?teamId=${team.teamId}`);
       setTeamMembers(res.data || []);
       setSelectedTeam(team);
     } catch (err) {
