@@ -28,7 +28,7 @@ const DailyTrendsChart = ({ data }) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6">
+    <div className="bg-white rounded-2xl shadow-xl p-6">
       <h2 className="text-xl font-semibold text-gray-800 mb-6">Daily Booking Trends</h2>
       <div className="h-[300px] overflow-x-auto">
         <div className="min-w-full" style={{ minWidth: `${Math.max(600, transformDailyTrends().length * 40)}px` }}>

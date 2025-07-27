@@ -683,7 +683,7 @@ const fetchUserBookings = async (query) => {
 
   return (
     <AdminSidebar>
-      <div>
+      <div className="bg-gradient-to-br from-gray-100 to-gray-200 p-6 min-h-screen">
         {renderContent()}
       </div>
     </AdminSidebar>

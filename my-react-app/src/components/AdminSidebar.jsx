@@ -204,7 +204,7 @@ const AdminSidebar = ({ children }) => {
   // Fetch unread count on mount and every minute
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 6000); // Refresh every minute
+    const interval = setInterval(fetchUnreadCount, 6000); 
     return () => clearInterval(interval);
   }, []);
 

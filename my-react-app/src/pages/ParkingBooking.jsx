@@ -160,7 +160,7 @@ const ParkingBooking = () => {
       setMessage(result.message || "Booking completed!");
       setSelectedSlot(null);
       setAvailableSlots([]);
-      if (Math.random() < 0.1) setIsRatingOpen(true); // Randomly open rating modal 50% chance
+      if (Math.random() < 1) setIsRatingOpen(true); // Randomly open rating modal 50% chance
       
     } catch {
       setMessage("Failed to book the slot.");

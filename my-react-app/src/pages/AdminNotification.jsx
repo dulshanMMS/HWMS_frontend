@@ -509,7 +509,7 @@ const AdminNotification = () => {
 
   return (
     <AdminSidebar>
-      <div className="flex items-center justify-between ml-8 mt-6">
+      <div className="flex items-center justify-between ml-8 mt-6 ">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Notifications</h1>
           <NotificationBadge isAdmin={true} />

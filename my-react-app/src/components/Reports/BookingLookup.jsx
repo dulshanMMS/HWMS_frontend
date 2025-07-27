@@ -154,7 +154,7 @@ const handleSuggestionClick = (suggestion) => {
   }, []);
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 mb-12 h-32">
+    <div className="bg-white rounded-lg shadow-xl p-6 mb-12 h-32">
       <div className="flex flex-col md:flex-row items-center gap-4">
         <div className="flex items-center gap-2 flex-1 relative">
           <FaSearch className="text-2xl text-green-900" />
@@ -193,7 +193,7 @@ const handleSuggestionClick = (suggestion) => {
           )}
 {showSuggestions && suggestions.length > 0 && (
   <ul
-    className="absolute bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto"
+    className="absolute bg-white border border-gray-200 rounded-md shadow-xl z-50 max-h-60 overflow-y-auto"
     style={{
       width: inputRef.current ? `${inputRef.current.offsetWidth}px` : 'auto',
       left: inputRef.current ? `${inputRef.current.offsetLeft}px` : '0',
@@ -218,7 +218,7 @@ const handleSuggestionClick = (suggestion) => {
 )}
 {loading && (
   <div
-    className="absolute bg-white border border-gray-200 rounded-md shadow-lg z-10 p-4 text-sm text-gray-500"
+    className="absolute bg-white border border-gray-200 rounded-md shadow-xl z-10 p-4 text-sm text-gray-500"
     style={{
       width: inputRef.current ? `${inputRef.current.offsetWidth}px` : 'auto',
       left: inputRef.current ? `${inputRef.current.offsetLeft}px` : '0',
