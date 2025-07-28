@@ -289,7 +289,7 @@ const RecentBookingsTable = ({ bookings, refreshTrigger }) => {
             <button
               onClick={handlePreviousPage}
               disabled={currentPage === 1}
-              className={`px-4 py-2 rounded-md text-white ${
+              className={`px-3 py-1 rounded-md text-white ${
                 currentPage === 1
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-blue-500 hover:bg-blue-600'
@@ -303,7 +303,7 @@ const RecentBookingsTable = ({ bookings, refreshTrigger }) => {
             <button
               onClick={handleNextPage}
               disabled={currentPage === totalPages}
-              className={`px-4 py-2 rounded-md text-white ${
+              className={`px-3 py-1 rounded-md text-white ${
                 currentPage === totalPages
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-blue-500 hover:bg-blue-600'

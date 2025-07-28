@@ -47,7 +47,6 @@ const UserNotification = () => {
   const [showDeleteAllSuccess, setShowDeleteAllSuccess] = useState(false);
   const deleteAllButtonRef = useRef(null);
   const notificationsPerPage = 10;
-  
 
   const notificationCache = useMemo(() => new Map(), []);
 
@@ -208,17 +207,23 @@ const UserNotification = () => {
       }
       seenNotifications.add(key);
       setNotifications(prev => {
+        const targetFilter =
+          notification.type === 'feedback_reply' ? 'all' :
+          notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' :
+          notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all';
         const updated = {
           ...prev,
           all: deduplicateNotifications([notification, ...prev.all]).slice(0, notificationsPerPage),
-          [notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' : notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all']: deduplicateNotifications([notification, ...prev[notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' : notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all']]).slice(0, notificationsPerPage),
+          [targetFilter]: deduplicateNotifications([notification, ...prev[targetFilter]]).slice(0, notificationsPerPage),
         };
         notificationCache.delete(`all-${pagination.all.currentPage}`);
-        notificationCache.delete(`${notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' : notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all'}-${pagination[notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' : notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all'].currentPage}`);
-        console.log(`Updated notifications for ${notification.type}:`, updated[notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' : notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all']);
+        notificationCache.delete(`${targetFilter}-${pagination[targetFilter].currentPage}`);
+        console.log(`Updated notifications for ${targetFilter}:`, updated[targetFilter]);
         return updated;
       });
-      setUnreadCount(prev => prev + 1);
+      if (!notification.read) {
+        setUnreadCount(prev => prev + 1);
+      }
     });
 
     socket.on('announcementReceived', (announcement) => {
@@ -410,7 +415,7 @@ const UserNotification = () => {
       });
       setUnreadCount(0);
       setShowDeleteAllSuccess(true);
-      setTimeout(() => setShowDeleteAllSuccess(false), 5000); // Show success for 5 seconds
+      setTimeout(() => setShowDeleteAllSuccess(false), 5000);
     } catch (error) {
       setError('Failed to delete all notifications');
     } finally {
@@ -555,12 +560,6 @@ const UserNotification = () => {
       {showDeleteAllSuccess && (
         <div className="p-2 mb-2 bg-green-100 text-green-800 rounded mx-8">
           All notifications deleted successfully!
-          {/* <button
-            onClick={undoDeleteAll}
-            className="ml-2 text-blue-600 hover:underline"
-          >
-            Undo
-          </button> */}
         </div>
       )}
       {error && (
