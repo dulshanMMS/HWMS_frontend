@@ -1,82 +1,31 @@
+
 import React, { useState, useEffect } from 'react';
 import { FaStar } from 'react-icons/fa';
+import api from '../config/api';
 
-const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
+const RatingModal = ({ isOpen, onClose, onSubmit, userId, bookingType }) => {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
 
-  // Hardcoded employee feedbacks
-  const employeeFeedbacks = [
-    {
-      id: 1,
-      name: "Priya Sharma",
-      role: "Product Manager",
-      rating: 5,
-      text: "Exceptional service and user-friendly design! Highly recommended.",
-      avatarColor: "bg-purple-500"
-    },
-    {
-      id: 2,
-      name: "James Wilson",
-      role: "Software Developer",
-      rating: 5,
-      text: "Impressive functionality and excellent customer support!",
-      avatarColor: "bg-blue-500"
-    },
-    {
-      id: 3,
-      name: "Nisha Gupta",
-      role: "Data Analyst",
-      rating: 3,
-      text: "Decent features, but the lack of customization options is disappointing.",
-      avatarColor: "bg-pink-500"
-    },
-    {
-      id: 4,
-      name: "Michael Chen",
-      role: "UI/UX Designer",
-      rating: 4,
-      text: "Great interface design and smooth user experience. Could use more advanced features.",
-      avatarColor: "bg-indigo-500"
-    },
-    {
-      id: 5,
-      name: "Sarah Johnson",
-      role: "Marketing Manager",
-      rating: 5,
-      text: "Outstanding platform! Easy to use and very efficient for our daily operations.",
-      avatarColor: "bg-teal-500"
-    },
-    {
-      id: 6,
-      name: "David Rodriguez",
-      role: "Operations Lead",
-      rating: 4,
-      text: "Solid performance and reliable service. Minor room for improvement in loading times.",
-      avatarColor: "bg-orange-500"
-    },
-    {
-      id: 7,
-      name: "Emily Chen",
-      role: "HR Manager",
-      rating: 5,
-      text: "Streamlined our entire workflow. The team loves using this platform daily.",
-      avatarColor: "bg-red-500"
-    },
-    {
-      id: 8,
-      name: "Alex Kumar",
-      role: "Business Analyst",
-      rating: 4,
-      text: "Good value for money. The reporting features are particularly useful.",
-      avatarColor: "bg-yellow-500"
-    }
-  ];
+  // Static team color mapping (fallback if teamColor is missing)
+  const teamColorMap = {
+    Engineering: 'bg-blue-500',
+    Design: 'bg-indigo-500',
+    Marketing: 'bg-teal-500',
+    Operations: 'bg-orange-500',
+    HR: 'bg-red-500',
+    Product: 'bg-purple-500',
+    Analytics: 'bg-pink-500',
+    Sales: 'bg-yellow-500',
+  };
 
-  // Reset fields when modal opens
+  // Reset fields and fetch data when modal opens
   useEffect(() => {
     if (isOpen) {
       setRating(0);
@@ -84,12 +33,41 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
       setErrorMessage('');
       setIsSubmitted(false);
       setScrollPosition(0);
+      setFeedbackError('');
+      fetchFeedbacks();
     }
   }, [isOpen]);
 
+  // Fetch feedbacks from the database
+  const fetchFeedbacks = async () => {
+    try {
+      setLoadingFeedbacks(true);
+      const response = await api.get('/api/ratings/feedback');
+      console.log('Feedbacks fetched:', response.data); // Debug log
+      setFeedbacks(response.data);
+    } catch (error) {
+      console.error('Error fetching feedbacks:', error);
+      setFeedbackError('Failed to load feedback. Please try again later.');
+    } finally {
+      setLoadingFeedbacks(false);
+    }
+  };
+
+  // Get team color for a feedback
+  const getTeamColor = (userId) => {
+    console.log('Getting team color for userId:', userId); // Debug log
+    if (!userId || !userId.teamId) {
+      console.log('No teamId provided, using default color');
+      return 'bg-gray-500';
+    }
+    const color = userId.teamColor || teamColorMap[userId.teamId] || 'bg-gray-500';
+    console.log('Team color selected:', color, 'for teamId:', userId.teamId);
+    return color;
+  };
+
   // Auto-scroll animation
   useEffect(() => {
-    if (!isOpen || isSubmitted) return;
+    if (!isOpen || isSubmitted || loadingFeedbacks || feedbackError) return;
 
     const scrollContainer = document.getElementById('feedback-scroll-container');
     if (!scrollContainer) return;
@@ -99,7 +77,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
       setScrollPosition((prev) => {
         const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
         const newPosition = prev + 2;
-        
+
         if (newPosition >= maxScroll) {
           return 0; // Reset to top
         }
@@ -118,7 +96,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
         cancelAnimationFrame(animationId);
       }
     };
-  }, [isOpen, isSubmitted]);
+  }, [isOpen, isSubmitted, loadingFeedbacks, feedbackError]);
 
   // Update scroll position
   useEffect(() => {
@@ -144,7 +122,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
       return;
     }
     try {
-      const response = await onSubmit({ userId, bookingType: 'parking', rating, feedback });
+      const response = await onSubmit({ userId, bookingType, rating, feedback });
       if (!response) {
         console.error('No response received from onSubmit');
         throw new Error('No response from server');
@@ -154,10 +132,6 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
       if (response.status === 201) {
         setIsSubmitted(true);
         setErrorMessage('');
-        setTimeout(() => {
-          setIsSubmitted(false);
-          onClose();
-        }, 2000);
       } else {
         console.error('Submit rating failed:', responseData);
         throw new Error(responseData.error || 'Failed to submit rating');
@@ -285,44 +259,54 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId }) => {
             </div>
           </div>
 
-          {/* Right Side - Employee Feedbacks */}
+          {/* Right Side - Database Feedbacks */}
           <div className="w-1/2 bg-gray-50 p-8 border-l border-gray-200">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-               What Others Say About Us
+              What Others Say About Us
             </h3>
             
             <div id="feedback-scroll-container" className="h-full overflow-y-auto pr-2 scrollbar-hide" style={{ maxHeight: 'calc(100vh - 200px)', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              <div className="space-y-4">
-                {employeeFeedbacks.map((feedback) => (
-                  <div key={feedback.id} className="bg-green-50 rounded-xl p-6 shadow-lg border border-green-100">
-                    <div className="flex items-start space-x-4">
-                      <div className={`w-12 h-12 ${feedback.avatarColor} rounded-full flex items-center justify-center flex-shrink-0`}>
-                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <div>
-                            <h4 className="font-semibold text-gray-900 text-sm">
-                              {feedback.name}
-                            </h4>
-                            <p className="text-gray-600 text-xs">
-                              {feedback.role}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            {renderStars(feedback.rating)}
-                          </div>
+              {loadingFeedbacks ? (
+                <div className="text-center py-8 text-gray-500">Loading feedback...</div>
+              ) : feedbackError ? (
+                <div className="text-center py-8 text-red-500">{feedbackError}</div>
+              ) : feedbacks.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No feedback available.</div>
+              ) : (
+                <div className="space-y-4">
+                  {feedbacks.map((feedback, index) => (
+                    <div key={feedback._id || `feedback-${index}`} className="bg-green-50 rounded-xl p-6 shadow-lg border border-green-100">
+                      <div className="flex items-start space-x-4">
+                        <div className={`w-12 h-12 ${getTeamColor(feedback.userId)} rounded-full flex items-center justify-center flex-shrink-0`}>
+                          <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                          </svg>
                         </div>
-                        <p className="text-gray-700 text-sm leading-relaxed">
-                          {feedback.text}
-                        </p>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <h4 className="font-semibold text-gray-900 text-sm">
+                                {feedback.userId?.fullName || feedback.userId?.username || 'Anonymous'}
+                              </h4>
+                              <p className="text-gray-600 text-xs">
+                                {feedback.bookingType === 'seating' ? 'Seating' : 'Parking'}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              {renderStars(feedback.rating)}
+                            </div>
+                          </div>
+                          <p className="text-gray-700 text-sm leading-relaxed">
+                            {feedback.feedback?.length > 100
+                              ? `${feedback.feedback.substring(0, 100)}...`
+                              : feedback.feedback || 'No comment provided'}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

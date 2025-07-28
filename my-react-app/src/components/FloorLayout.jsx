@@ -1,414 +1,822 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  FaUserCircle,
-  FaSearch,
-  FaCheckCircle,
-  FaComments,
-  FaQuestionCircle,
-  FaTimes,
-  FaRobot,
-} from "react-icons/fa";
+/* eslint-disable no-unused-vars */
+import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import Seat from './Seat';
+import { jwtDecode } from "jwt-decode";
+import RatingModal from "./ratingModal";
 
-/**
- * FloatingChatBot component provides a floating chat widget with:
- * - A toggle button to open/close chat
- * - Chat interface with predefined questions & answers
- * - Help tab with static help info
- * - Contact Admin form with submission
- */
-const FloatingChatBot = () => {
-  // Chat open/close state
-  const [isOpen, setIsOpen] = useState(false);
+// Utility functions
+const TAILWIND_COLORS = {
+  'bg-red-500': '#ef4444', 'bg-blue-500': '#3b82f6', 'bg-green-500': '#22c55e',
+  'bg-yellow-500': '#eab308', 'bg-purple-500': '#a855f7', 'bg-pink-500': '#ec4899',
+  'bg-indigo-500': '#6366f1', 'bg-orange-500': '#f97316', 'bg-teal-500': '#14b8a6',
+  'bg-cyan-500': '#06b6d4', 'bg-gray-500': '#6b7280', 'bg-slate-500': '#64748b',
+  'bg-amber-500': '#f59e0b', 'bg-lime-500': '#84cc16', 'bg-emerald-500': '#10b981',
+  'bg-sky-500': '#0ea5e9', 'bg-violet-500': '#8b5cf6', 'bg-fuchsia-500': '#d946ef',
+  'bg-rose-500': '#f43f5e'
+};
 
-  // Active tab: 'home' (chat), 'help', or 'contactAdmin'
-  const [activeTab, setActiveTab] = useState("home");
+const ensureHexColor = (color) => {
+  if (!color) return '#808080';
+  if (color.startsWith('#')) return color;
+  return TAILWIND_COLORS[color] || '#808080';
+};
 
-  // Chat messages array (each with sender and text, optional suggestions)
-  const [messages, setMessages] = useState([]);
-
-  // Current user input text in chat
-  const [userInput, setUserInput] = useState("");
-
-  // Ref for scrolling to latest message
-  const chatEndRef = useRef(null);
-
-  // Contact admin form fields and submission state
-  const [contactName, setContactName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactSubject, setContactSubject] = useState("");
-  const [contactMessage, setContactMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(null);
-
-  // Premade questions & corresponding answers
-  const premadeQuestions = [
-    "How do I book a parking slot?",
-    "What’s my schedule today?",
-    "How to contact support?",
-    "Where can I see my booking history?",
-  ];
-
-  const premadeAnswers = {
-    "How do I book a parking slot?":
-      "To book a parking slot, go to the 'Parking' section in your dashboard, select a date, entry and exit time, and choose an available slot.",
-    "What’s my schedule today?":
-      "You can find today's schedule under 'My Calendar'. It lists all your bookings and events for the day.",
-    "How to contact support?":
-      "You can contact our support team via the 'Help & Support' tab in your dashboard or email us at support@example.com.",
-    "Where can I see my booking history?":
-      "Go to 'Booking History' in the dashboard to view all your past and upcoming bookings.",
+const timesOverlap = (start1, end1, start2, end2) => {
+  const parseTime = (timeStr) => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
   };
+  
+  const [s1, e1, s2, e2] = [start1, end1, start2, end2].map(parseTime);
+  return s1 < e2 && s2 < e1;
+};
 
-  // Decode JWT from localStorage to autofill contact form name and email on mount
+const isUserAdmin = () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return false;
+    
+    const decoded = jwtDecode(token);
+    return decoded.role === 'admin' || decoded.isAdmin === true;
+  } catch (error) {
+    return false;
+  }
+};
+
+const getCurrentUserName = () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+    
+    const decoded = jwtDecode(token);
+    return decoded.userName || decoded.username;
+  } catch (error) {
+    return null;
+  }
+};
+
+// API functions
+const api = {
+  async fetchBookings(date, floor) {
+    const response = await fetch(`http://localhost:5000/api/bookings/filtered?date=${date}&floor=${floor}`);
+    if (!response.ok) throw new Error('Failed to fetch bookings');
+    return response.json();
+  },
+
+  async fetchUser(userId) {
+    const response = await fetch(`http://localhost:5000/api/bookings/users/${userId}`);
+    if (!response.ok) throw new Error('User not found');
+    return response.json();
+  },
+
+  async fetchTeam(teamId) {
+    const response = await fetch(`http://localhost:5000/api/teams`);
+    if (!response.ok) throw new Error('Failed to fetch teams');
+    
+    const teams = await response.json();
+    const team = teams.find(t => t.teamId === teamId);
+    
+    if (!team) throw new Error('Team not found');
+    return team;
+  },
+
+  async bookSeat(chairId, bookingDetails) {
+    const isAdmin = isUserAdmin();
+    const currentUserName = getCurrentUserName();
+    
+    const endpoint = isAdmin 
+      ? `/api/bookings/admin/${currentUserName}/seat/${chairId}`
+      : `/api/bookings/member/${currentUserName}/seat/${chairId}`;
+    
+    const response = await fetch(`http://localhost:5000${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bookingDetails),
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Booking failed');
+    }
+    return response.json();
+  },
+
+  async unbookSeat(tableId, chairId, floor, date) {
+    const isAdmin = isUserAdmin();
+    const endpoint = isAdmin 
+      ? `/api/bookings/admin/unbook/${tableId}/${chairId}/${floor}/${date}`
+      : `/api/bookings/unbook/${tableId}/${chairId}/${floor}/${date}`;
+    
+    const response = await fetch(`http://localhost:5000${endpoint}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Unbooking failed');
+    }
+    return response.json();
+  }
+};
+
+// Custom hooks
+const useAuth = () => {
+  const [memberId, setMemberId] = useState('');
+  const [userRole, setUserRole] = useState('user');
+  const navigate = useNavigate();
+
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      navigate('/');
+      return;
+    }
 
     try {
-      const payloadBase64 = token.split(".")[1];
-      const decodedPayload = JSON.parse(atob(payloadBase64));
-      setContactName(decodedPayload.name || decodedPayload.username || "");
-      setContactEmail(
-        decodedPayload.email ||
-          decodedPayload.user_email ||
-          decodedPayload.username ||
-          ""
-      );
+      const decoded = jwtDecode(token);
+      setMemberId(decoded.userName || decoded.username);
+      setUserRole(decoded.role || 'user');
     } catch (e) {
-      console.error("Failed to parse JWT token", e);
+      navigate('/');
     }
-  }, []);
+  }, [navigate]);
 
-  // Initialize welcome messages when chat opens on home tab and no messages yet
+  return { memberId, userRole };
+};
+
+const useUserData = (memberId) => {
+  const [memberDetails, setMemberDetails] = useState(null);
+  const [teamName, setTeamName] = useState('');
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    if (isOpen && activeTab === "home" && messages.length === 0) {
-      const welcomeMessages = [
-        { sender: "bot", text: "👋 Hello! I'm your assistant bot." },
-        {
-          sender: "bot",
-          text: "Here are some things you can ask:",
-          suggestions: premadeQuestions,
-        },
-      ];
-      setMessages(welcomeMessages);
-    }
-  }, [isOpen, activeTab, messages.length]);
+    if (!memberId) return;
 
-  // Scroll chat window to latest message when messages update
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const fetchUserData = async () => {
+      try {
+        const user = await api.fetchUser(memberId);
+        if (!user.userName || !user.teamId) {
+          throw new Error('User data incomplete');
+        }
 
-  // Send message handler for user input or suggested question buttons
-  const sendMessage = (text = userInput) => {
-    if (!text.trim()) return;
-
-    const userMessage = { sender: "user", text };
-    const botResponseText =
-      premadeAnswers[text] || "Thanks! I'll get back to you shortly.";
-    const botMessage = { sender: "bot", text: botResponseText };
-    const suggestionMessage = {
-      sender: "bot",
-      text: "Anything else you'd like to ask?",
-      suggestions: premadeQuestions,
+        const team = await api.fetchTeam(user.teamId);
+        const teamColor = ensureHexColor(team.color);
+        
+        setMemberDetails({ ...user, teamColor, userName: user.userName });
+        setTeamName(team.teamName);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setMessages((prev) => [
-      ...prev,
-      userMessage,
-      botMessage,
-      suggestionMessage,
-    ]);
-    setUserInput("");
+    fetchUserData();
+  }, [memberId]);
+
+  return { memberDetails, teamName, loading };
+};
+
+// Popup components
+const PopUp = ({ message, onClose, children }) => (
+  <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50 p-4">
+    <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border-2 border-green-400 transform translate-y-16">
+      <p className="mb-4 text-gray-800 text-lg font-semibold text-center">{message}</p>
+      {children || (
+        <div className="flex justify-center">
+          <button 
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-8 rounded-lg"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+// Table component
+const TableComponent = ({ tableId, index, seatSize = "normal", bookedChairs, onChairClick, userBooking, disabled, selectedSeat }) => {
+  const sizeClasses = {
+    small: { seat: "w-12 h-6", table: "p-1", gap: "gap-1" },
+    medium: { seat: "w-14 h-7", table: "p-1", gap: "gap-1" },
+    normal: { seat: "w-16 h-8", table: "p-2", gap: "gap-2" }
   };
 
-  // Contact Admin form submission handler (simulate API call)
-  const handleContactSubmit = async (e) => {
-    e.preventDefault();
+  const classes = sizeClasses[seatSize];
 
-    if (
-      !contactName.trim() ||
-      !contactEmail.trim() ||
-      !contactSubject.trim() ||
-      !contactMessage.trim()
-    )
-      return;
-
-    setIsSubmitting(true);
-    setSubmitSuccess(null);
-
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/support/submit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          name: contactName,
-          email: contactEmail,
-          subject: contactSubject,
-          message: contactMessage,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || "Failed to send support request");
-      }
-
-      setSubmitSuccess(true);
-      setContactSubject("");
-      setContactMessage("");
-    } catch (err) {
-      setSubmitSuccess(false);
-      console.error("Support request error:", err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Toggle chat open/close; reset to home tab on open
-  const toggleChat = () => {
-    if (!isOpen) {
-      setIsOpen(true);
-      setActiveTab("home");
-    } else {
-      setIsOpen(false);
-    }
-  };
+  const renderSeats = (startIndex, count) => 
+    Array.from({ length: count }, (_, i) => {
+      const chairId = `${tableId}-chair${startIndex + i}`;
+      return (
+        <div key={i} className={classes.seat}>
+          <Seat
+            chairId={chairId}
+            tableId={tableId}
+            bookedChairs={bookedChairs}
+            onClick={disabled ? () => {} : () => onChairClick(chairId, tableId)}
+            label={`Seat-${startIndex + i}`}
+            isUserBooked={!disabled && (userBooking?.chairId === chairId || selectedSeat === chairId)}
+            seatSize={seatSize}
+          />
+        </div>
+      );
+    });
 
   return (
-    <>
-      {/* Floating chat toggle button */}
-      <button
-        onClick={toggleChat}
-        aria-label={isOpen ? "Close chat" : "Open chat"}
-        className={`fixed bottom-6 right-6 z-50 rounded-full shadow-lg flex items-center justify-center
-          transition-all duration-500
-          ${
-            isOpen
-              ? "w-14 h-14 bg-red-600 text-white hover:bg-red-700"
-              : "w-16 h-16 bg-green-600 text-white hover:bg-green-700"
-          }`}
-      >
-        {isOpen ? <FaTimes size={24} /> : < FaRobot size={24} />}
-      </button>
-
-      {/* Chat window panel */}
-      <div
-        className={`fixed bottom-20 right-6 z-50 flex flex-col bg-white rounded-xl shadow-xl border
-          transition-all duration-500 ease-in-out
-          ${
-            isOpen
-              ? "opacity-100 scale-100 pointer-events-auto w-[460px] h-[650px]"
-              : "opacity-0 scale-90 pointer-events-none w-0 h-0"
-          }`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="chatbot-header"
-      >
-        {/* Header tabs */}
-        <header
-          id="chatbot-header"
-          className="flex bg-green-700 rounded-t-xl text-white font-semibold"
-        >
-          <button
-            onClick={() => setActiveTab("home")}
-            className={`flex-1 py-3 flex items-center justify-center gap-2 hover:bg-green-800 transition-colors
-            ${
-              activeTab === "home"
-                ? "bg-green-900 shadow-inner"
-                : "bg-green-700"
-            }`}
-            aria-selected={activeTab === "home"}
-            role="tab"
-            type="button"
-          >
-            < FaRobot/>
-            Chat
-          </button>
-          <button
-            onClick={() => setActiveTab("help")}
-            className={`flex-1 py-3 flex items-center justify-center gap-2 hover:bg-green-800 transition-colors
-            ${
-              activeTab === "help"
-                ? "bg-green-900 shadow-inner"
-                : "bg-green-700"
-            }`}
-            aria-selected={activeTab === "help"}
-            role="tab"
-            type="button"
-          >
-            <FaQuestionCircle />
-            Help
-          </button>
-          <button
-            onClick={() => setActiveTab("contactAdmin")}
-            className={`flex-1 py-3 flex items-center justify-center gap-2 hover:bg-green-800 transition-colors
-            ${
-              activeTab === "contactAdmin"
-                ? "bg-green-900 shadow-inner"
-                : "bg-green-700"
-            }`}
-            aria-selected={activeTab === "contactAdmin"}
-            role="tab"
-            type="button"
-          >
-            <FaUserCircle />
-            Contact Admin
-          </button>
-        </header>
-
-        {/* Main content area */}
-        <main className="flex-1 p-4 overflow-hidden flex flex-col">
-          {/* Chat messages tab */}
-          {activeTab === "home" && (
-            <>
-              <section
-                className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-green-600 scrollbar-track-green-100"
-                aria-live="polite"
-                role="log"
-                aria-relevant="additions"
-              >
-                {messages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`mb-2 max-w-[80%] px-3 py-2 rounded-lg shadow
-                      ${
-                        msg.sender === "user"
-                          ? "ml-auto bg-green-100 text-green-900"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                  >
-                    {msg.text}
-                    {msg.suggestions && (
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {msg.suggestions.map((sugg, i) => (
-                          <button
-                            key={i}
-                            onClick={() => sendMessage(sugg)}
-                            className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded-full text-xs"
-                          >
-                            {sugg}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                <div ref={chatEndRef} />
-              </section>
-            </>
-          )}
-
-          {/* Help tab */}
-          {activeTab === "help" && (
-            <section
-              className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-green-600 scrollbar-track-green-100"
-              aria-label="Help content"
-            >
-              <h2 className="text-lg font-semibold mb-4">Help Collections</h2>
-              <ul className="list-disc list-inside space-y-2 text-sm">
-                <li>How to use the parking system</li>
-                <li>Booking and cancellation policies</li>
-                <li>Contacting support</li>
-                <li>Account management</li>
-                <li>Payment options</li>
-              </ul>
-            </section>
-          )}
-
-          {/* Contact Admin form tab */}
-          {activeTab === "contactAdmin" && (
-            <section className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-green-600 scrollbar-track-green-100">
-              <h2 className="text-lg font-semibold mb-4">Contact Admin</h2>
-              {submitSuccess && (
-                <p className="mb-4 text-green-700 font-semibold">
-                  Message sent successfully!
-                </p>
-              )}
-              <form
-                onSubmit={handleContactSubmit}
-                className="flex flex-col gap-4"
-              >
-                <label className="flex flex-col">
-                  <span className="font-semibold mb-1">Name</span>
-                  <input
-                    type="text"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    required
-                    className="rounded-md border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="Your name"
-                  />
-                </label>
-
-                <label className="flex flex-col">
-                  <span className="font-semibold mb-1">Email</span>
-                  <input
-                    type="email"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    required
-                    className="rounded-md border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="Your email"
-                  />
-                </label>
-
-                <label className="flex flex-col">
-                  <span className="font-semibold mb-1">Subject</span>
-                  <input
-                    type="text"
-                    value={contactSubject}
-                    onChange={(e) => setContactSubject(e.target.value)}
-                    required
-                    className="rounded-md border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="Subject"
-                  />
-                </label>
-
-                <label className="flex flex-col">
-                  <span className="font-semibold mb-1">Message</span>
-                  <textarea
-                    value={contactMessage}
-                    onChange={(e) => setContactMessage(e.target.value)}
-                    required
-                    className="rounded-md border border-gray-300 px-3 py-2 outline-none focus:ring-2 focus:ring-green-500"
-                    rows={5}
-                    placeholder="Write your message here"
-                  />
-                </label>
-
-                <button
-                  type="submit"
-                  disabled={
-                    isSubmitting ||
-                    !contactName.trim() ||
-                    !contactEmail.trim() ||
-                    !contactSubject.trim() ||
-                    !contactMessage.trim()
-                  }
-                  className={`bg-green-600 hover:bg-green-700 rounded-md px-4 py-2 text-white transition ${
-                    isSubmitting ||
-                    !contactName.trim() ||
-                    !contactEmail.trim() ||
-                    !contactSubject.trim() ||
-                    !contactMessage.trim()
-                      ? "opacity-70 cursor-not-allowed"
-                      : ""
-                  }`}
-                >
-                  {isSubmitting ? "Sending..." : "Send Message"}
-                </button>
-              </form>
-            </section>
-          )}
-        </main>
+    <div className={`bg-white rounded-lg border border-gray-300 shadow-sm ${classes.table}`}>
+      <div className={`flex justify-center ${classes.gap} mb-1`}>
+        {renderSeats(1, 4)}
       </div>
-    </>
+      
+      <div className="bg-green-50 text-center py-1 text-xs font-semibold text-gray-700 rounded mb-1">
+        Table {index + 1}
+      </div>
+      
+      <div className={`flex justify-center ${classes.gap}`}>
+        {renderSeats(5, 4)}
+      </div>
+    </div>
   );
 };
 
-export default FloatingChatBot;
+// Main component
+export default function FloorLayout() {
+  const { state } = useLocation();
+  const navigate = useNavigate();
+  const { memberId, userRole } = useAuth();
+  const { memberDetails, teamName, loading: userLoading } = useUserData(memberId);
+  const [isRatingOpen, setIsRatingOpen] = useState(false);
+  const [userId, setUserId] = useState(null);
+
+  const bookingInfo = useMemo(() => ({
+    date: state?.date || null,
+    entryTime: state?.entryTime || null,
+    exitTime: state?.exitTime || null,
+    floor: state?.floor || null,
+  }), [state]);
+
+  const [bookedChairs, setBookedChairs] = useState({});
+  const [userBooking, setUserBooking] = useState(null);
+  const [selectedSeat, setSelectedSeat] = useState(null);
+  const [message, setMessage] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [bookingSubmitted, setBookingSubmitted] = useState(false);
+
+  // Fetch userId for RatingModal
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error('No token found in localStorage');
+          setMessage('Please log in to submit ratings.');
+          return;
+        }
+        const profile = await api.fetchUser(memberId);
+        if (!profile._id) {
+          console.error('No userId found in profile:', profile);
+          setMessage('Unable to fetch user profile.');
+          return;
+        }
+        setUserId(profile._id);
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error.message);
+        setMessage('Failed to fetch user profile. Please log in again.');
+      }
+    };
+
+    if (memberId) {
+      fetchUserProfile();
+    }
+  }, [memberId]);
+
+  // Prevent scrolling
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = originalOverflow; };
+  }, []);
+
+  // Initialize component state
+  useEffect(() => {
+    if (!memberId || !bookingInfo.date || !bookingInfo.floor) return;
+    
+    setBookingSubmitted(false);
+    setSelectedSeat(null);
+    setUserBooking(null);
+    
+    Object.keys(localStorage)
+      .filter(key => key.startsWith('booking_submitted_') && 
+              !key.includes(`${memberId}_${bookingInfo.date}_${bookingInfo.floor}`))
+      .forEach(key => localStorage.removeItem(key));
+    
+  }, [memberId, bookingInfo]);
+
+  // Main booking fetch effect
+  useEffect(() => {
+    if (!bookingInfo.floor || !bookingInfo.date || !bookingInfo.entryTime || !bookingInfo.exitTime) {
+      setMessage('Please select booking details.');
+      setIsLoading(false);
+      navigate('/datebooking');
+      return;
+    }
+
+    if (userLoading) return;
+
+    const fetchBookings = async () => {
+      try {
+        const data = await api.fetchBookings(bookingInfo.date, bookingInfo.floor);
+        const filteredChairs = {};
+
+        if (data.chairs) {
+          Object.entries(data.chairs).forEach(([chairId, booking]) => {
+            filteredChairs[chairId] = {
+              ...booking,
+              userName: booking.userName,
+              teamColor: ensureHexColor(booking.teamColor),
+              timeSlot: booking.timeSlot || `${booking.entryTime} - ${booking.exitTime}`,
+              isFromDatabase: true
+            };
+          });
+        }
+
+        setBookedChairs(prev => {
+          const merged = { ...filteredChairs };
+          
+          if (!bookingSubmitted) {
+            Object.entries(prev).forEach(([chairId, booking]) => {
+              if (!filteredChairs[chairId] && booking.isVisualOnly) {
+                merged[chairId] = booking;
+              }
+            });
+          }
+          
+          return merged;
+        });
+
+        // Check submission state with 30-second timeout
+        const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
+        const justSubmitted = localStorage.getItem(submissionKey);
+        const submissionTime = localStorage.getItem(`${submissionKey}_time`);
+        
+        if (justSubmitted && submissionTime) {
+          const timeDiff = Date.now() - parseInt(submissionTime);
+          if (timeDiff < 30000) {
+            setBookingSubmitted(true);
+          } else {
+            localStorage.removeItem(submissionKey);
+            localStorage.removeItem(`${submissionKey}_time`);
+            setBookingSubmitted(false);
+          }
+        }
+        
+      } catch (err) {
+        setMessage('Failed to fetch bookings: ' + err.message);
+      }
+    };
+
+    setIsLoading(true);
+    fetchBookings().finally(() => setIsLoading(false));
+
+    const interval = setInterval(() => fetchBookings(), 10000);
+    return () => clearInterval(interval);
+  }, [bookingInfo, navigate, memberDetails?.userName, userLoading, memberId, bookingSubmitted]);
+
+  // Event handlers
+  const showMessage = (msg) => setMessage(msg);
+  const closeMessage = () => setMessage(null);
+
+  const handleChairClick = async (chairId, tableId) => {
+    if (bookingSubmitted || !memberDetails) return;
+
+    const userDatabaseBookings = Object.entries(bookedChairs).filter(([seatId, booking]) => 
+      booking.userName === memberDetails.userName && 
+      booking.isFromDatabase === true
+    );
+    
+    const booking = bookedChairs[chairId];
+    
+    if (booking) {
+      if (booking.userName === memberDetails.userName) {
+        if (booking.isVisualOnly) {
+          setSelectedSeat(null);
+          setUserBooking(null);
+          setBookedChairs(prev => {
+            const updated = { ...prev };
+            delete updated[chairId];
+            return updated;
+          });
+        } else {
+          try {
+            await api.unbookSeat(tableId, chairId, bookingInfo.floor, bookingInfo.date);
+            setUserBooking(null);
+            setSelectedSeat(null);
+            setBookedChairs(prev => {
+              const updated = { ...prev };
+              delete updated[chairId];
+              return updated;
+            });
+          } catch (err) {
+            showMessage('Failed to unbook seat: ' + err.message);
+          }
+        }
+      } else {
+        return;
+      }
+    } else {
+      if (userDatabaseBookings.length > 0) {
+        const existingBooking = userDatabaseBookings[0];
+        showMessage(`You already have a booking saved on this floor (${existingBooking[0]}). Please unbook your existing seat first before selecting a new one.`);
+        return;
+      }
+      
+      const userVisualBookings = Object.entries(bookedChairs).filter(([seatId, booking]) => 
+        booking.userName === memberDetails.userName && 
+        booking.isVisualOnly === true
+      );
+      
+      if (userVisualBookings.length > 0) {
+        const existingVisual = userVisualBookings[0];
+        showMessage(`You already have a seat selected (${existingVisual[0]}). Please unbook or submit your current selection first.`);
+        return;
+      }
+      
+      setSelectedSeat(chairId);
+      setUserBooking({ chairId, tableId });
+      
+      const visualChairData = {
+        userName: memberDetails.userName,
+        teamColor: ensureHexColor(memberDetails.teamColor),
+        teamName,
+        teamId: memberDetails.teamId,
+        entryTime: bookingInfo.entryTime,
+        exitTime: bookingInfo.exitTime,
+        timeSlot: `${bookingInfo.entryTime} - ${bookingInfo.exitTime}`,
+        date: bookingInfo.date,
+        floor: bookingInfo.floor,
+        isVisualOnly: true
+      };
+      
+      setBookedChairs(prev => ({ ...prev, [chairId]: visualChairData }));
+    }
+  };
+
+  const handleUnbook = async () => {
+    if (!memberDetails?.userName) return;
+
+    const userBookedSeat = Object.keys(bookedChairs).find(chairId => 
+      bookedChairs[chairId]?.userName === memberDetails.userName
+    );
+    
+    if (!userBookedSeat) return;
+
+    const booking = bookedChairs[userBookedSeat];
+    const tableId = userBookedSeat.split('-')[0];
+    
+    if (booking.isVisualOnly) {
+      setSelectedSeat(null);
+      setUserBooking(null);
+      setBookedChairs(prev => {
+        const updated = { ...prev };
+        delete updated[userBookedSeat];
+        return updated;
+      });
+    } else {
+      try {
+        await api.unbookSeat(tableId, userBookedSeat, bookingInfo.floor, bookingInfo.date);
+        setUserBooking(null);
+        setSelectedSeat(null);
+        setBookedChairs(prev => {
+          const updated = { ...prev };
+          delete updated[userBookedSeat];
+          return updated;
+        });
+      } catch (err) {
+        showMessage('Failed to unbook seat: ' + err.message);
+      }
+    }
+  };
+
+  const hasBookedSeat = () => {
+    return memberDetails?.userName && (
+      userBooking?.chairId || 
+      Object.keys(bookedChairs).some(chairId => bookedChairs[chairId]?.userName === memberDetails.userName) ||
+      selectedSeat
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!memberDetails?.userName) {
+      showMessage('No user logged in for submission.');
+      return;
+    }
+
+    if (!selectedSeat && !Object.keys(bookedChairs).some(chairId => 
+        bookedChairs[chairId]?.userName === memberDetails.userName && 
+        !bookedChairs[chairId]?.isVisualOnly
+      )) {
+      showMessage('Please select a seat before submitting.');
+      return;
+    }
+
+    if (selectedSeat) {
+      const tableId = selectedSeat.split('-')[0];
+      const bookingDetails = {
+        roomId: tableId,
+        teamName,
+        teamColor: memberDetails.teamColor,
+        userName: memberDetails.userName,
+        floor: bookingInfo.floor,
+        date: bookingInfo.date,
+        entryTime: bookingInfo.entryTime,
+        exitTime: bookingInfo.exitTime,
+      };
+
+      try {
+        const result = await api.bookSeat(selectedSeat, bookingDetails);
+        
+        const realChairData = {
+          userName: memberDetails.userName,
+          teamColor: ensureHexColor(memberDetails.teamColor),
+          teamName,
+          teamId: memberDetails.teamId,
+          entryTime: bookingInfo.entryTime,
+          exitTime: bookingInfo.exitTime,
+          timeSlot: `${bookingInfo.entryTime} - ${bookingInfo.exitTime}`,
+          bookingId: result.bookingId,
+          bookedAt: new Date(),
+          floor: bookingInfo.floor,
+          date: bookingInfo.date,
+          isFromDatabase: true
+        };
+        
+        setBookedChairs(prev => ({ ...prev, [selectedSeat]: realChairData }));
+        setSelectedSeat(null);
+        setBookingSubmitted(true);
+        const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
+        localStorage.setItem(submissionKey, 'true');
+        localStorage.setItem(`${submissionKey}_time`, Date.now().toString());
+        
+        showMessage('Booking submitted successfully!');
+        if (Math.random() < 0.1) setIsRatingOpen(true);
+      } catch (err) {
+        showMessage('Booking failed: ' + err.message);
+        return;
+      }
+    } else {
+      setBookingSubmitted(true);
+      const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
+      localStorage.setItem(submissionKey, 'true');
+      localStorage.setItem(`${submissionKey}_time`, Date.now().toString());
+      
+      showMessage('Booking submitted successfully!');
+      if (Math.random() < 0.1) setIsRatingOpen(true);
+    }
+  };
+
+  const handleCancel = () => {
+    if (bookingSubmitted) return;
+    
+    if (selectedSeat) {
+      setBookedChairs(prev => {
+        const updated = { ...prev };
+        if (updated[selectedSeat]?.isVisualOnly) {
+          delete updated[selectedSeat];
+        }
+        return updated;
+      });
+      setSelectedSeat(null);
+      setUserBooking(null);
+      return;
+    }
+
+    const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
+    localStorage.removeItem(submissionKey);
+    
+    setUserBooking(null);
+    navigate('/datebooking');
+  };
+
+  if (isLoading || userLoading) {
+    return (
+      <div className="w-full h-screen bg-green-50 flex items-center justify-center">
+        <p className="text-gray-800 text-lg font-semibold">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!memberDetails && !bookingSubmitted) {
+    return (
+      <div className="w-full h-screen bg-green-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <p className="text-gray-800 text-lg font-semibold mb-4">Please complete your booking information</p>
+          <button 
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg"
+            onClick={() => navigate('/datebooking')}
+          >
+            Go to Booking
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const tableIds = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8'];
+
+  return (
+    <div className="w-full h-screen bg-green-50 overflow-hidden relative">
+      <div className="h-full overflow-y-auto">
+        <div className="flex flex-col items-center justify-center gap-6 w-full min-h-screen py-8">
+          
+          <div className="bg-blue-100 border border-blue-300 rounded-xl p-4 text-center w-full max-w-2xl shadow-sm">
+            <p className="text-base font-semibold text-blue-800">
+              📅 Booking for: {bookingInfo.date}  | 🕐 Time: {bookingInfo.entryTime} - {bookingInfo.exitTime} | 🏢 Floor {bookingInfo.floor}
+              {userRole === 'admin' && <span className="ml-2 bg-red-500 text-white px-2 py-1 rounded text-sm">ADMIN</span>}
+            </p>
+          </div>
+
+          <div className="w-full flex justify-center">
+            <div className="block md:hidden w-full max-w-sm px-4">
+              <div className="flex flex-col gap-4 mb-8">
+                {tableIds.slice(0, 4).map((tableId, index) => (
+                  <TableComponent 
+                    key={tableId}
+                    tableId={tableId} 
+                    index={index} 
+                    seatSize="small"
+                    bookedChairs={bookedChairs}
+                    onChairClick={handleChairClick}
+                    userBooking={userBooking}
+                    selectedSeat={selectedSeat}
+                    disabled={bookingSubmitted}
+                  />
+                ))}
+              </div>
+              
+              <div className="bg-green-50 border-2 border-green-400 rounded-xl flex items-center justify-center h-20 mb-8 shadow-sm">
+                <span className="text-gray-800 font-bold text-base">Lobby</span>
+              </div>
+              
+              <div className="flex flex-col gap-4">
+                {tableIds.slice(4).map((tableId, index) => (
+                  <TableComponent 
+                    key={tableId}
+                    tableId={tableId} 
+                    index={index + 4} 
+                    seatSize="small"
+                    bookedChairs={bookedChairs}
+                    onChairClick={handleChairClick}
+                    userBooking={userBooking}
+                    selectedSeat={selectedSeat}
+                    disabled={bookingSubmitted}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="hidden md:block lg:hidden w-full max-w-4xl px-6">
+              <div className="flex flex-col items-center gap-8">
+                <div className="grid grid-cols-2 gap-6 w-full max-w-3xl">
+                  {tableIds.slice(0, 4).map((tableId, index) => (
+                    <TableComponent 
+                      key={tableId}
+                      tableId={tableId} 
+                      index={index} 
+                      seatSize="medium"
+                      bookedChairs={bookedChairs}
+                      onChairClick={handleChairClick}
+                      userBooking={userBooking}
+                      selectedSeat={selectedSeat}
+                      disabled={bookingSubmitted}
+                    />
+                  ))}
+                </div>
+                
+                <div className="bg-green-50 border-2 border-green-400 rounded-xl flex items-center justify-center w-80 h-32 shadow-sm">
+                  <span className="text-gray-800 font-bold text-xl">Lobby</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-6 w-full max-w-3xl">
+                  {tableIds.slice(4).map((tableId, index) => (
+                    <TableComponent 
+                      key={tableId}
+                      tableId={tableId} 
+                      index={index + 4} 
+                      seatSize="medium"
+                      bookedChairs={bookedChairs}
+                      onChairClick={handleChairClick}
+                      userBooking={userBooking}
+                      selectedSeat={selectedSeat}
+                      disabled={bookingSubmitted}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="hidden lg:flex items-center justify-center w-full max-w-7xl px-8">
+              <div className="flex items-center gap-12">
+                <div className="flex flex-col gap-5">
+                  {tableIds.slice(0, 4).map((tableId, index) => (
+                    <TableComponent 
+                      key={tableId}
+                      tableId={tableId} 
+                      index={index}
+                      bookedChairs={bookedChairs}
+                      onChairClick={handleChairClick}
+                      userBooking={userBooking}
+                      selectedSeat={selectedSeat}
+                      disabled={bookingSubmitted}
+                    />
+                  ))}
+                </div>
+
+                <div className="bg-green-50 border-2 border-green-400 rounded-xl flex items-center justify-center w-56 h-[520px] shadow-lg">
+                  <span className="text-gray-800 font-bold text-2xl">Lobby</span>
+                </div>
+
+                <div className="flex flex-col gap-5">
+                  {tableIds.slice(4).map((tableId, index) => (
+                    <TableComponent 
+                      key={tableId}
+                      tableId={tableId} 
+                      index={index + 4}
+                      bookedChairs={bookedChairs}
+                      onChairClick={handleChairClick}
+                      userBooking={userBooking}
+                      selectedSeat={selectedSeat}
+                      disabled={bookingSubmitted}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {!bookingSubmitted && (
+            <div className="bg-green-100 border border-green-300 rounded-xl p-6 w-full max-w-md shadow-sm">
+              <div className="flex gap-3 justify-center">
+                <button 
+                  className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 px-6 rounded-lg"
+                  onClick={handleUnbook}
+                >
+                  Unbook
+                </button>
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-6 rounded-lg disabled:bg-gray-400"
+                  onClick={handleSubmit}
+                  disabled={!hasBookedSeat()}
+                >
+                  Submit
+                </button>
+                <button 
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2.5 px-6 rounded-lg"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {bookingSubmitted && (
+            <div className="bg-green-100 border border-green-300 rounded-xl p-6 text-center w-full max-w-md shadow-sm">
+              <p className="text-green-800 font-semibold text-lg mb-4">✅ Booking Submitted Successfully!</p>
+              <button 
+                className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-8 rounded-lg"
+                onClick={() => navigate('/datebooking')}
+              >
+                Make Another Booking
+              </button>
+            </div>
+          )}
+
+          <RatingModal
+            isOpen={isRatingOpen}
+            onClose={() => setIsRatingOpen(false)}
+            onSubmit={async (data) => {
+              try {
+                const response = await fetch('/api/ratings/submit-rating', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId, bookingType: 'seating', ...data }),
+                });
+                return response;
+              } catch (error) {
+                console.error('Fetch error in onSubmit:', error.message);
+                throw error;
+              }
+            }}
+            userId={userId}
+            bookingType="seating"
+          />
+
+          {message && <PopUp message={message} onClose={closeMessage} />}
+        </div>
+      </div>
+    </div>
+  );
+}
