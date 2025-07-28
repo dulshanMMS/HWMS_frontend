@@ -15,6 +15,21 @@ const AdminTeamManagement = () => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [membersLoading, setMembersLoading] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  const filteredTeams = teams.filter(
+    (team) =>
+      team.teamName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      team.teamId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredTeams.length / itemsPerPage);
+  const paginatedTeams = filteredTeams.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  
   const fetchTeams = async () => {
     try {
       const res = await axios.get("/api/teams");
@@ -65,12 +80,6 @@ const AdminTeamManagement = () => {
     }
   };
 
-  const filteredTeams = teams.filter(
-    (team) =>
-      team.teamName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      team.teamId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <AdminSidebar>
       <div className="w-full px-4 sm:px-6 md:px-8 py-6 relative">
@@ -97,13 +106,53 @@ const AdminTeamManagement = () => {
         />
 
         <TeamList
-          teams={filteredTeams}
+          teams={paginatedTeams}
           onEdit={handleEditClick}
           onDelete={fetchTeams}
           loading={loading}
           memberCounts={memberCounts}
           onTeamClick={handleTeamClick}
         />
+
+        <div className="p-4 border-t flex items-center justify-center text-sm text-gray-700 gap-2 flex-wrap">
+          <button
+            onClick={() => setCurrentPage((prev) => prev - 1)}
+            disabled={currentPage === 1}
+            className={`px-3 py-1 rounded-full border transition ${
+              currentPage === 1
+                ? "text-gray-400 border-gray-300 cursor-not-allowed"
+                : "hover:bg-gray-100 border-gray-400"
+            }`}
+          >
+            ← Prev
+          </button>
+
+          {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((num) => (
+            <button
+              key={num}
+              onClick={() => setCurrentPage(num)}
+              className={`w-8 h-8 rounded-full text-sm font-medium border transition ${
+                num === currentPage
+                  ? "bg-green-600 text-white border-green-600"
+                  : "text-gray-700 border-gray-300 hover:bg-gray-100"
+              }`}
+            >
+              {num}
+            </button>
+          ))}
+
+          <button
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+            disabled={currentPage === totalPages}
+            className={`px-3 py-1 rounded-full border transition ${
+              currentPage === totalPages
+                ? "text-gray-400 border-gray-300 cursor-not-allowed"
+                : "hover:bg-gray-100 border-gray-400"
+            }`}
+          >
+            Next →
+          </button>
+        </div>
 
         {showFormModal && (
           <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 flex items-center justify-center transition-all p-2">
@@ -136,9 +185,9 @@ const AdminTeamManagement = () => {
 
         {selectedTeam && (
           <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-2">
-            <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-4 sm:p-5 relative">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 sm:p-5 relative animate-fade-in">
               <h3 className="text-lg font-semibold mb-3">
-                Members of {selectedTeam.teamName}
+                👥 Members of {selectedTeam.teamName}
               </h3>
               {membersLoading ? (
                 <p>Loading members...</p>

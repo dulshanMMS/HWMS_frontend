@@ -12,6 +12,7 @@ import AdminTeamManagement from "./pages/AdminTeamManagement";
 import AboutUsPage from "./pages/AboutUsPage";
 import BookingHistory from "./pages/BookingHistory";
 import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
 import SeatHistory from "./pages/SeatHistory";
 import BookingPage from './pages/DateBooking';
 import FloorLayout from './pages/FloorLayout';
@@ -41,8 +42,9 @@ const App = () => {
   return (
     <div className={containerClass}>
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/homepage" element={<HomePage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/datebooking" element={<BookingPage />} />
         <Route path="/floorlayout" element={<FloorLayout />} />
         <Route path="/admin" element={<AdminDashboard />} />

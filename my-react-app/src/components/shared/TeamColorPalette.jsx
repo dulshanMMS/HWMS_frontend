@@ -90,12 +90,12 @@ const TeamColorPalette = () => {
     <div className="bg-white p-6 rounded-xl shadow-xl">
       <div className="flex justify-between items-center mb-3">
         <h2 className="font-semibold text-lg">🎯 Teams Color Palette</h2>
-        <button
+        {/* <button
           onClick={() => setShowForm(!showForm)}
           className="bg-green-600 text-white text-sm px-4 py-1.5 rounded-md hover:bg-green-800 transition"
         >
           + Add Team
-        </button>
+        </button> */}
       </div>
 
       {showForm && (

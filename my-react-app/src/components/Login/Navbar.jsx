@@ -12,13 +12,13 @@ const Navbar = () => {
   }, []);
 
   const navLinks = [
-    { label: "Home", path: "/homepage" },
+    { label: "Home", path: "/" },
     { label: "About Us", path: "/about/us" },
   ];
 
   return (
     <nav
-      className={`absolute top-8 left-1/2 transform -translate-x-1/2 w-11/12 max-w-5xl bg-black/30 backdrop-blur-md px-4 py-2 rounded-xl shadow-md flex justify-between items-center z-10 transition-all duration-700 ease-out ${
+      className={`absolute top-8 z-50 left-1/2 transform -translate-x-1/2 w-11/12 max-w-5xl bg-black/30 backdrop-blur-md px-4 py-2 rounded-xl shadow-md flex justify-between items-center z-10 transition-all duration-700 ease-out ${
         visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
       }`}
     >
@@ -40,12 +40,12 @@ const Navbar = () => {
 
       {/* Auth Buttons - Desktop */}
       <div className="hidden md:flex gap-3">
-        <Link to="/">
+        <Link to="/login">
           <button className="bg-[#0E5D35] text-white font-bold px-4 py-2 rounded-md hover:bg-[#9cc5a7] hover:text-[#0E5D35] transition text-sm md:text-base">
             Sign In
           </button>
         </Link>
-        <Link to="/">
+        <Link to="/signup">
           <button className="bg-[#0E5D35] text-white font-bold px-4 py-2 rounded-md hover:bg-white hover:text-[#0E5D35] transition text-sm md:text-base">
             Sign Up
           </button>
