@@ -260,56 +260,47 @@ const MessagingPage = () => {
   };
 
   const createConversation = async (participantIds, type = 'direct', groupName = '') => {
-    try {
-      const response = await axios.post(
-        'http://localhost:5000/api/messages/conversations',
-        {
-          participantIds,
-          conversationType: type,
-          groupName: type === 'group' ? groupName : undefined
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  try {
+    const response = await axios.post(
+      'http://localhost:5000/api/messages/conversations',
+      {
+        participantIds,
+        conversationType: type,
+        groupName: type === 'group' ? groupName : undefined
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-      if (response.data.success) {
-        const conversation = response.data.conversation;
-        
-        const formattedConversation = {
-          _id: conversation._id,
-          conversationType: conversation.conversationType,
-          participants: conversation.participants,
-          displayName: conversation.conversationType === 'group' 
-            ? conversation.groupName 
-            : conversation.participants
-                .filter(p => p.userId._id !== currentUser.id)
-                .map(p => `${p.firstName} ${p.lastName}`)
-                .join(', '),
-          lastMessage: conversation.lastMessage,
-          totalMessages: conversation.totalMessages || 0,
-          updatedAt: conversation.updatedAt || new Date(),
-          isOnline: conversation.participants.some(p => 
-            p.userId._id !== currentUser.id && p.isOnline
-          )
-        };
-        
-        if (response.data.isNew) {
-          setConversations(prev => [formattedConversation, ...prev]);
-        }
-        
-        setActiveConversation(formattedConversation);
-        setMessages([]);
-        
-        if (isMobile) {
-          setShowConversationList(false);
-        }
-        
-        return true;
+    if (response.data.success) {
+      const conversation = response.data.conversation;
+      
+      if (response.data.isNew) {
+        setConversations(prev => [conversation, ...prev]);
       }
-    } catch (error) {
-      console.error('Error creating conversation:', error);
-      return false;
+      
+      setActiveConversation(conversation);
+      setMessages([]);
+      
+      if (isMobile) {
+        setShowConversationList(false);
+      }
+      
+      return true;
     }
-  };
+  } catch (error) {
+    console.error('Error creating conversation:', error);
+    return false;
+  }
+};
+
+  const handleConversationsUpdate = (updatedConversations) => {
+  setConversations(updatedConversations);
+  // Clear active conversation if it was deleted
+  if (activeConversation && !updatedConversations.find(c => c._id === activeConversation._id)) {
+    setActiveConversation(null);
+    setMessages([]);
+  }
+};
 
   if (isLoading) {
     return (
@@ -361,6 +352,7 @@ const MessagingPage = () => {
               showConversationList={showConversationList}
               isMobile={isMobile}
               currentUser={currentUser}
+              onConversationsUpdate={handleConversationsUpdate}
             />
             
             <ChatArea

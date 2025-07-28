@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { FaSearch, FaPlus, FaComments, FaUsers } from 'react-icons/fa';
-
+import { FaSearch, FaPlus, FaComments, FaUsers, FaTrash } from 'react-icons/fa';
 const ConversationsList = ({ 
   conversations, 
   activeConversation, 
@@ -11,6 +10,8 @@ const ConversationsList = ({
   currentUser
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+const [isDeleting, setIsDeleting] = useState(false);
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -39,6 +40,25 @@ const ConversationsList = ({
   const filteredConversations = conversations.filter(conv =>
     conv.displayName.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleDeleteConversation = async (conversationId) => {
+  setIsDeleting(true);
+  try {
+    const { conversationApi } = await import('../../api/messageApi');
+    await conversationApi.deleteConversation(conversationId);
+    
+    // Remove from local state
+    const updatedConversations = conversations.filter(conv => conv._id !== conversationId);
+    // You'll need to add onConversationsUpdate prop or use a callback to update parent state
+    
+    setShowDeleteConfirm(null);
+  } catch (error) {
+    console.error('Failed to delete conversation:', error);
+    alert('Failed to delete conversation. Please try again.');
+  } finally {
+    setIsDeleting(false);
+  }
+};
 
   return (
     <div className={`${showConversationList || !isMobile ? 'w-full sm:w-96 md:w-[480px] lg:w-[520px] flex-shrink-0' : 'hidden'} h-full bg-white/95 backdrop-blur-sm border-r border-gray-200/50 flex flex-col`}>
@@ -156,17 +176,27 @@ const ConversationsList = ({
                           {conversation.displayName}
                         </h3>
                         <div className="flex items-center gap-1 sm:gap-2">
-                          <span className="text-xs font-medium text-gray-500">
-                            {formatTime(conversation.updatedAt)}
-                          </span>
-                          {conversation.unreadCount > 0 && (
-                            <div className="w-4 h-4 sm:w-6 sm:h-6 bg-gradient-to-r from-red-400 to-pink-500 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-bold text-white">
-                                {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                            {/* <span className="text-xs font-medium text-gray-500">
+                              {formatTime(conversation.updatedAt)}
+                            </span> */}
+                            {conversation.unreadCount > 0 && (
+                              <div className="w-4 h-4 sm:w-6 sm:h-6 bg-gradient-to-r from-red-400 to-pink-500 rounded-full flex items-center justify-center">
+                                <span className="text-xs font-bold text-white">
+                                  {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+                                </span>
+                              </div>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowDeleteConfirm(conversation._id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all duration-200"
+                              title="Delete conversation"
+                            >
+                              <FaTrash className="text-red-500 text-xs" />
+                            </button>
+                          </div>
                       </div>
                       
                       {/* Last Message Preview */}
@@ -223,6 +253,33 @@ const ConversationsList = ({
           </span>
         </div>
       </div>
+
+
+            {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-3">Delete Conversation?</h3>
+            <p className="text-gray-600 mb-6">This will remove the conversation from your list. This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteConversation(showDeleteConfirm)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

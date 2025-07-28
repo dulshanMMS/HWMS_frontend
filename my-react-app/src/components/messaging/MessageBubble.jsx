@@ -93,12 +93,12 @@ const MessageBubble = ({ message, isOwn, activeConversation, onReply }) => {
             <span className={`text-xs font-medium ${isOwn ? 'text-green-100' : 'text-gray-500'}`}>
               {formatTime(message.createdAt)}
             </span>
-            {isOwn && (
+            {/* {isOwn && (
               <div className="flex items-center gap-1">
                 <FaCheckDouble className="text-green-200 text-sm animate-pulse" />
                 <span className="text-xs text-green-100">Delivered</span>
               </div>
-            )}
+            )} */}
           </div>
 
           {/* Message reactions placeholder */}

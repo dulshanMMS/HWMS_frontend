@@ -18,6 +18,7 @@ const NewChatModal = ({ onClose, onCreateConversation, token }) => {
     if (success) {
       handleClose();
     }
+    return success;
   };
 
   const handleClose = () => {
@@ -62,9 +63,9 @@ const NewChatModal = ({ onClose, onCreateConversation, token }) => {
           <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 to-blue-400/20 rounded-3xl blur-xl scale-110 animate-pulse"></div>
           
           {/* Main Modal */}
-          <div className="relative bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200/50">
+          <div className="relative bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200/50 z-10">
             {/* Animated particles background */}
-            <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <div className={`absolute top-0 left-0 w-full h-full transition-transform duration-1000 ${isVisible ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-green-300/30 rounded-full animate-float"></div>
                 <div className="absolute top-1/2 right-1/3 w-3 h-3 bg-blue-300/30 rounded-full animate-float-delayed"></div>
@@ -73,9 +74,9 @@ const NewChatModal = ({ onClose, onCreateConversation, token }) => {
             </div>
 
             {/* Enhanced Header with slide-in animation */}
-            <div className="relative p-6 bg-gradient-to-r from-green-500 to-blue-600 text-white overflow-hidden">
+            <div className="relative p-6 bg-gradient-to-r from-green-500 to-blue-600 text-white overflow-hidden z-10">
               {/* Animated background pattern */}
-              <div className={`absolute inset-0 opacity-20 transition-transform duration-700 ${isVisible ? 'translate-x-0' : 'translate-x-full'}`}>
+              <div className={`absolute inset-0 opacity-20 transition-transform duration-700 pointer-events-none ${isVisible ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16 animate-spin-slow"></div>
                 <div className="absolute bottom-0 right-0 w-24 h-24 bg-white rounded-full translate-x-12 translate-y-12 animate-reverse-spin"></div>
               </div>
@@ -103,7 +104,7 @@ const NewChatModal = ({ onClose, onCreateConversation, token }) => {
               </div>
             </div>
             
-            <div className="p-6">
+            <div className="p-6 relative z-20">
               {!showUserSearch ? (
                 <div className="space-y-4">
                   {/* Direct Message Option with staggered animation */}
@@ -234,7 +235,7 @@ const NewChatModal = ({ onClose, onCreateConversation, token }) => {
                   </div>
                 </div>
               ) : (
-                <div className={`transition-all duration-500 ${showUserSearch ? 'opacity-100' : 'opacity-0'}`}>
+                <div className="transition-all duration-500 relative z-30 pointer-events-auto">
                   <UserSearchModal
                     token={token}
                     onCreateConversation={handleCreateConversation}
@@ -255,7 +256,7 @@ const NewChatModal = ({ onClose, onCreateConversation, token }) => {
       </div>
 
       {/* Custom CSS for additional animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
           50% { transform: translateY(-10px) rotate(2deg); }

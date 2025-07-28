@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { FaPaperPlane, FaReply, FaTimes, FaSmile, FaExclamationTriangle } from 'react-icons/fa';
+import { FaPaperPlane, FaReply, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
+import EmojiPicker from './EmojiPicker';
+
 
 const MessageInput = ({ 
   onSendMessage, 
@@ -140,16 +142,15 @@ const MessageInput = ({
               />
               
               {/* Emoji button */}
-              <button 
-                className={`absolute right-2 sm:right-3 bottom-2 sm:bottom-3 p-1 transition-colors duration-200 ${
-                  !isConnected || disabled
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-400 hover:text-yellow-500'
-                }`}
-                disabled={disabled || !isConnected}
-              >
-                <FaSmile className="text-base sm:text-lg" />
-              </button>
+                <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3">
+              <EmojiPicker
+                onEmojiSelect={(emoji) => {
+                  setNewMessage(prev => prev + emoji);
+                  messageInputRef.current?.focus();
+                }}
+                className={disabled || !isConnected ? 'pointer-events-none opacity-50' : ''}
+              />
+            </div>
             </div>
 
             {/* Character counter for long messages */}

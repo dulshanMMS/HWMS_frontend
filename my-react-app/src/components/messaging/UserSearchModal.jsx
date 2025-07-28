@@ -21,33 +21,7 @@ const UserSearchModal = ({ token, onCreateConversation, onBack }) => {
       setSearchResults(response.data.users || []);
     } catch (error) {
       console.error('Error searching users:', error);
-      // Mock users for demo if API not ready
-      setSearchResults([
-        {
-          _id: '1',
-          firstName: 'John',
-          lastName: 'Doe', 
-          username: 'john.doe',
-          email: 'john@company.com',
-          profilePhoto: 'https://i.pravatar.cc/40?img=1',
-          displayName: 'John Doe',
-          teamInfo: { name: 'Development Team' }
-        },
-        {
-          _id: '2',
-          firstName: 'Sarah',
-          lastName: 'Wilson',
-          username: 'sarah.wilson',
-          email: 'sarah@company.com', 
-          profilePhoto: 'https://i.pravatar.cc/40?img=2',
-          displayName: 'Sarah Wilson',
-          teamInfo: { name: 'Design Team' }
-        }
-      ].filter(user => 
-        user.displayName.toLowerCase().includes(query.toLowerCase()) ||
-        user.username.toLowerCase().includes(query.toLowerCase()) ||
-        user.email.toLowerCase().includes(query.toLowerCase())
-      ));
+      setSearchResults([]);
     }
   };
 
@@ -67,6 +41,9 @@ const UserSearchModal = ({ token, onCreateConversation, onBack }) => {
     
     onCreateConversation(participantIds, type, groupName);
   };
+
+  // Debug the button state
+  const isButtonDisabled = selectedUsers.length === 0;
 
   return (
     <div className="space-y-4">
@@ -132,9 +109,20 @@ const UserSearchModal = ({ token, onCreateConversation, onBack }) => {
             />
           )}
           
+          {/* Debug info */}
+          <div className="text-xs text-gray-500">
+            Selected {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''}
+          </div>
+          
           <button
+            type="button"
             onClick={handleCreateConversation}
-            className="w-full p-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors font-medium"
+            disabled={isButtonDisabled}
+            className={`w-full p-3 rounded-xl font-medium transition-colors ${
+              isButtonDisabled 
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                : 'bg-green-500 text-white hover:bg-green-600 cursor-pointer'
+            }`}
           >
             Start Conversation ({selectedUsers.length} {selectedUsers.length === 1 ? 'person' : 'people'})
           </button>

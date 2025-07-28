@@ -157,7 +157,7 @@ const MessagingButton = ({
       className={`
         ${positionClasses}
         ${config.button}
-        bg-gradient-to-r from-green-500 to-green-600
+        bg-[#052E19]
         hover:from-green-600 hover:to-green-700
         text-white
         rounded-full
