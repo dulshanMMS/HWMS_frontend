@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Seat from './Seat';
 import { jwtDecode } from "jwt-decode";
@@ -58,19 +58,19 @@ const getCurrentUserName = () => {
 // API functions
 const api = {
   async fetchBookings(date, floor) {
-    const response = await fetch(`http://localhost:5000/api/bookings/filtered?date=${date}&floor=${floor}`);
+    const response = await fetch(`http://localhost:6001/api/bookings/filtered?date=${date}&floor=${floor}`);
     if (!response.ok) throw new Error('Failed to fetch bookings');
     return response.json();
   },
 
   async fetchUser(userId) {
-    const response = await fetch(`http://localhost:5000/api/bookings/users/${userId}`);
+    const response = await fetch(`http://localhost:6001/api/bookings/users/${userId}`);
     if (!response.ok) throw new Error('User not found');
     return response.json();
   },
 
   async fetchTeam(teamId) {
-    const response = await fetch(`http://localhost:5000/api/teams`);
+    const response = await fetch(`http://localhost:6001/api/teams`);
     if (!response.ok) throw new Error('Failed to fetch teams');
     
     const teams = await response.json();
@@ -88,7 +88,7 @@ const api = {
       ? `/api/bookings/admin/${currentUserName}/seat/${chairId}`
       : `/api/bookings/member/${currentUserName}/seat/${chairId}`;
     
-    const response = await fetch(`http://localhost:5000${endpoint}`, {
+    const response = await fetch(`http://localhost:6001${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bookingDetails),
@@ -107,7 +107,7 @@ const api = {
       ? `/api/bookings/admin/unbook/${tableId}/${chairId}/${floor}/${date}`
       : `/api/bookings/unbook/${tableId}/${chairId}/${floor}/${date}`;
     
-    const response = await fetch(`http://localhost:5000${endpoint}`, {
+    const response = await fetch(`http://localhost:6001${endpoint}`, {
       method: 'DELETE',
     });
     
@@ -256,11 +256,17 @@ export default function FloorLayout() {
   }), [state]);
 
   const [bookedChairs, setBookedChairs] = useState({});
+  const [originalBookedChairs, setOriginalBookedChairs] = useState({}); // Track original state  
+  const [localChanges, setLocalChanges] = useState({}); // Track what user changed locally
   const [userBooking, setUserBooking] = useState(null);
   const [selectedSeat, setSelectedSeat] = useState(null);
   const [message, setMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [bookingSubmitted, setBookingSubmitted] = useState(false);
+
+  // Use ref to track local changes for interval access
+  const localChangesRef = useRef({});
+  const isUpdatingRef = useRef(false);
 
   // Prevent scrolling
   useEffect(() => {
@@ -276,10 +282,11 @@ export default function FloorLayout() {
     setBookingSubmitted(false);
     setSelectedSeat(null);
     setUserBooking(null);
+    setLocalChanges({});
     
+    // Clean up any old localStorage entries
     Object.keys(localStorage)
-      .filter(key => key.startsWith('booking_submitted_') && 
-              !key.includes(`${memberId}_${bookingInfo.date}_${bookingInfo.floor}`))
+      .filter(key => key.startsWith('booking_submitted_'))
       .forEach(key => localStorage.removeItem(key));
     
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -297,7 +304,15 @@ export default function FloorLayout() {
     if (userLoading) return;
 
     const fetchBookings = async () => {
+      // Absolutely prevent any updates if local changes exist
+      if (Object.keys(localChangesRef.current).length > 0 || isUpdatingRef.current) {
+        console.log('🛑 BLOCKED: API call blocked due to local changes');
+        return;
+      }
+
       try {
+        isUpdatingRef.current = true;
+        
         const data = await api.fetchBookings(bookingInfo.date, bookingInfo.floor);
         const filteredChairs = {};
 
@@ -313,6 +328,16 @@ export default function FloorLayout() {
           });
         }
 
+        // Double check before updating - prevent race conditions
+        if (Object.keys(localChangesRef.current).length > 0) {
+          console.log('🛑 BLOCKED: Race condition prevented');
+          return;
+        }
+
+        // Store original state from database
+        setOriginalBookedChairs(filteredChairs);
+        
+        // Only update if absolutely no local changes
         setBookedChairs(prev => {
           const merged = { ...filteredChairs };
           
@@ -327,93 +352,111 @@ export default function FloorLayout() {
           return merged;
         });
 
-        // Check submission state with 30-second timeout
-        const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
-        const justSubmitted = localStorage.getItem(submissionKey);
-        const submissionTime = localStorage.getItem(`${submissionKey}_time`);
+        // Allow editing immediately when user returns later
+        setBookingSubmitted(false);
         
-        if (justSubmitted && submissionTime) {
-          const timeDiff = Date.now() - parseInt(submissionTime);
-          if (timeDiff < 30000) { // 30 seconds - CHANGE THIS VALUE TO MODIFY TIMEOUT
-            setBookingSubmitted(true);
-          } else {
-            localStorage.removeItem(submissionKey);
-            localStorage.removeItem(`${submissionKey}_time`);
-            setBookingSubmitted(false);
-          }
-        }
+        console.log('✅ API Update Applied');
         
       } catch (err) {
         setMessage('Failed to fetch bookings: ' + err.message);
+      } finally {
+        isUpdatingRef.current = false;
       }
     };
 
-    setIsLoading(true);
-    fetchBookings().finally(() => setIsLoading(false));
+    // Only fetch on initial load and periodically when no local changes
+    if (isLoading) {
+      fetchBookings().finally(() => setIsLoading(false));
+    }
 
-    const interval = setInterval(() => fetchBookings(), 10000);
+    const interval = setInterval(() => {
+      // Triple check using ref to ensure current value
+      if (Object.keys(localChangesRef.current).length === 0 && !isUpdatingRef.current) {
+        console.log('🔄 Auto refresh triggered');
+        fetchBookings();
+      } else {
+        console.log('🛑 Auto refresh blocked - local changes exist');
+      }
+    }, 10000);
     return () => clearInterval(interval);
-  }, [bookingInfo, navigate, memberDetails?.userName, userLoading, memberId, bookingSubmitted]);
+  }, [bookingInfo, navigate, memberDetails?.userName, userLoading, memberId, bookingSubmitted]); // Removed localChanges dependency to prevent re-runs
 
   // Event handlers
   const showMessage = (msg) => setMessage(msg);
   const closeMessage = () => setMessage(null);
 
-  const handleChairClick = async (chairId, tableId) => {
-    if (bookingSubmitted || !memberDetails) return;
+  const handleChairClick = (chairId, tableId) => {
+    console.log('🔵 CHAIR CLICKED:', chairId);
+    
+    if (bookingSubmitted || !memberDetails) {
+      console.log('❌ Click blocked - submitted or no member details');
+      return;
+    }
 
-    const userDatabaseBookings = Object.entries(bookedChairs).filter(([seatId, booking]) => 
-      booking.userName === memberDetails.userName && 
-      booking.isFromDatabase === true
-    );
+    const currentBooking = bookedChairs[chairId];
     
-    const booking = bookedChairs[chairId];
-    
-    if (booking) {
-      if (booking.userName === memberDetails.userName) {
-        if (booking.isVisualOnly) {
-          setSelectedSeat(null);
-          setUserBooking(null);
+    if (currentBooking) {
+      if (currentBooking.userName === memberDetails.userName) {
+        console.log('🔴 User clicking own seat to unbook');
+        
+        if (currentBooking.isFromDatabase) {
+          // Database booking - mark for local unbooking (don't call API immediately)
+          const newLocalChanges = {
+            ...localChanges,
+            [chairId]: { action: 'unbook', originalData: currentBooking }
+          };
+          
+          setLocalChanges(newLocalChanges);
+          localChangesRef.current = newLocalChanges; // Update ref immediately
+          
+          console.log('🔴 UNBOOK LOCAL:', chairId);
+          
+          // Remove from display locally
           setBookedChairs(prev => {
             const updated = { ...prev };
             delete updated[chairId];
             return updated;
           });
-        } else {
-          try {
-            await api.unbookSeat(tableId, chairId, bookingInfo.floor, bookingInfo.date);
-            setUserBooking(null);
-            setSelectedSeat(null);
-            setBookedChairs(prev => {
-              const updated = { ...prev };
-              delete updated[chairId];
-              return updated;
-            });
-          } catch (err) {
-            showMessage('Failed to unbook seat: ' + err.message);
-          }
+          
+          setSelectedSeat(null);
+          setUserBooking(null);
+        } else if (currentBooking.isVisualOnly) {
+          // Visual-only booking - just remove locally
+          const newLocalChanges = { ...localChanges };
+          delete newLocalChanges[chairId];
+          
+          setLocalChanges(newLocalChanges);
+          localChangesRef.current = newLocalChanges; // Update ref immediately
+          
+          setBookedChairs(prev => {
+            const updated = { ...prev };
+            delete updated[chairId];
+            return updated;
+          });
+          
+          setSelectedSeat(null);
+          setUserBooking(null);
         }
       } else {
-        return;
+        console.log('❌ Cannot unbook someone else\'s seat');
       }
+      return;
     } else {
-      if (userDatabaseBookings.length > 0) {
-        const existingBooking = userDatabaseBookings[0];
-        showMessage(`You already have a booking saved on this floor (${existingBooking[0]}). Please unbook your existing seat first before selecting a new one.`);
-        return;
-      }
+      console.log('🟢 Booking available seat');
       
-      const userVisualBookings = Object.entries(bookedChairs).filter(([seatId, booking]) => 
-        booking.userName === memberDetails.userName && 
-        booking.isVisualOnly === true
+      // Seat is available - check if user already has a seat
+      const userCurrentBookings = Object.entries(bookedChairs).filter(([seatId, booking]) => 
+        booking.userName === memberDetails.userName
       );
       
-      if (userVisualBookings.length > 0) {
-        const existingVisual = userVisualBookings[0];
-        showMessage(`You already have a seat selected (${existingVisual[0]}). Please unbook or submit your current selection first.`);
+      if (userCurrentBookings.length > 0) {
+        const existingBooking = userCurrentBookings[0];
+        showMessage(`You already have a seat selected/booked (${existingBooking[0]}). Please unbook your existing seat first before selecting a new one.`);
+        console.log('❌ User already has a booking:', existingBooking[0]);
         return;
       }
       
+      // Create visual booking - NO API CALL
       setSelectedSeat(chairId);
       setUserBooking({ chairId, tableId });
       
@@ -430,11 +473,22 @@ export default function FloorLayout() {
         isVisualOnly: true
       };
       
+      // Track local change - NO API CALL HERE
+      const newLocalChanges = {
+        ...localChanges,
+        [chairId]: { action: 'book', data: visualChairData }
+      };
+      
+      setLocalChanges(newLocalChanges);
+      localChangesRef.current = newLocalChanges; // Update ref immediately
+      
+      console.log('🟢 BOOK LOCAL ONLY:', chairId, '- NO API CALL MADE');
+      
       setBookedChairs(prev => ({ ...prev, [chairId]: visualChairData }));
     }
   };
 
-  const handleUnbook = async () => {
+  const handleUnbook = () => {
     if (!memberDetails?.userName) return;
 
     const userBookedSeat = Object.keys(bookedChairs).find(chairId => 
@@ -444,38 +498,38 @@ export default function FloorLayout() {
     if (!userBookedSeat) return;
 
     const booking = bookedChairs[userBookedSeat];
-    const tableId = userBookedSeat.split('-')[0];
     
-    if (booking.isVisualOnly) {
-      setSelectedSeat(null);
-      setUserBooking(null);
-      setBookedChairs(prev => {
-        const updated = { ...prev };
-        delete updated[userBookedSeat];
-        return updated;
-      });
+    if (booking.isFromDatabase) {
+      // Database booking - mark for local unbooking (don't call API)
+      const newLocalChanges = {
+        ...localChanges,
+        [userBookedSeat]: { action: 'unbook', originalData: booking }
+      };
+      
+      setLocalChanges(newLocalChanges);
+      localChangesRef.current = newLocalChanges; // Update ref immediately
     } else {
-      try {
-        await api.unbookSeat(tableId, userBookedSeat, bookingInfo.floor, bookingInfo.date);
-        setUserBooking(null);
-        setSelectedSeat(null);
-        setBookedChairs(prev => {
-          const updated = { ...prev };
-          delete updated[userBookedSeat];
-          return updated;
-        });
-      } catch (err) {
-        showMessage('Failed to unbook seat: ' + err.message);
-      }
+      // Visual booking - just remove locally
+      const newLocalChanges = { ...localChanges };
+      delete newLocalChanges[userBookedSeat];
+      
+      setLocalChanges(newLocalChanges);
+      localChangesRef.current = newLocalChanges; // Update ref immediately
     }
+    
+    // Remove from display
+    setBookedChairs(prev => {
+      const updated = { ...prev };
+      delete updated[userBookedSeat];
+      return updated;
+    });
+    
+    setSelectedSeat(null);
+    setUserBooking(null);
   };
 
   const hasBookedSeat = () => {
-    return memberDetails?.userName && (
-      userBooking?.chairId || 
-      Object.keys(bookedChairs).some(chairId => bookedChairs[chairId]?.userName === memberDetails.userName) ||
-      selectedSeat
-    );
+    return memberDetails?.userName && Object.keys(localChanges).length > 0;
   };
 
   const handleSubmit = async () => {
@@ -484,81 +538,84 @@ export default function FloorLayout() {
       return;
     }
 
-    if (!selectedSeat && !Object.keys(bookedChairs).some(chairId => 
-        bookedChairs[chairId]?.userName === memberDetails.userName && 
-        !bookedChairs[chairId]?.isVisualOnly
-      )) {
-      showMessage('Please select a seat before submitting.');
+    if (Object.keys(localChanges).length === 0) {
+      showMessage('No changes to submit.');
       return;
     }
 
-    if (selectedSeat) {
-      const tableId = selectedSeat.split('-')[0];
-      const bookingDetails = {
-        roomId: tableId,
-        teamName,
-        teamColor: memberDetails.teamColor,
-        userName: memberDetails.userName,
-        floor: bookingInfo.floor,
-        date: bookingInfo.date,
-        entryTime: bookingInfo.entryTime,
-        exitTime: bookingInfo.exitTime,
-      };
+    try {
+      // Process all local changes and apply to database
+      for (const [chairId, change] of Object.entries(localChanges)) {
+        const tableId = chairId.split('-')[0];
+        
+        if (change.action === 'book') {
+          // Book the seat
+          const bookingDetails = {
+            roomId: tableId,
+            teamName,
+            teamColor: memberDetails.teamColor,
+            userName: memberDetails.userName,
+            floor: bookingInfo.floor,
+            date: bookingInfo.date,
+            entryTime: bookingInfo.entryTime,
+            exitTime: bookingInfo.exitTime,
+          };
 
-      try {
-        const result = await api.bookSeat(selectedSeat, bookingDetails);
-        
-        const realChairData = {
-          userName: memberDetails.userName,
-          teamColor: ensureHexColor(memberDetails.teamColor),
-          teamName,
-          teamId: memberDetails.teamId,
-          entryTime: bookingInfo.entryTime,
-          exitTime: bookingInfo.exitTime,
-          timeSlot: `${bookingInfo.entryTime} - ${bookingInfo.exitTime}`,
-          bookingId: result.bookingId,
-          bookedAt: new Date(),
-          floor: bookingInfo.floor,
-          date: bookingInfo.date,
-          isFromDatabase: true
-        };
-        
-        setBookedChairs(prev => ({ ...prev, [selectedSeat]: realChairData }));
-        setSelectedSeat(null);
-      } catch (err) {
-        showMessage('Booking failed: ' + err.message);
-        return;
+          await api.bookSeat(chairId, bookingDetails);
+          
+        } else if (change.action === 'unbook') {
+          // Unbook the seat
+          await api.unbookSeat(tableId, chairId, bookingInfo.floor, bookingInfo.date);
+        }
       }
-    }
 
-    setBookingSubmitted(true);
-    const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
-    localStorage.setItem(submissionKey, 'true');
-    localStorage.setItem(`${submissionKey}_time`, Date.now().toString());
-    
-    showMessage('Booking submitted successfully!');
+      // Clear local changes and show only database state after successful submission
+      setLocalChanges({});
+      localChangesRef.current = {}; // Clear ref immediately
+      setSelectedSeat(null);
+      
+      console.log('✅ SUBMIT: Local changes cleared, showing final DB state');
+      
+      // Refresh to show final database state
+      const data = await api.fetchBookings(bookingInfo.date, bookingInfo.floor);
+      const finalChairs = {};
+      
+      if (data.chairs) {
+        Object.entries(data.chairs).forEach(([chairId, booking]) => {
+          finalChairs[chairId] = {
+            ...booking,
+            userName: booking.userName,
+            teamColor: ensureHexColor(booking.teamColor),
+            timeSlot: booking.timeSlot || `${booking.entryTime} - ${booking.exitTime}`,
+            isFromDatabase: true
+          };
+        });
+      }
+      
+      setBookedChairs(finalChairs);
+      setOriginalBookedChairs(finalChairs);
+      setBookingSubmitted(true);
+      
+      showMessage('All changes submitted successfully!');
+      
+    } catch (err) {
+      showMessage('Submission failed: ' + err.message);
+    }
   };
 
   const handleCancel = () => {
     if (bookingSubmitted) return;
     
-    if (selectedSeat) {
-      setBookedChairs(prev => {
-        const updated = { ...prev };
-        if (updated[selectedSeat]?.isVisualOnly) {
-          delete updated[selectedSeat];
-        }
-        return updated;
-      });
-      setSelectedSeat(null);
-      setUserBooking(null);
-      return;
-    }
-
-    const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
-    localStorage.removeItem(submissionKey);
-    
+    // Clear all local changes and show only database state
+    setLocalChanges({});
+    localChangesRef.current = {}; // Clear ref immediately
+    setBookedChairs(originalBookedChairs);
+    setSelectedSeat(null);
     setUserBooking(null);
+    
+    console.log('🔄 CANCEL: Local changes cleared');
+    
+    // Navigate back
     navigate('/datebooking');
   };
 

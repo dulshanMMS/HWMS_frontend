@@ -32,8 +32,14 @@ export default function DateBooking() {
   const [showPopup, setShowPopup] = useState(false);
   const [message, setMessage] = useState("");
   const [user, setUser] = useState('');
+  
+  // NEW: States for conflict management
+  const [availableFloors, setAvailableFloors] = useState([]);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [existingBookingId, setExistingBookingId] = useState(null);
+  const [isLoadingFloors, setIsLoadingFloors] = useState(false);
 
-  // UPDATED: Decode JWT to get the logged-in user's userName
+  // Decode JWT to get the logged-in user's userName
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -46,10 +52,108 @@ export default function DateBooking() {
     }
   }, []);
 
+  // Initialize available floors on component mount
+  useEffect(() => {
+    const allFloors = [];
+    for (let i = 1; i <= 32; i++) {
+      allFloors.push({ id: i, name: `Floor ${i}` });
+    }
+    setAvailableFloors(allFloors);
+  }, []);
+
+  // NEW: Check for booking conflicts and update available floors
+  const checkBookingConflicts = async () => {
+    if (!user || !date) return;
+
+    setIsLoadingFloors(true);
+    
+    try {
+      const selectedDate = new Date(date);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
+
+      const entryTime = `${pad(entryHour)}:${pad(entryMinute)}`;
+      const exitTime = `${pad(exitHour)}:${pad(exitMinute)}`;
+
+      console.log('🔍 Checking conflicts for:', {
+        userName: user,
+        date: formattedDate,
+        entryTime,
+        exitTime
+      });
+
+      const response = await fetch('http://localhost:6001/api/bookings/check-user-conflict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          userName: user,
+          date: formattedDate,
+          entryTime: entryTime,
+          exitTime: exitTime
+        })
+      });
+
+      const data = await response.json();
+      console.log('📋 Conflict check response:', data);
+
+      if (data.hasConflict) {
+        // User has existing booking at this time - show only that floor
+        console.log(`⚠️ Conflict found on Floor ${data.existingFloor}`);
+        setAvailableFloors([{ id: data.existingFloor, name: `Floor ${data.existingFloor}` }]);
+        setFloor(data.existingFloor.toString());
+        setIsEditMode(true);
+        setExistingBookingId(data.bookingId);
+        // Silently switch to edit mode without showing popup
+      } else {
+        // No conflict - show all floors (32 floors available)
+        console.log('✅ No conflicts found - showing all floors');
+        const allFloors = [];
+        for (let i = 1; i <= 32; i++) {
+          allFloors.push({ id: i, name: `Floor ${i}` });
+        }
+        setAvailableFloors(allFloors);
+        setIsEditMode(false);
+        setExistingBookingId(null);
+        setFloor(""); // Reset floor selection
+      }
+    } catch (error) {
+      console.error('❌ Error checking booking conflicts:', error);
+      // Fallback to show all floors
+      const allFloors = [];
+      for (let i = 1; i <= 32; i++) {
+        allFloors.push({ id: i, name: `Floor ${i}` });
+      }
+      setAvailableFloors(allFloors);
+      setIsEditMode(false);
+      setExistingBookingId(null);
+    } finally {
+      setIsLoadingFloors(false);
+    }
+  };
+
+  // NEW: Effect to check conflicts when date/time changes
+  useEffect(() => {
+    if (user) {
+      // Debounce the conflict check to avoid too many API calls
+      const timeoutId = setTimeout(() => {
+        checkBookingConflicts();
+      }, 500);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [date, entryHour, entryMinute, exitHour, exitMinute, user]);
+
   // Helper to pad numbers <10 with a leading zero for display
   const pad = (num) => (num < 10 ? "0" + num : num);
 
-  // UPDATED: Validate booking date and time - NOW INCLUDES PAST TIME VALIDATION
+  // Validate booking date and time - includes past time validation
   const validateBookingDateTime = () => {
     const selectedDate = new Date(date);
     selectedDate.setHours(0, 0, 0, 0);
@@ -65,7 +169,7 @@ export default function DateBooking() {
       };
     }
     
-    // NEW: Check if booking is for today and time has already passed
+    // Check if booking is for today and time has already passed
     if (selectedDate.getTime() === today.getTime()) {
       const now = new Date();
       const entryTime = new Date();
@@ -102,7 +206,7 @@ export default function DateBooking() {
       return;
     }
 
-    // UPDATED: Date and time validation (now includes past time checking)
+    // Date and time validation (includes past time checking)
     const dateTimeValidation = validateBookingDateTime();
     if (!dateTimeValidation.isValid) {
       setMessage(dateTimeValidation.message);
@@ -119,7 +223,17 @@ export default function DateBooking() {
     const day = String(selectedDate.getDate()).padStart(2, '0');
     const formattedDate = `${year}-${month}-${day}`;
 
-    // Navigate to FloorLayout with booking info + user
+    console.log('🚀 Navigating to FloorLayout with:', {
+      date: formattedDate,
+      entryTime: `${pad(entryHour)}:${pad(entryMinute)}`,
+      exitTime: `${pad(exitHour)}:${pad(exitMinute)}`,
+      floor,
+      user,
+      isEditMode,
+      existingBookingId
+    });
+
+    // Navigate to FloorLayout with booking info + user + edit mode info
     navigate("/floorlayout", {
       state: {
         date: formattedDate,
@@ -127,6 +241,8 @@ export default function DateBooking() {
         exitTime: `${pad(exitHour)}:${pad(exitMinute)}`,
         floor,
         user,
+        isEditMode,
+        existingBookingId
       },
     });
   };
@@ -204,7 +320,7 @@ export default function DateBooking() {
         {/* Title Section */}
         <div className="text-center mb-6 flex-shrink-0">
           <h2 className="text-2xl font-semibold text-gray-900 mb-3">
-            Book your Seat
+            {isEditMode ? "Edit your Booking" : "Book your Seat"}
           </h2>
           <p className="text-base text-gray-600">
             Choose Date and Time
@@ -344,42 +460,58 @@ export default function DateBooking() {
             </div>
           </div>
 
-          {/* Floor Selection */}
+          {/* Floor Selection with conflict handling */}
           <div>
             <label 
               className="block text-sm font-semibold text-gray-700 tracking-wider uppercase text-center mb-3"
               htmlFor="floor-select"
             >
-              Choose Floor
+              {isEditMode ? "Your Booked Floor" : "Choose Floor"}
             </label>
-            <select
-              id="floor-select"
-              value={floor}
-              onChange={(e) => setFloor(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-            >
-              <option value="">Choose floor</option>
-              {[...Array(32)].map((_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  Floor {i + 1}
+            
+            {isLoadingFloors ? (
+              <div className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm text-center text-gray-500">
+                <div className="inline-flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-800 mr-2"></div>
+                  Checking availability...
+                </div>
+              </div>
+            ) : (
+              <select
+                id="floor-select"
+                value={floor}
+                onChange={(e) => setFloor(e.target.value)}
+                disabled={isEditMode}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
+                  isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
+              >
+                <option value="">
+                  {availableFloors.length === 0 ? "No floors available" : "Choose floor"}
                 </option>
-              ))}
-            </select>
+                {availableFloors.map((floorOption) => (
+                  <option key={floorOption.id} value={floorOption.id}>
+                    {floorOption.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Submit Button */}
           <div>
             <button
-              className="w-full bg-green-800 hover:bg-green-900 text-white font-semibold py-3 px-4 rounded-xl transition-colors text-sm focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="w-full bg-green-800 hover:bg-green-900 text-white font-semibold py-3 px-4 rounded-xl transition-colors text-sm focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSubmit}
               type="button"
+              disabled={isLoadingFloors || availableFloors.length === 0}
             >
-              DONE
+              {isEditMode ? "EDIT BOOKING" : "DONE"}
             </button>
           </div>
         </div>
 
-        {/* Updated Popup */}
+        {/* Popup for messages */}
         {showPopup && (
           <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50">
             <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 transform transition-all">

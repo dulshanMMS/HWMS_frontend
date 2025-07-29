@@ -880,7 +880,7 @@ const AdminNotification = () => {
       });
       setUnreadCount(0);
       setShowDeleteAllSuccess(true);
-      setTimeout(() => setShowDeleteAllSuccess(false), 5000); // Show success for 5 seconds
+      setTimeout(() => setShowDeleteAllSuccess(false), 6001); // Show success for 5 seconds
     } catch (error) {
       setError('Failed to delete all notifications');
     } finally {
@@ -1548,7 +1548,7 @@ export default AdminNotification;
 //       });
 //       setUnreadCount(0);
 //       setShowDeleteAllSuccess(true);
-//       setTimeout(() => setShowDeleteAllSuccess(false), 5000); // Show success for 5 seconds
+//       setTimeout(() => setShowDeleteAllSuccess(false), 6001); // Show success for 5 seconds
 //     } catch (error) {
 //       setError('Failed to delete all notifications');
 //     } finally {
