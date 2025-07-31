@@ -7,7 +7,8 @@ const ConversationsList = ({
   onNewChat,
   showConversationList,
   isMobile,
-  currentUser
+  currentUser,
+  onConversationsUpdate
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
@@ -46,6 +47,11 @@ const [isDeleting, setIsDeleting] = useState(false);
   try {
     const { conversationApi } = await import('../../api/messageApi');
     await conversationApi.deleteConversation(conversationId);
+
+    if (onConversationsUpdate) {
+      const updatedConversations = conversations.filter(conv => conv._id !== conversationId);
+      onConversationsUpdate(updatedConversations);
+    }
     
     // Remove from local state
     const updatedConversations = conversations.filter(conv => conv._id !== conversationId);
@@ -146,12 +152,28 @@ const [isDeleting, setIsDeleting] = useState(false);
 
                   <div className="flex items-center space-x-3 sm:space-x-4">
                     {/* Enhanced Avatar */}
-                    <div className="relative">
-                      <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center ring-2 ring-white shadow-lg group-hover:scale-110 transition-transform duration-300">
-                        <span className="text-sm sm:text-lg font-bold text-white">
-                          {conversation.displayName ? conversation.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : '?'}
-                        </span>
-                      </div>
+<div className="relative">
+  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center ring-2 ring-white shadow-lg group-hover:scale-110 transition-transform duration-300 overflow-hidden">
+    {/* ✅ ADD THIS: Show profile photo if available, otherwise show initials */}
+    {conversation.displayPhoto ? (
+      <img 
+        src={conversation.displayPhoto} 
+        alt={conversation.displayName}
+        className="w-full h-full object-cover"
+        onError={(e) => {
+          // Fallback to initials if image fails to load
+          e.target.style.display = 'none';
+          e.target.nextSibling.style.display = 'flex';
+        }}
+      />
+    ) : null}
+    <span 
+      className={`text-sm sm:text-lg font-bold text-white ${conversation.displayPhoto ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}
+      style={{ display: conversation.displayPhoto ? 'none' : 'flex' }}
+    >
+      {conversation.displayName ? conversation.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : '?'}
+    </span>
+  </div>
                       
                       {/* Real-time Online Status */}
                       {conversation.isOnline && (

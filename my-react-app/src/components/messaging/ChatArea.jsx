@@ -4,6 +4,7 @@ import { FiArrowLeft } from 'react-icons/fi';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import io from 'socket.io-client';
+import axios from 'axios';
 
 const ChatArea = ({ 
   activeConversation, 
@@ -13,7 +14,7 @@ const ChatArea = ({
   showConversationList,
   isMobile,
   currentUser,
-  onMessagesUpdate // New prop to update parent component's messages
+  onMessagesUpdate
 }) => {
   const [replyingTo, setReplyingTo] = useState(null);
   const [messages, setMessages] = useState(initialMessages || []);
@@ -22,13 +23,119 @@ const ChatArea = ({
   const [typingUsers, setTypingUsers] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+  
+  // ✅ Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [totalMessages, setTotalMessages] = useState(0);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  // Update local messages when prop changes
+  const MESSAGES_PER_PAGE = 10;
+
+  // ✅ Function to load older messages
+  const loadOlderMessages = async () => {
+    if (!activeConversation || isLoadingOlder || !hasMoreMessages) return;
+
+    setIsLoadingOlder(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `http://localhost:5000/api/messages/conversations/${activeConversation._id}/messages?page=${currentPage + 1}&limit=${MESSAGES_PER_PAGE}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        const olderMessages = response.data.messages || [];
+        const pagination = response.data.pagination || {};
+        
+        if (olderMessages.length > 0) {
+          // Store current scroll position
+          const container = messagesContainerRef.current;
+          const scrollHeight = container.scrollHeight;
+          
+          // Prepend older messages
+          setMessages(prev => [...olderMessages, ...prev]);
+          setCurrentPage(prev => prev + 1);
+          setHasMoreMessages(pagination.hasMore || false);
+          
+          // Restore scroll position to prevent jumping
+          setTimeout(() => {
+            if (container) {
+              const newScrollHeight = container.scrollHeight;
+              container.scrollTop = newScrollHeight - scrollHeight;
+            }
+          }, 50);
+        } else {
+          setHasMoreMessages(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading older messages:', error);
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  };
+
+  // ✅ Scroll event handler
+  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    
+    // Show scroll to bottom button when not at bottom
+    setShowScrollToBottom(scrollTop < scrollHeight - clientHeight - 100);
+    
+    // Load more when user scrolls near the top (within 100px)
+    if (scrollTop < 100 && hasMoreMessages && !isLoadingOlder) {
+      loadOlderMessages();
+    }
+  };
+
+  // ✅ Initial message loading - only load first 10 messages
   useEffect(() => {
-    setMessages(initialMessages || []);
-  }, [initialMessages]);
+    if (!activeConversation) {
+      setMessages([]);
+      setCurrentPage(1);
+      setHasMoreMessages(true);
+      setTotalMessages(0);
+      return;
+    }
+
+    // Load initial messages (first page)
+    const loadInitialMessages = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(
+          `http://localhost:5000/api/messages/conversations/${activeConversation._id}/messages?page=1&limit=${MESSAGES_PER_PAGE}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (response.data.success) {
+          const initialMsgs = response.data.messages || [];
+          const pagination = response.data.pagination || {};
+          
+          setMessages(initialMsgs);
+          setCurrentPage(1);
+          setHasMoreMessages(pagination.hasMore || false);
+          setTotalMessages(pagination.total || initialMsgs.length);
+          
+          // Update parent if callback provided
+          if (onMessagesUpdate) {
+            onMessagesUpdate(initialMsgs);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading initial messages:', error);
+        setMessages([]);
+      }
+    };
+
+    loadInitialMessages();
+  }, [activeConversation?._id]);
 
   // Initialize socket connection for real-time messaging
   useEffect(() => {
@@ -37,23 +144,17 @@ const ChatArea = ({
 
     console.log('Initializing socket for conversation:', activeConversation._id);
 
-    // Create socket connection
     const newSocket = io('http://localhost:5000', {
       auth: { token }
     });
 
     setSocket(newSocket);
-
-    // Authenticate for messaging
     newSocket.emit('authenticateMessaging', token);
 
-    // Handle authentication
     newSocket.on('messagingAuthenticated', (data) => {
       if (data.success) {
         setIsConnected(true);
         console.log('Chat area authenticated:', data.user);
-        
-        // Join the conversation room
         newSocket.emit('joinMessagingConversation', activeConversation._id);
       }
     });
@@ -67,10 +168,8 @@ const ChatArea = ({
     newSocket.on('newMessagingMessage', (data) => {
       console.log('New message received in chat area:', data);
       
-      // Only add message if it's for the current conversation
       if (data.conversationId === activeConversation._id) {
         setMessages(prevMessages => {
-          // Check if message already exists to prevent duplicates
           const messageExists = prevMessages.some(msg => msg._id === data.message._id);
           if (messageExists) {
             console.log('Message already exists, skipping duplicate');
@@ -79,7 +178,6 @@ const ChatArea = ({
           
           const newMessages = [...prevMessages, data.message];
           
-          // Update parent component if callback provided
           if (onMessagesUpdate) {
             onMessagesUpdate(newMessages);
           }
@@ -87,7 +185,6 @@ const ChatArea = ({
           return newMessages;
         });
 
-        // Show message received animation
         if (data.message.sender._id !== currentUser?.id) {
           showMessageReceivedAnimation();
         }
@@ -105,7 +202,6 @@ const ChatArea = ({
           }
         });
 
-        // Clear typing indicator after 3 seconds
         if (data.isTyping) {
           setTimeout(() => {
             setTypingUsers(prev => prev.filter(u => u.userId !== data.userId));
@@ -114,7 +210,6 @@ const ChatArea = ({
       }
     });
 
-    // Handle user status updates
     newSocket.on('messagingUserStatusUpdate', (data) => {
       setOnlineUsers(prev => {
         const newSet = new Set(prev);
@@ -127,7 +222,6 @@ const ChatArea = ({
       });
     });
 
-    // Handle connection status
     newSocket.on('connect', () => {
       setIsConnected(true);
       console.log('Chat area connected to server');
@@ -138,18 +232,14 @@ const ChatArea = ({
       console.log('Chat area disconnected from server');
     });
 
-    // Handle successful message send
     newSocket.on('messageSuccessfullySent', (message) => {
       console.log('Message sent successfully:', message);
-      // Message should already be added via newMessagingMessage event
     });
 
     newSocket.on('messagingError', (error) => {
       console.error('Messaging error:', error);
-      // You could show an error toast here
     });
 
-    // Cleanup on unmount or conversation change
     return () => {
       if (activeConversation) {
         newSocket.emit('leaveMessagingConversation', activeConversation._id);
@@ -158,19 +248,19 @@ const ChatArea = ({
     };
   }, [activeConversation?._id, currentUser?.id]);
 
-  // Auto-scroll to bottom when new messages arrive
+  // ✅ Auto-scroll only for new messages, not when loading older ones
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!isLoadingOlder) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoadingOlder]);
 
-  // Clean up typing users when conversation changes
   useEffect(() => {
     setTypingUsers([]);
     setIsTyping(false);
   }, [activeConversation?._id]);
 
   const showMessageReceivedAnimation = () => {
-    // Add a subtle animation to indicate new message
     const chatContainer = document.querySelector('[data-chat-container]');
     if (chatContainer) {
       chatContainer.classList.add('animate-pulse');
@@ -180,7 +270,6 @@ const ChatArea = ({
     }
   };
 
-  // ✅ SOCKET-ONLY MESSAGE SENDING
   const handleSendMessage = async (messageContent) => {
     if (!socket || !isConnected || !activeConversation) {
       console.error('Cannot send message: socket not connected or no active conversation');
@@ -188,7 +277,6 @@ const ChatArea = ({
     }
 
     try {
-      // Send ONLY via socket for real-time delivery
       socket.emit('sendMessageViaSocket', {
         conversationId: activeConversation._id,
         content: messageContent,
@@ -197,7 +285,6 @@ const ChatArea = ({
         bookingContext: null
       });
 
-      // Clear reply state and stop typing
       setReplyingTo(null);
       stopTyping();
       
@@ -212,7 +299,6 @@ const ChatArea = ({
   const handleTyping = () => {
     if (!socket || !isConnected || !activeConversation) return;
 
-    // Send typing indicator
     if (!isTyping) {
       setIsTyping(true);
       socket.emit('messagingTyping', {
@@ -221,12 +307,10 @@ const ChatArea = ({
       });
     }
 
-    // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Set timeout to stop typing indicator
     typingTimeoutRef.current = setTimeout(() => {
       stopTyping();
     }, 2000);
@@ -243,7 +327,6 @@ const ChatArea = ({
   };
 
   const determineOwnership = (message) => {
-    // Try different methods to determine if message is from current user
     if (currentUser?.id && message.sender?._id === currentUser.id) {
       return true;
     }
@@ -256,11 +339,16 @@ const ChatArea = ({
     return false;
   };
 
+  // ✅ Scroll to bottom function
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowScrollToBottom(false);
+  };
+
   if (!activeConversation) {
     return (
       <div className={`${!showConversationList || !isMobile ? 'flex-1' : 'hidden md:flex md:flex-1'} flex flex-col h-full`}>
         <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 relative overflow-hidden">
-          {/* Animated Background Elements */}
           <div className="absolute inset-0">
             <div className="absolute top-1/4 left-1/3 w-32 sm:w-48 md:w-64 h-32 sm:h-48 md:h-64 bg-gradient-to-r from-green-200/30 to-blue-200/30 rounded-full mix-blend-multiply filter blur-xl animate-float"></div>
             <div className="absolute bottom-1/4 right-1/3 w-32 sm:w-48 md:w-64 h-32 sm:h-48 md:h-64 bg-gradient-to-r from-purple-200/30 to-pink-200/30 rounded-full mix-blend-multiply filter blur-xl animate-float-delayed"></div>
@@ -300,10 +388,10 @@ const ChatArea = ({
 
   return (
     <div 
-      className={`${!showConversationList || !isMobile ? 'flex-1' : 'hidden md:flex md:flex-1'} flex flex-col h-full bg-gradient-to-b from-white to-gray-50 overflow-hidden`}
+      className={`${!showConversationList || !isMobile ? 'flex-1' : 'hidden md:flex md:flex-1'} flex flex-col h-full bg-gradient-to-b from-white to-gray-50 overflow-hidden relative`}
       data-chat-container
     >
-      {/* Enhanced Chat Header with connection status */}
+      {/* Enhanced Chat Header */}
       <div className="bg-white/90 backdrop-blur-md border-b border-gray-200/50 p-3 sm:p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 sm:space-x-4">
@@ -317,13 +405,26 @@ const ChatArea = ({
             )}
             
             <div className="relative">
-              <div className="w-8 h-8 sm:w-10 md:w-12 sm:h-10 md:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-lg">
-                <span className="text-sm sm:text-base md:text-lg font-bold text-white">
+              <div className="w-8 h-8 sm:w-10 md:w-12 sm:h-10 md:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-lg overflow-hidden">
+                {activeConversation.displayPhoto ? (
+                  <img 
+                    src={activeConversation.displayPhoto} 
+                    alt={activeConversation.displayName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <span 
+                  className={`text-sm sm:text-base md:text-lg font-bold text-white ${activeConversation.displayPhoto ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}
+                  style={{ display: activeConversation.displayPhoto ? 'none' : 'flex' }}
+                >
                   {activeConversation.displayName ? activeConversation.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : '?'}
                 </span>
               </div>
               
-              {/* Enhanced online status with real-time updates */}
               {activeConversation.isOnline && isConnected && (
                 <div className="absolute -bottom-1 -right-1 flex items-center justify-center">
                   <div className="w-2.5 h-2.5 sm:w-4 sm:h-4 bg-green-500 rounded-full border-2 border-white"></div>
@@ -348,7 +449,6 @@ const ChatArea = ({
             </div>
           </div>
 
-          {/* Connection status indicator */}
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
             <span className="text-xs text-gray-500 hidden sm:block">
@@ -358,8 +458,47 @@ const ChatArea = ({
         </div>
       </div>
 
-      {/* Messages Container with real-time updates */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 sm:space-y-6 bg-gradient-to-b from-gray-50/30 to-white scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+      {/* ✅ Messages Container with pagination */}
+      <div 
+        ref={messagesContainerRef}
+        className="messages-container flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 sm:space-y-6 bg-gradient-to-b from-gray-50/30 to-white"
+        onScroll={handleScroll}
+      >
+        {/* ✅ Load more indicator at the top */}
+        {hasMoreMessages && (
+          <div className="flex justify-center py-4">
+            <button
+              onClick={loadOlderMessages}
+              disabled={isLoadingOlder}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full text-sm font-medium transition-colors disabled:opacity-50 hover:scale-105 transform duration-200"
+            >
+              {isLoadingOlder ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  Loading older messages...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                  Load older messages ({totalMessages > messages.length ? totalMessages - messages.length : 0} more)
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* ✅ Loading indicator when fetching older messages */}
+        {isLoadingOlder && (
+          <div className="flex justify-center py-2">
+            <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full message-fade-in">
+              <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-xs text-gray-600">Loading...</span>
+            </div>
+          </div>
+        )}
+
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-8 sm:py-12">
             <div className="relative mb-4 sm:mb-6">
@@ -375,7 +514,6 @@ const ChatArea = ({
               Send your first message to {activeConversation.displayName} and begin collaborating on workspace bookings.
             </p>
             
-            {/* Real-time connection status for empty chat */}
             <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
               <span>{isConnected ? 'Ready to send messages' : 'Connecting to chat server...'}</span>
@@ -390,8 +528,7 @@ const ChatArea = ({
                 new Date(message.createdAt).toDateString() !== new Date(prevMessage.createdAt).toDateString();
               
               return (
-                <div key={message._id}>
-                  {/* Date Separator */}
+                <div key={message._id} className="message-fade-in">
                   {showDateSeparator && (
                     <div className="flex items-center justify-center my-4 sm:my-6">
                       <div className="bg-white px-3 sm:px-4 py-1 sm:py-2 rounded-full shadow-md border border-gray-200">
@@ -444,7 +581,20 @@ const ChatArea = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Enhanced Message Input with real-time features */}
+      {/* ✅ Scroll to bottom button */}
+      {showScrollToBottom && (
+        <button
+          onClick={scrollToBottom}
+          className="fixed bottom-32 right-6 bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-all duration-300 z-10 hover:scale-110 transform"
+          title="Scroll to bottom"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </button>
+      )}
+
+      {/* Enhanced Message Input */}
       <MessageInput
         onSendMessage={handleSendMessage}
         replyingTo={replyingTo}
@@ -455,7 +605,7 @@ const ChatArea = ({
         disabled={!isConnected}
       />
 
-      {/* Connection status banner for disconnections */}
+      {/* Connection status banner */}
       {!isConnected && (
         <div className="bg-yellow-100 border-t border-yellow-200 px-4 py-2 text-center">
           <div className="flex items-center justify-center gap-2 text-yellow-800">
@@ -464,6 +614,67 @@ const ChatArea = ({
           </div>
         </div>
       )}
+
+      {/* ✅ Custom CSS Styles */}
+      <style jsx>{`
+        /* Scrollbar styling */
+        .messages-container {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 transparent;
+        }
+
+        .messages-container::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 3px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+
+        /* Smooth loading animation */
+        @keyframes fadeIn {
+          from { 
+            opacity: 0; 
+            transform: translateY(10px); 
+          }
+          to { 
+            opacity: 1; 
+            transform: translateY(0); 
+          }
+        }
+
+        .message-fade-in {
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Float animations for background elements */
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-10px) rotate(2deg); }
+        }
+        
+        @keyframes float-delayed {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-8px) rotate(-2deg); }
+        }
+
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+        
+        .animate-float-delayed {
+          animation: float-delayed 4s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 };

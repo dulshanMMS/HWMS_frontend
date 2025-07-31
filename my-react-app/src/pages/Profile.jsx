@@ -319,16 +319,41 @@ const Profile = () => {
         setProgressWidth(100);
       }, 3000);
     } catch (err) {
-      // On error, clear preview and keep original
-      setPreviewImage(null);
-      setPendingProfilePhoto("");
-      setIsError(true);
-      setSuccessMsg("Image upload failed. Please try again.");
-      setTimeout(() => {
-        setSuccessMsg("");
-        setProgressWidth(100);
-        setIsError(false);
-      }, 3000);
+  console.error('Image upload error:', err);
+  
+  // On error, clear preview and keep original
+  setPreviewImage(null);
+  setPendingProfilePhoto("");
+  
+  // Clear the file input
+  const fileInput = document.querySelector('input[type="file"]');
+  if (fileInput) fileInput.value = '';
+  
+  setIsError(true);
+  
+  // Show specific error message based on error type
+  let errorMessage = "Image upload failed. Please try again."; // Default fallback
+  
+  if (err.message.includes('Invalid file type')) {
+    errorMessage = "Invalid file format. Please upload a JPEG, PNG, or WebP image.";
+  } else if (err.message.includes('File too large')) {
+    errorMessage = "File size too large. Please upload an image smaller than 10MB.";
+  } else if (err.message.includes('Network error')) {
+    errorMessage = "Network error. Please check your connection and try again.";
+  } else if (err.message.includes('Cloudinary configuration')) {
+    errorMessage = "Upload service unavailable. Please try again later.";
+  } else if (err.message) {
+    // Use the actual error message if it's available and user-friendly
+    errorMessage = err.message;
+  }
+  
+  setSuccessMsg(errorMessage);
+  
+  setTimeout(() => {
+    setSuccessMsg("");
+    setProgressWidth(100);
+    setIsError(false);
+  }, 3000);
     }
   };
 
@@ -447,8 +472,8 @@ const Profile = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
               {/* Map over form fields except team, which is rendered separately */}
               {[
-                { label: "First Name", name: "firstName", type: "text" },
-                { label: "Last Name", name: "lastName", type: "text" },
+                { label: "First Name*", name: "firstName", type: "text" },
+                { label: "Last Name*", name: "lastName", type: "text" },
                 { label: "Nick Name", name: "nickName", type: "text" },
                 {
                   label: "Gender",

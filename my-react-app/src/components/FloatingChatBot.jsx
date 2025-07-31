@@ -546,11 +546,13 @@ const FloatingChatBot = () => {
                   <input
                     type="email"
                     value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
                     placeholder="your.email@company.com"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Using your account email address
+                  </p>
                 </div>
 
                 <div>

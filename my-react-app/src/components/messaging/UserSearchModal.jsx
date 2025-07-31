@@ -150,12 +150,27 @@ const UserSearchModal = ({ token, onCreateConversation, onBack }) => {
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                      <span className="text-sm font-semibold text-gray-600">
-                        {user.displayName ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : '?'}
-                      </span>
-                    </div>
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
+                {/* ✅ ADD THIS: Show user profile photo */}
+                {user.profilePhoto ? (
+                  <img 
+                    src={user.profilePhoto} 
+                    alt={user.displayName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <span 
+                  className={`text-sm font-semibold text-gray-600 ${user.profilePhoto ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}
+                  style={{ display: user.profilePhoto ? 'none' : 'flex' }}
+                >
+                  {user.displayName ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : '?'}
+                </span>
+              </div>
                     {selectedUsers.some(u => u._id === user._id) && (
                       <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                         <FaCheck className="text-white text-xs" />
@@ -172,8 +187,8 @@ const UserSearchModal = ({ token, onCreateConversation, onBack }) => {
                     )}
                   </div>
                   <div className="text-right">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <p className="text-xs text-gray-400 mt-1">Online</p>
+                    {/* <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <p className="text-xs text-gray-400 mt-1">Online</p> */}
                   </div>
                 </div>
               </div>

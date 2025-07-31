@@ -197,7 +197,7 @@ const MessagingPage = () => {
     
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/messages/conversations/${conversation._id}/messages`,
+        `http://localhost:5000/api/messages/conversations/${conversation._id}/messages?page=1&limit=10`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -324,6 +324,30 @@ const MessagingPage = () => {
       </div>
     );
   }
+
+  const deleteConversation = async (conversationId) => {
+  try {
+    const { conversationApi } = await import('../api/messageApi');
+    await conversationApi.deleteConversation(conversationId);
+    
+    // Update local state immediately
+    setConversations(prev => prev.filter(conv => conv._id !== conversationId));
+    
+    // Clear active conversation if it was deleted
+    if (activeConversation?._id === conversationId) {
+      setActiveConversation(null);
+      setMessages([]);
+      if (isMobile) {
+        setShowConversationList(true);
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to delete conversation:', error);
+    return false;
+  }
+};
 
   return (
     <div className="h-screen flex bg-gradient-to-br from-slate-50 via-white to-blue-50 overflow-hidden">

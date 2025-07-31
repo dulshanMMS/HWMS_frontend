@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { FiChevronRight, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { FiChevronRight, FiChevronDown, FiChevronUp, FiMoreHorizontal } from "react-icons/fi";
 import { 
   FaCar, 
   FaChair, 
@@ -14,24 +13,30 @@ import {
   FaTrash,
   FaClock,
   FaExclamationTriangle,
-  FaInfoCircle
+  FaInfoCircle,
+  FaChevronLeft,
+  FaEllipsisV
 } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
-
 
 const NotificationsList = ({
   todayBookings = [],
   upcomingBooking = null,
   userNotifications = [],
 }) => {
-
   const navigate = useNavigate();
-  // State for announcements
+  
+  // State for announcements with pagination
   const [announcements, setAnnouncements] = useState([]);
   const [announcementsLoading, setAnnouncementsLoading] = useState(true);
   const [announcementsError, setAnnouncementsError] = useState(null);
+  const [announcementsPagination, setAnnouncementsPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasMore: false
+  });
   
   // UI state for collapsible sections
   const [sectionsCollapsed, setSectionsCollapsed] = useState({
@@ -43,15 +48,29 @@ const NotificationsList = ({
 
   // Show/hide read announcements
   const [showReadAnnouncements, setShowReadAnnouncements] = useState(false);
+  
+  // Pagination and overflow handling
+  const [notificationsPagination, setNotificationsPagination] = useState({
+    currentPage: 1,
+    itemsPerPage: 5,
+    totalItems: 0
+  });
+  
+  const [expandedSections, setExpandedSections] = useState({
+    bookingReminders: false,
+    announcements: false,
+    messages: false,
+    upcoming: false
+  });
 
   const count = todayBookings.length;
 
-  // Fetch announcements on component mount
+  // Fetch announcements with pagination
   useEffect(() => {
-    fetchAnnouncements();
+    fetchAnnouncements(1);
   }, [showReadAnnouncements]);
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = async (page = 1) => {
     try {
       setAnnouncementsLoading(true);
       const token = localStorage.getItem("token");
@@ -61,15 +80,29 @@ const NotificationsList = ({
         return;
       }
 
-      // Use your existing announcement route
       const response = await axios.get(
-        `http://localhost:5000/api/announcements?page=1&limit=10`,
+        `http://localhost:5000/api/announcements?page=${page}&limit=10`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      setAnnouncements(response.data.announcements || []);
+      const newAnnouncements = response.data.announcements || [];
+      
+      // If it's page 1, replace the array; otherwise, append
+      if (page === 1) {
+        setAnnouncements(newAnnouncements);
+      } else {
+        setAnnouncements(prev => [...prev, ...newAnnouncements]);
+      }
+      
+      setAnnouncementsPagination({
+        currentPage: page,
+        totalPages: response.data.totalPages || 1,
+        totalCount: response.data.total || 0,
+        hasMore: page < (response.data.totalPages || 1)
+      });
+      
       setAnnouncementsError(null);
     } catch (error) {
       console.error("Error fetching announcements:", error);
@@ -80,9 +113,24 @@ const NotificationsList = ({
     }
   };
 
+  // Load more announcements
+  const loadMoreAnnouncements = () => {
+    if (announcementsPagination.hasMore && !announcementsLoading) {
+      fetchAnnouncements(announcementsPagination.currentPage + 1);
+    }
+  };
+
   // Toggle section collapse
   const toggleSection = (section) => {
     setSectionsCollapsed(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  // Toggle section expansion for overflow handling
+  const toggleSectionExpansion = (section) => {
+    setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
     }));
@@ -101,7 +149,7 @@ const NotificationsList = ({
     return date.toLocaleDateString();
   };
 
-  // Mark announcement as read (using your existing route)
+  // Mark announcement as read
   const markAnnouncementAsRead = async (announcementId) => {
     try {
       const token = localStorage.getItem("token");
@@ -111,7 +159,6 @@ const NotificationsList = ({
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Update local state
       setAnnouncements(prev => 
         prev.map(ann => 
           ann._id === announcementId ? { ...ann, read: true } : ann
@@ -122,7 +169,7 @@ const NotificationsList = ({
     }
   };
 
-  // Delete announcement (using your existing route)
+  // Delete announcement
   const deleteAnnouncement = async (announcementId) => {
     try {
       const token = localStorage.getItem("token");
@@ -131,11 +178,22 @@ const NotificationsList = ({
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Remove from local state
       setAnnouncements(prev => prev.filter(ann => ann._id !== announcementId));
+      setAnnouncementsPagination(prev => ({
+        ...prev,
+        totalCount: prev.totalCount - 1
+      }));
     } catch (error) {
       console.error("Error deleting announcement:", error);
     }
+  };
+
+  // Get limited items for display
+  const getLimitedItems = (items, section, limit = 3) => {
+    if (expandedSections[section]) {
+      return items;
+    }
+    return items.slice(0, limit);
   };
 
   // Filter announcements based on read status
@@ -143,7 +201,7 @@ const NotificationsList = ({
     ? announcements 
     : announcements.filter(ann => !ann.read);
 
-  // Collapsible Section Header Component
+  // Enhanced Section Header Component with overflow controls
   const SectionHeader = ({ 
     title, 
     count, 
@@ -153,7 +211,9 @@ const NotificationsList = ({
     showActions = false,
     onAction = null,
     actionIcon = null,
-    actionTitle = ""
+    actionTitle = "",
+    hasOverflow = false,
+    totalCount = 0
   }) => (
     <div className="flex items-center justify-between mb-3">
       <button
@@ -166,6 +226,11 @@ const NotificationsList = ({
         <div className="flex-1">
           <h4 className="font-semibold text-gray-800 group-hover:text-gray-900 transition-colors">
             {title} {count !== undefined && `(${count})`}
+            {hasOverflow && totalCount > count && (
+              <span className="text-xs text-gray-500 ml-1">
+                showing {count} of {totalCount}
+              </span>
+            )}
           </h4>
         </div>
         <div className="transition-transform duration-200">
@@ -176,8 +241,22 @@ const NotificationsList = ({
         </div>
       </button>
       
-      {showActions && onAction && (
-        <div className="flex items-center gap-2 ml-2">
+      <div className="flex items-center gap-1 ml-2">
+        {/* Expand/Collapse for overflow */}
+        {hasOverflow && !sectionsCollapsed[sectionKey] && (
+          <button
+            onClick={() => toggleSectionExpansion(sectionKey)}
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-all duration-200 group"
+            title={expandedSections[sectionKey] ? "Show less" : "Show all"}
+          >
+            {expandedSections[sectionKey] ? 
+              <FiChevronUp size={14} /> : 
+              <FiMoreHorizontal size={14} />
+            }
+          </button>
+        )}
+        
+        {showActions && onAction && (
           <button
             onClick={onAction}
             className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-all duration-200 group"
@@ -185,36 +264,44 @@ const NotificationsList = ({
           >
             {actionIcon}
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 
   return (
     <div className="mt-2 space-y-4">
-      {/* Main Header */}
+      {/* Main Header with total count indicator */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold bg-gradient-to-r from-green-600 to-green-600 bg-clip-text text-transparent">
-          Notifications
-        </h3>
-        <button 
-  onClick={() => {
-    navigate('/user/notifications');
-  }}
-  className="bg-gradient-to-r from-green-500 to-green-400 text-white text-sm font-medium py-2 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 hover:scale-105"
->
-  View All <FiChevronRight />
-</button>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-bold bg-gradient-to-r from-green-600 to-green-600 bg-clip-text text-transparent">
+            Notifications
+          </h3>
+          {/* Total notification count indicator */}
+          {(count + filteredAnnouncements.length + userNotifications.length) > 20 && (
+            <div className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-full">
+              {count + filteredAnnouncements.length + userNotifications.length} total
             </div>
+          )}
+        </div>
+        <button 
+          onClick={() => navigate('/user/notifications')}
+          className="bg-gradient-to-r from-green-500 to-green-400 text-white text-sm font-medium py-2 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 hover:scale-105"
+        >
+          View All <FiChevronRight />
+        </button>
+      </div>
 
-      {/* Booking Reminders Section */}
+      {/* Booking Reminders Section with overflow handling */}
       <div className="bg-gradient-to-br from-red-50 to-pink-50 p-4 rounded-2xl border border-red-100 shadow-sm hover:shadow-md transition-shadow duration-300">
         <SectionHeader
           title="Reminders"
-          count={count}
+          count={getLimitedItems(todayBookings, 'bookingReminders').length}
+          totalCount={count}
           icon={<FaCalendarAlt className="text-red-500 text-sm" />}
           color="bg-red-100"
           sectionKey="bookingReminders"
+          hasOverflow={count > 3}
         />
         
         {!sectionsCollapsed.bookingReminders && (
@@ -229,7 +316,7 @@ const NotificationsList = ({
               </div>
             ) : (
               <div className="space-y-3">
-                {todayBookings.slice(0, 8).map((booking, idx) => (
+                {getLimitedItems(todayBookings, 'bookingReminders', 3).map((booking, idx) => (
                   <div
                     key={idx}
                     className="group p-3 bg-white rounded-xl border border-red-200 hover:border-red-300 hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5"
@@ -269,22 +356,40 @@ const NotificationsList = ({
                           </div>
                         )}
 
-                        {/* ADDED: Additional booking details if available */}
-                  {booking.floor && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-400">Floor:</span>
-                      <span className="text-xs text-gray-600 font-medium">{booking.floor}</span>
-                    </div>
-                  )}
+                        {booking.floor && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-400">Floor:</span>
+                            <span className="text-xs text-gray-600 font-medium">{booking.floor}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 ))}
-                {count > 8 && (
+                
+                {/* Show more indicator */}
+                {!expandedSections.bookingReminders && count > 3 && (
                   <div className="text-center py-2 border-t border-red-100">
-                    <p className="text-sm text-gray-600">
-                      ...and <span className="font-semibold text-red-600">{count - 5}</span> more
-                    </p>
+                    <button
+                      onClick={() => toggleSectionExpansion('bookingReminders')}
+                      className="text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1 mx-auto transition-colors"
+                    >
+                      <span>Show {count - 3} more bookings</span>
+                      <FiChevronDown size={14} />
+                    </button>
+                  </div>
+                )}
+                
+                {/* Show less indicator */}
+                {expandedSections.bookingReminders && count > 3 && (
+                  <div className="text-center py-2 border-t border-red-100">
+                    <button
+                      onClick={() => toggleSectionExpansion('bookingReminders')}
+                      className="text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1 mx-auto transition-colors"
+                    >
+                      <span>Show less</span>
+                      <FiChevronUp size={14} />
+                    </button>
                   </div>
                 )}
               </div>
@@ -293,11 +398,12 @@ const NotificationsList = ({
         )}
       </div>
 
-      {/* Announcements Section */}
+      {/* Announcements Section with enhanced pagination */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-2xl border border-blue-100 shadow-sm hover:shadow-md transition-shadow duration-300">
         <SectionHeader
           title="Announcements"
           count={filteredAnnouncements.length}
+          totalCount={announcementsPagination.totalCount}
           icon={<FaBullhorn className="text-blue-500 text-sm" />}
           color="bg-blue-100"
           sectionKey="announcements"
@@ -305,11 +411,12 @@ const NotificationsList = ({
           onAction={() => setShowReadAnnouncements(!showReadAnnouncements)}
           actionIcon={showReadAnnouncements ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
           actionTitle={showReadAnnouncements ? "Hide read announcements" : "Show all announcements"}
+          hasOverflow={announcementsPagination.totalCount > 5}
         />
         
         {!sectionsCollapsed.announcements && (
-          <div className="max-h-64 overflow-auto custom-scrollbar">
-            {announcementsLoading ? (
+          <div className="max-h-80 overflow-auto custom-scrollbar">
+            {announcementsLoading && filteredAnnouncements.length === 0 ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
                 <p className="text-sm text-gray-500">Loading announcements...</p>
@@ -321,7 +428,7 @@ const NotificationsList = ({
                 </div>
                 <p className="text-sm text-red-500 font-medium">{announcementsError}</p>
                 <button
-                  onClick={fetchAnnouncements}
+                  onClick={() => fetchAnnouncements(1)}
                   className="mt-2 text-xs text-blue-500 hover:text-blue-600 font-medium"
                 >
                   Try again
@@ -419,20 +526,45 @@ const NotificationsList = ({
                     </div>
                   </div>
                 ))}
+                
+                {/* Load More Button */}
+                {announcementsPagination.hasMore && (
+                  <div className="text-center py-3 border-t border-blue-100">
+                    <button
+                      onClick={loadMoreAnnouncements}
+                      disabled={announcementsLoading}
+                      className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 mx-auto"
+                    >
+                      {announcementsLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          Load More ({announcementsPagination.totalCount - filteredAnnouncements.length} remaining)
+                          <FiChevronDown />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Messages Section */}
+      {/* Messages Section with overflow handling */}
       <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-4 rounded-2xl border border-yellow-100 shadow-sm hover:shadow-md transition-shadow duration-300">
         <SectionHeader
           title="Notifications"
-          count={userNotifications.length}
+          count={getLimitedItems(userNotifications, 'messages', 5).length}
+          totalCount={userNotifications.length}
           icon={<FaEnvelope className="text-yellow-500 text-sm" />}
           color="bg-yellow-100"
           sectionKey="messages"
+          hasOverflow={userNotifications.length > 5}
         />
         
         {!sectionsCollapsed.messages && (
@@ -447,7 +579,7 @@ const NotificationsList = ({
               </div>
             ) : (
               <div className="space-y-3">
-                {userNotifications.slice(0, 5).map((notif, idx) => (
+                {getLimitedItems(userNotifications, 'messages', 5).map((notif, idx) => (
                   <div key={idx} className="group p-3 bg-white rounded-xl border border-yellow-200 hover:border-yellow-300 hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5">
                     <div className="flex items-start gap-3">
                       <div className="p-2 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg group-hover:scale-110 transition-transform duration-200 shadow-sm">
@@ -463,11 +595,29 @@ const NotificationsList = ({
                     </div>
                   </div>
                 ))}
-                {userNotifications.length > 5 && (
+                
+                {/* Show more/less controls */}
+                {!expandedSections.messages && userNotifications.length > 5 && (
                   <div className="text-center py-2 border-t border-yellow-100">
-                    <p className="text-sm text-gray-600">
-                      ...and <span className="font-semibold text-yellow-600">{userNotifications.length - 5}</span> more
-                    </p>
+                    <button
+                      onClick={() => toggleSectionExpansion('messages')}
+                      className="text-sm text-yellow-600 hover:text-yellow-700 font-medium flex items-center gap-1 mx-auto transition-colors"
+                    >
+                      <span>Show {userNotifications.length - 5} more notifications</span>
+                      <FiChevronDown size={14} />
+                    </button>
+                  </div>
+                )}
+                
+                {expandedSections.messages && userNotifications.length > 5 && (
+                  <div className="text-center py-2 border-t border-yellow-100">
+                    <button
+                      onClick={() => toggleSectionExpansion('messages')}
+                      className="text-sm text-yellow-600 hover:text-yellow-700 font-medium flex items-center gap-1 mx-auto transition-colors"
+                    >
+                      <span>Show less</span>
+                      <FiChevronUp size={14} />
+                    </button>
                   </div>
                 )}
               </div>
@@ -478,79 +628,78 @@ const NotificationsList = ({
 
       {/* Upcoming Booking Section */}
       <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-2xl border border-purple-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-  <SectionHeader
-    title="Upcoming Bookings"
-    count={upcomingBooking ? (Array.isArray(upcomingBooking) ? upcomingBooking.length : 1) : 0}
-    icon={<FaBell className="text-purple-500 text-sm" />}
-    color="bg-purple-100"
-    sectionKey="upcoming"
-  />
-  
-  {!sectionsCollapsed.upcoming && (
-    <div className="max-h-64 overflow-auto custom-scrollbar">
-      {!upcomingBooking || (Array.isArray(upcomingBooking) && upcomingBooking.length === 0) ? (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <FaBell className="text-purple-400 text-xl" />
-          </div>
-          <p className="text-sm text-gray-500 font-medium">No upcoming bookings</p>
-          <p className="text-xs text-gray-400 mt-1">Plan your next visit! 📅</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {/* Handle both single object and array cases */}
-          {(Array.isArray(upcomingBooking) ? upcomingBooking : [upcomingBooking]).map((booking, idx) => (
-            <div key={idx} className="group p-3 bg-white rounded-xl border border-purple-200 hover:border-purple-300 hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg group-hover:scale-110 transition-transform duration-200 shadow-sm">
-                  {booking.type === "seat" ? (
-                    <FaChair className="text-purple-600 text-sm" />
-                  ) : (
-                    <FaCar className="text-purple-600 text-sm" />
-                  )}
+        <SectionHeader
+          title="Upcoming Bookings"
+          count={upcomingBooking ? (Array.isArray(upcomingBooking) ? upcomingBooking.length : 1) : 0}
+          icon={<FaBell className="text-purple-500 text-sm" />}
+          color="bg-purple-100"
+          sectionKey="upcoming"
+        />
+        
+        {!sectionsCollapsed.upcoming && (
+          <div className="max-h-64 overflow-auto custom-scrollbar">
+            {!upcomingBooking || (Array.isArray(upcomingBooking) && upcomingBooking.length === 0) ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <FaBell className="text-purple-400 text-xl" />
                 </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium text-purple-800 text-sm">
-                      {booking.type === "seat" ? "Seat" : "Parking"}: {booking.details}
-                    </p>
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                      {Array.isArray(upcomingBooking) ? (idx === 0 ? 'Next' : `+${idx + 1}`) : 'Next'}
-                    </span>
-                  </div>
-
-                  {booking.location && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <FaMapMarkerAlt className="text-gray-400 text-xs" />
-                      <p className="text-xs text-gray-600">{booking.location}</p>
-                    </div>
-                  )}
-
-                  {booking.entryTime && booking.exitTime && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <FaClock className="text-gray-400 text-xs" />
-                      <p className="text-xs text-gray-500 font-medium">
-                        {booking.entryTime} - {booking.exitTime}
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center gap-1 mt-2">
-                    <FaCalendarAlt className="text-gray-400 text-xs" />
-                    <p className="text-xs text-gray-500 font-medium">
-                      {booking.date}
-                    </p>
-                  </div>
-                </div>
+                <p className="text-sm text-gray-500 font-medium">No upcoming bookings</p>
+                <p className="text-xs text-gray-400 mt-1">Plan your next visit! 📅</p>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )}
-</div>
+            ) : (
+              <div className="space-y-3">
+                {(Array.isArray(upcomingBooking) ? upcomingBooking : [upcomingBooking]).map((booking, idx) => (
+                  <div key={idx} className="group p-3 bg-white rounded-xl border border-purple-200 hover:border-purple-300 hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg group-hover:scale-110 transition-transform duration-200 shadow-sm">
+                        {booking.type === "seat" ? (
+                          <FaChair className="text-purple-600 text-sm" />
+                        ) : (
+                          <FaCar className="text-purple-600 text-sm" />
+                        )}
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-purple-800 text-sm">
+                            {booking.type === "seat" ? "Seat" : "Parking"}: {booking.details}
+                          </p>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                            {Array.isArray(upcomingBooking) ? (idx === 0 ? 'Next' : `+${idx + 1}`) : 'Next'}
+                          </span>
+                        </div>
+
+                        {booking.location && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <FaMapMarkerAlt className="text-gray-400 text-xs" />
+                            <p className="text-xs text-gray-600">{booking.location}</p>
+                          </div>
+                        )}
+
+                        {booking.entryTime && booking.exitTime && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <FaClock className="text-gray-400 text-xs" />
+                            <p className="text-xs text-gray-500 font-medium">
+                              {booking.entryTime} - {booking.exitTime}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center gap-1 mt-2">
+                          <FaCalendarAlt className="text-gray-400 text-xs" />
+                          <p className="text-xs text-gray-500 font-medium">
+                            {booking.date}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Custom scrollbar styles */}
       <style jsx>{`

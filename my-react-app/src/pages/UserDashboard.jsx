@@ -209,7 +209,7 @@ const clearSensitiveData = () => {
 
       {/* Profile sidebar - only show on large screens when open */}
       {sidebarOpen && (
-        <div className="hidden lg:block w-96">
+        <div className="hidden lg:block w-[380px]">
           <SidebarWrapper
             sidebarOpen={sidebarOpen}
             closeSidebar={() => setSidebarOpen(false)}
