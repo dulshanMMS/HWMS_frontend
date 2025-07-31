@@ -6,11 +6,8 @@ import AvailableSlots from "../components/parking/Availableslots";
 import BookButton from "../components/parking/Bookbutton";
 import MessageBox from "../components/parking/Messagebox";
 import LeftSidebar from "../components/LeftSidebar";
-import RatingModal from "../components/ratingModal"; // Importing the RatingModal component
-import { getProfile } from "../api/userApi"; // Import userApi for ratingModal
-
-//import SidebarWrapper from '../components/profilesidebar/SidebarWrapper';
-//methn1
+import RatingModal from "../components/ratingModal";
+import { getProfile } from "../api/userApi";
 
 const ParkingBooking = () => {
   const [loadingScreen, setLoadingScreen] = useState(true);
@@ -22,12 +19,10 @@ const ParkingBooking = () => {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isRatingOpen, setIsRatingOpen] = useState(false);//ratingModal original
-  // const [isRatingOpen, setIsRatingOpen] = useState(false);//ratingModal test button
-  const [userId, setUserId] = useState(null); // State for userId for ratingModal
+  const [isRatingOpen, setIsRatingOpen] = useState(false);
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-  //for ratingmodal
     const fetchUserProfile = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -50,31 +45,24 @@ const ParkingBooking = () => {
     };
 
     fetchUserProfile();
-//for ratingmodal
-
     const timer = setTimeout(() => setLoadingScreen(false), 2000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Function to check if selected date is in the past
   const isDateInPast = (selectedDate) => {
     const today = new Date();
     const selected = new Date(selectedDate);
     
-    // Set time to beginning of day for accurate comparison
     today.setHours(0, 0, 0, 0);
     selected.setHours(0, 0, 0, 0);
     
     return selected < today;
   };
 
-
-  // Function to check if entry time is in the past for today's bookings
   const isEntryTimeInPast = (selectedDate, entryTime) => {
     const today = new Date();
     const selected = new Date(selectedDate);
     
-    // Only check if booking is for today
     if (selected.toDateString() === today.toDateString()) {
       const currentHour = today.getHours();
       const currentMinute = today.getMinutes();
@@ -86,15 +74,13 @@ const ParkingBooking = () => {
       return entryTimeInMinutes <= currentTimeInMinutes;
     }
     
-    return false; // For future dates, no time restriction
+    return false;
   };
-
 
   const handleCheckAvailability = async () => {
     setLoading(true);
     setMessage("");
     
-    // Check if all required fields are filled
     if (!date) {
       setMessage("Please select a date.");
       setLoading(false);
@@ -113,7 +99,6 @@ const ParkingBooking = () => {
       return;
     }
     
-    // Check if exit time is after entry time
     if (entryTime >= exitTime) {
       setMessage("Exit time must be after entry time.");
       setLoading(false);
@@ -122,22 +107,19 @@ const ParkingBooking = () => {
       return;
     }
     
-    // Check if selected date is in the past
     if (isDateInPast(date)) {
       setMessage("You cannot select a past date. Please select today or a future date.");
       setLoading(false);
-      setAvailableSlots([]); // Clear any existing slots
-      setSelectedSlot(null); // Clear selected slot
+      setAvailableSlots([]);
+      setSelectedSlot(null);
       return;
     }
 
-
-    // Check if entry time is in the past for today's booking
     if (isEntryTimeInPast(date, entryTime)) {
       setMessage("You cannot select a past time for today's booking. Please select a future time.");
       setLoading(false);
-      setAvailableSlots([]); // Clear any existing slots
-      setSelectedSlot(null); // Clear selected slot
+      setAvailableSlots([]);
+      setSelectedSlot(null);
       return;
     }
 
@@ -162,19 +144,20 @@ const ParkingBooking = () => {
       setMessage(result.message || "Booking completed!");
       setSelectedSlot(null);
       setAvailableSlots([]);
-      if (Math.random() < 0.01) setIsRatingOpen(true); // Randomly open rating modal 50% chance
+
+      if (Math.random() < 0.1) setIsRatingOpen(true); // Randomly open rating modal 50% chance
       
     } catch (error) {
       // FIXED: Display actual backend error message instead of generic message
       const errorMessage = error.response?.data?.message || error.message || "Failed to book the slot.";
       setMessage(errorMessage);
+
+      
+
     } finally {
       setLoading(false);
     }
   };
-
-  //const [sidebarOpen, setSidebarOpen] = useState(true); // or false based on what you want
-  // * *methn 2
 
   if (loadingScreen) return <LoadingScreen />;
 
@@ -213,21 +196,7 @@ const ParkingBooking = () => {
         <MessageBox message={message} />
       </div>
 
-      {/*<SidebarWrapper                          // * * methn 3
-        sidebarOpen={sidebarOpen}
-        closeSidebar={() => setSidebarOpen(false)}
-      /> */}
-
-     {/* <button   //ratingmodal test button
-       onClick={() => setIsRatingOpen(true)}
-       className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-      >
-           Test Seating Rating
-     </button> */}
-      
-    
-
-   <RatingModal
+      <RatingModal
         isOpen={isRatingOpen}
         onClose={() => setIsRatingOpen(false)}
         onSubmit={async (data) => {
@@ -237,15 +206,15 @@ const ParkingBooking = () => {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ userId, bookingType: 'parking', ...data }),
             });
-            return response; // Ensure response is returned
+            return response;
           } catch (error) {
             console.error('Fetch error in onSubmit:', error.message);
-            throw error; // Rethrow to be caught in handleSubmit
+            throw error;
           }
         }}
         userId={userId}
+        bookingType="parking"
       />
-
     </div>
   );
 };

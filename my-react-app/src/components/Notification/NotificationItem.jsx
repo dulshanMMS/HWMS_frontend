@@ -1,5 +1,5 @@
-
 import { useState, useRef, useEffect } from 'react';
+import { FaStar } from 'react-icons/fa';
 
 const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotification, onBulkReadChange }) => {
   const [showSuccess, setShowSuccess] = useState(false);
@@ -10,11 +10,10 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
   const [isExpanded, setIsExpanded] = useState(false);
   const deleteButtonRef = useRef(null);
   const isAnnouncement = notification.type === 'announcement';
+  const isFeedbackReply = notification.type === 'feedback_reply';
 
-  // Truncate announcement to ~100 characters (adjustable based on box size)
   const truncateText = (text, maxLength = 100) => {
     if (text.length <= maxLength) return text;
-    // Find the last space within maxLength to avoid cutting words
     const lastSpace = text.lastIndexOf(' ', maxLength);
     return text.substring(0, lastSpace > 0 ? lastSpace : maxLength) + '...';
   };
@@ -43,7 +42,7 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
       setIsDeleting(true);
       await deleteNotification(notification._id, isAnnouncement);
       setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      setTimeout(() => setShowSuccess(false), 6000);
     } catch (err) {
       setError('Failed to delete');
     } finally {
@@ -56,14 +55,12 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
     setShowDeleteConfirm(false);
   };
 
-  // Toggle announcement expansion
   const handleToggleExpand = () => {
-    if (isAnnouncement) {
+    if (isAnnouncement || isFeedbackReply) {
       setIsExpanded(!isExpanded);
     }
   };
 
-  // Handle click outside to close delete confirmation
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (deleteButtonRef.current && !deleteButtonRef.current.contains(event.target)) {
@@ -77,7 +74,6 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
     };
   }, []);
 
-  // Update isRead state when parent signals bulk read/unread change
   useEffect(() => {
     setIsRead(notification.read);
   }, [notification.read]);
@@ -86,7 +82,7 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
     <div
       className={`p-4 hover:bg-gray-50 transition-colors duration-100 relative ${
         isRead ? 'bg-white' : 'bg-green-100 font-semibold text-black'
-      } ${isAnnouncement ? 'cursor-pointer' : ''}`}
+      } ${isAnnouncement || isFeedbackReply ? 'cursor-pointer' : ''}`}
       onClick={handleToggleExpand}
     >
       {showSuccess && !isAnnouncement && (
@@ -147,6 +143,41 @@ const NotificationItem = ({ notification, markAsRead, markAsUnread, deleteNotifi
               >
                 {isExpanded ? notification.message : truncateText(notification.message)}
               </p>
+            </>
+          ) : isFeedbackReply ? (
+            <>
+              <h3 className={`text-base font-bold ${isRead ? 'text-black' : 'text-black'}`}>
+                📝 Feedback Reply
+              </h3>
+              <p
+                className={`mt-1 text-sm ${isRead ? 'text-gray-600' : 'text-black'} overflow-hidden ${
+                  isExpanded
+                    ? 'overflow-wrap break-word'
+                    : 'text-ellipsis line-clamp-2'
+                }`}
+              >
+                Thank you for your feedback! {isExpanded ? notification.message : truncateText(notification.message)}
+              </p>
+              {isExpanded && (
+                <div className="mt-2 text-sm text-gray-600">
+                  <p>
+                    <strong>Original Feedback:</strong>{' '}
+                    {notification.feedback?.length > 50
+                      ? `${notification.feedback.substring(0, 50)}...`
+                      : notification.feedback || 'N/A'}
+                  </p>
+                  <p>
+                    <strong>Rating:</strong>{' '}
+                    {[...Array(notification.rating || 0)].map((_, i) => (
+                      <FaStar key={i} className="inline text-yellow-400" />
+                    ))}
+                  </p>
+                  <p>
+                    <strong>Booking Type:</strong>{' '}
+                    {notification.bookingType === 'seating' ? 'Seating' : 'Parking'}
+                  </p>
+                </div>
+              )}
             </>
           ) : (
             <p className={`mt-1 text-sm ${isRead ? 'text-gray-600' : 'text-black'} overflow-hidden overflow-wrap break-word`}>

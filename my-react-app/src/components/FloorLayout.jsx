@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Seat from './Seat';
 import { jwtDecode } from "jwt-decode";
+import RatingModal from "./ratingModal";
 
 // Utility functions
 const TAILWIND_COLORS = {
@@ -247,6 +248,8 @@ export default function FloorLayout() {
   const navigate = useNavigate();
   const { memberId, userRole } = useAuth();
   const { memberDetails, teamName, loading: userLoading } = useUserData(memberId);
+  const [isRatingOpen, setIsRatingOpen] = useState(false);
+  const [userId, setUserId] = useState(null);
 
   const bookingInfo = useMemo(() => ({
     date: state?.date || null,
@@ -261,6 +264,34 @@ export default function FloorLayout() {
   const [message, setMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [bookingSubmitted, setBookingSubmitted] = useState(false);
+
+  // Fetch userId for RatingModal
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error('No token found in localStorage');
+          setMessage('Please log in to submit ratings.');
+          return;
+        }
+        const profile = await api.fetchUser(memberId);
+        if (!profile._id) {
+          console.error('No userId found in profile:', profile);
+          setMessage('Unable to fetch user profile.');
+          return;
+        }
+        setUserId(profile._id);
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error.message);
+        setMessage('Failed to fetch user profile. Please log in again.');
+      }
+    };
+
+    if (memberId) {
+      fetchUserProfile();
+    }
+  }, [memberId]);
 
   // Prevent scrolling
   useEffect(() => {
@@ -282,8 +313,7 @@ export default function FloorLayout() {
               !key.includes(`${memberId}_${bookingInfo.date}_${bookingInfo.floor}`))
       .forEach(key => localStorage.removeItem(key));
     
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [memberId, bookingInfo]);
 
   // Main booking fetch effect
   useEffect(() => {
@@ -334,7 +364,7 @@ export default function FloorLayout() {
         
         if (justSubmitted && submissionTime) {
           const timeDiff = Date.now() - parseInt(submissionTime);
-          if (timeDiff < 30000) { // 30 seconds - CHANGE THIS VALUE TO MODIFY TIMEOUT
+          if (timeDiff < 30000) {
             setBookingSubmitted(true);
           } else {
             localStorage.removeItem(submissionKey);
@@ -525,18 +555,26 @@ export default function FloorLayout() {
         
         setBookedChairs(prev => ({ ...prev, [selectedSeat]: realChairData }));
         setSelectedSeat(null);
+        setBookingSubmitted(true);
+        const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
+        localStorage.setItem(submissionKey, 'true');
+        localStorage.setItem(`${submissionKey}_time`, Date.now().toString());
+        
+        showMessage('Booking submitted successfully!');
+        if (Math.random() < 0.1) setIsRatingOpen(true);
       } catch (err) {
         showMessage('Booking failed: ' + err.message);
         return;
       }
+    } else {
+      setBookingSubmitted(true);
+      const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
+      localStorage.setItem(submissionKey, 'true');
+      localStorage.setItem(`${submissionKey}_time`, Date.now().toString());
+      
+      showMessage('Booking submitted successfully!');
+      if (Math.random() < 0.1) setIsRatingOpen(true);
     }
-
-    setBookingSubmitted(true);
-    const submissionKey = `booking_submitted_${memberId}_${bookingInfo.date}_${bookingInfo.floor}`;
-    localStorage.setItem(submissionKey, 'true');
-    localStorage.setItem(`${submissionKey}_time`, Date.now().toString());
-    
-    showMessage('Booking submitted successfully!');
   };
 
   const handleCancel = () => {
@@ -756,10 +794,29 @@ export default function FloorLayout() {
             </div>
           )}
 
+          <RatingModal
+            isOpen={isRatingOpen}
+            onClose={() => setIsRatingOpen(false)}
+            onSubmit={async (data) => {
+              try {
+                const response = await fetch('/api/ratings/submit-rating', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId, bookingType: 'seating', ...data }),
+                });
+                return response;
+              } catch (error) {
+                console.error('Fetch error in onSubmit:', error.message);
+                throw error;
+              }
+            }}
+            userId={userId}
+            bookingType="seating"
+          />
+
+          {message && <PopUp message={message} onClose={closeMessage} />}
         </div>
       </div>
-
-      {message && <PopUp message={message} onClose={closeMessage} />}
     </div>
   );
 }

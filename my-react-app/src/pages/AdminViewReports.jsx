@@ -153,20 +153,23 @@ const fetchUserBookings = async (query) => {
     setTeamStatsError(null);
   };
 
-  
 
-
-
-const fetchAllBookings = async () => {
-  try {
-    const response = await api.get('/api/reports/all-bookings');
-    setAllBookings(response.data);
-  } catch (err) {
-    console.error('Error fetching all bookings:', err);
-    setError('Failed to fetch recent bookings. Please try again later.');
-    setAllBookings([]);
-  }
-};
+  const fetchAllBookings = async () => {
+    try {
+      const [appliedStart, appliedEnd] = appliedDateRange;
+      const response = await api.get('/api/reports/all-bookings', {
+        params: {
+          startDate: appliedStart?.toISOString(),
+          endDate: appliedEnd?.toISOString()
+        }
+      });
+      setAllBookings(response.data);
+    } catch (err) {
+      console.error('Error fetching all bookings:', err);
+      setError('Failed to fetch recent bookings. Please try again later.');
+      setAllBookings([]);
+    }
+  };// can apply date range
 
   const getFloorUsageBookings = () => {
     if (!appliedDateRange[0] || !appliedDateRange[1]) {
@@ -680,7 +683,7 @@ const fetchAllBookings = async () => {
 
   return (
     <AdminSidebar>
-      <div>
+      <div className="bg-gradient-to-br from-gray-100 to-gray-200 p-6 min-h-screen">
         {renderContent()}
       </div>
     </AdminSidebar>

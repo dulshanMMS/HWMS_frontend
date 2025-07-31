@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X } from 'lucide-react'; // optional icon package; or you can use plain "×"
 
 const ForgotPassword = ({ onClose }) => {
   const [email, setEmail] = useState('');
@@ -32,8 +33,17 @@ const ForgotPassword = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-6 rounded-lg w-80">
-        <h3 className="text-lg font-bold mb-2">Forgot Password</h3>
+      <div className="relative bg-white p-6 rounded-lg w-80">
+        {/* Close Icon in Top-Right */}
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
+          aria-label="Close"
+        >
+          ×
+        </button>
+
+        <h3 className="text-lg font-bold mb-2 text-center">Forgot Password</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
@@ -55,9 +65,6 @@ const ForgotPassword = ({ onClose }) => {
             {status}
           </p>
         )}
-        <button onClick={onClose} className="text-sm text-gray-600 mt-4 hover:underline">
-          Close
-        </button>
       </div>
     </div>
   );
