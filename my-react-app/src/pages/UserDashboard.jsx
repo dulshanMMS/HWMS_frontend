@@ -157,6 +157,8 @@ const UserDashboard = () => {
         <DashboardHeader
           sidebarOpen={sidebarOpen}
           toggleSidebar={() => setSidebarOpen((prev) => !prev)}
+           userProfile={userProfile} // ← Admin return prop
+
         />
 
         {/* User profile summary display */}

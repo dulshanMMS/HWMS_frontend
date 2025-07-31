@@ -23,7 +23,16 @@ const AdminSidebar = ({ children }) => {
     setIsOpen(!isOpen);
   };
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    // Handle exact matches and partial matches for nested routes
+    if (path === "/admin" && location.pathname === "/admin") {
+      return true;
+    }
+    if (path !== "/admin" && location.pathname.startsWith(path)) {
+      return true;
+    }
+    return location.pathname === path;
+  };
 
   return (
     <>
@@ -62,18 +71,21 @@ const AdminSidebar = ({ children }) => {
               to="/datebooking"
               icon={<FaExchangeAlt />}
               label="Seat Booking"
+              active={isActive("/datebooking")}
             />
             <SidebarLink
               to="/user/parking-booking"
               icon={<FaCar />}
               label="Parking Booking"
+              active={isActive("/user/parking-booking")}
             />
             <SidebarLink
               to="/help"
               icon={<FaQuestionCircle />}
               label="Help Section"
+              active={isActive("/help")}
             />
-            {/* <SidebarLink to="/booking-history" icon={<FaHistory />} label="Booking History" /> */}
+            {/* <SidebarLink to="/booking-history" icon={<FaHistory />} label="Booking History" active={isActive("/booking-history")} /> */}
           </ul>
         </div>
 
@@ -87,9 +99,24 @@ const AdminSidebar = ({ children }) => {
               label="Notifications"
               active={isActive("/AdminNotification")}
             />
-            <SidebarLink to="/admin/adminparking" icon={<FaCar />} label="Parking ADMIN" />
-            <SidebarLink to="/admin/team-management" icon={<FaUsers />} label="Teams" active={isActive("/admin/team-management")} />
-            <SidebarLink to="/profile" icon={<FaUser />} label="Profile" />
+            <SidebarLink 
+              to="/admin/adminparking" 
+              icon={<FaCar />} 
+              label="Parking ADMIN" 
+              active={isActive("/admin/adminparking")}
+            />
+            <SidebarLink 
+              to="/admin/team-management" 
+              icon={<FaUsers />} 
+              label="Teams" 
+              active={isActive("/admin/team-management")} 
+            />
+            <SidebarLink 
+              to="/profile" 
+              icon={<FaUser />} 
+              label="Profile" 
+              active={isActive("/profile")}
+            />
             <SidebarLink
               to="/admin-reports"
               icon={<FaChartBar />}
@@ -122,7 +149,6 @@ const AdminSidebar = ({ children }) => {
       )}
 
       {/* Main Content Area */}
-      {/*<div className="flex flex-col lg:ml-72 p-8 bg-gray-100 min-h-screen">*/}  
       <div className="lg:ml-72 bg-gray-100 min-h-screen">
         {children}
       </div>
@@ -135,7 +161,9 @@ const SidebarLink = ({ to, icon, label, active = false }) => (
   <li className={`mb-1 ${active ? "font-semibold bg-[#331108] relative" : ""}`}>
     <Link
       to={to}
-      className="flex items-center gap-4 py-3 px-4 text-white rounded hover:bg-[#331108] relative"
+      className={`flex items-center gap-4 py-3 px-4 text-white rounded hover:bg-[#331108] relative transition-all duration-200 ${
+        active ? "bg-[#331108] font-semibold" : ""
+      }`}
     >
       {active && (
         <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-[#37F568] rounded-r-md"></span>

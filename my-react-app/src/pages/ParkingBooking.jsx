@@ -117,6 +117,8 @@ const ParkingBooking = () => {
     if (entryTime >= exitTime) {
       setMessage("Exit time must be after entry time.");
       setLoading(false);
+      setAvailableSlots([]); // Clear any existing slots
+      setSelectedSlot(null); // Clear selected slot
       return;
     }
     
@@ -160,10 +162,12 @@ const ParkingBooking = () => {
       setMessage(result.message || "Booking completed!");
       setSelectedSlot(null);
       setAvailableSlots([]);
-      if (Math.random() < 1) setIsRatingOpen(true); // Randomly open rating modal 50% chance
+      if (Math.random() < 0.01) setIsRatingOpen(true); // Randomly open rating modal 50% chance
       
-    } catch {
-      setMessage("Failed to book the slot.");
+    } catch (error) {
+      // FIXED: Display actual backend error message instead of generic message
+      const errorMessage = error.response?.data?.message || error.message || "Failed to book the slot.";
+      setMessage(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -40,10 +40,10 @@ const Footer = () => {
                 <a href="#" className="bg-green-700 p-2 rounded-lg hover:bg-green-600 transition-colors">
                   <Twitter className="h-5 w-5" />
                 </a>
-                <a href="#" className="bg-green-700 p-2 rounded-lg hover:bg-green-600 transition-colors">
+                <a href="https://www.linkedin.com/company/john-wiley-and-sons/posts/?feedView=all" className="bg-green-700 p-2 rounded-lg hover:bg-green-600 transition-colors">
                   <Linkedin className="h-5 w-5" />
                 </a>
-                <a href="#" className="bg-green-700 p-2 rounded-lg hover:bg-green-600 transition-colors">
+                <a href="https://www.instagram.com/wiley_global?igsh=MW1oMHJ6M3Jwcm56dw==" className="bg-green-700 p-2 rounded-lg hover:bg-green-600 transition-colors">
                   <Instagram className="h-5 w-5" />
                 </a>
               </div>
@@ -53,19 +53,19 @@ const Footer = () => {
             <div>
               <h3 className="text-lg font-semibold mb-6">Quick Links</h3>
               <ul className="space-y-4 text-green-100">
-                <li><a href="#" className="hover:text-white transition-colors flex items-center">
+                <li><a href="/homepage" className="hover:text-white transition-colors flex items-center">
                   <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>Home
                 </a></li>
                 <li><a href="/about/us" className="hover:text-white transition-colors flex items-center">
                   <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>About Us
                 </a></li>
-                <li><a href="#" className="hover:text-white transition-colors flex items-center">
+                {/*<li><a href="#" className="hover:text-white transition-colors flex items-center">
                   <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>Services
-                </a></li>
+                </a></li>*/}
                 
-                <li><a href="#" className="hover:text-white transition-colors flex items-center">
+                {/*<li><a href="#" className="hover:text-white transition-colors flex items-center">
                   <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>Contact
-                </a></li>
+                </a></li>*/}
               </ul>
             </div>
 
@@ -131,16 +131,16 @@ const Footer = () => {
 
         {/* Bottom Footer */}
         <div className="border-t border-green-700 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+          <div className="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0">
             <div className="text-green-200 text-sm">
               <p>&copy; 2025 Wiley Booking Platform. All rights reserved.</p>
             </div>
-            <div className="flex space-x-6 text-sm text-green-200">
+            {/* <div className="flex space-x-6 text-sm text-green-200">
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
               <a href="#" className="hover:text-white transition-colors">Cookie Policy</a>
               <a href="#" className="hover:text-white transition-colors">Support</a>
-            </div>
+            </div> */}
           </div>
           
         

@@ -56,7 +56,7 @@ const DeleteBookingPopup = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
         <h2 className="text-xl font-bold mb-4">Confirm Deletion</h2>
-        <p className="mb-4">Please confirm the booking details to delete:</p>
+        <p className="mb-4">Please review the booking details before deletion:</p>
         
         {error && <ErrorMessage message={error} />}
         {validationError && <ErrorMessage message={validationError} />}
@@ -73,8 +73,8 @@ const DeleteBookingPopup = ({
                 type="text"
                 name={field}
                 value={deleteForm[field]}
-                onChange={onInputChange}
-                className="w-full p-2 border rounded-md"
+                readOnly={true}
+                className="w-full p-2 border rounded-md bg-gray-50 text-gray-700 cursor-not-allowed"
               />
             </div>
           ))}
