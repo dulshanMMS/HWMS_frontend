@@ -57,7 +57,7 @@ const Header = () => {
                 About Us
               </button>
               <button 
-                onClick={() => navigateToPage('/')}
+                onClick={() => navigateToPage('/login')}
                 className="bg-green-600 text-white px-6 xl:px-8 py-2 xl:py-3 rounded-xl text-sm font-medium hover:bg-green-700 transition-all duration-300 shadow-lg"
               >
                 Sign In
