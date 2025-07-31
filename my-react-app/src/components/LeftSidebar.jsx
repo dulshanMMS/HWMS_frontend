@@ -1,3 +1,4 @@
+
 // // import React, { useState } from "react";
 // // import { Link, useLocation } from "react-router-dom";
 // // import {
@@ -349,6 +350,7 @@
 
 // added notification count badge Sjay
 import React, { useState, useEffect } from "react";
+
 import { Link, useLocation } from "react-router-dom";
 import axios from 'axios';
 import {
@@ -431,12 +433,24 @@ const LeftSidebar = ({ children }) => {
         <div className="mb-6">
           <h3 className="text-gray-400 text-sm uppercase mb-3">Quick Access</h3>
           <ul>
-            <SidebarLink to="/user" icon={<FaHome />} label="Dashboard" active={isActive("/user")} />
+
+            <SidebarLink 
+              to="/user" 
+              icon={<FaHome />} 
+              label="Dashboard"
+              active={isActive("/user")}
+            />
+
+         
             <SidebarLink
               to="/datebooking"
               icon={<FaExchangeAlt />}
               label="Seat Booking"
+
+              active={isActive("/datebooking")}
+
               active={isActive("/seat-booking")}
+
             />
             <SidebarLink
               to="/user/parking-booking"
@@ -453,7 +467,11 @@ const LeftSidebar = ({ children }) => {
                 </div>
               }
               label="Seat Booking History"
+
+              active={isActive("/seathistory")}
+
               active={isActive("/seat-booking")} // Note: Same path as Seat Booking, consider changing
+
             />
             <SidebarLink
               to="/parkinghistory"
@@ -492,6 +510,7 @@ const LeftSidebar = ({ children }) => {
               label="Profile"
               active={isActive("/profile")}
             />
+
           </ul>
         </div>
 
@@ -518,8 +537,10 @@ const LeftSidebar = ({ children }) => {
         />
       )}
 
+
       {/* Main content area */}
       <div className="lg:ml-72 bg-gray-100 min-h-screen">
+
         {children}
       </div>
     </>

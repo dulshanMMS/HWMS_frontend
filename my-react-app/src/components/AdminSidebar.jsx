@@ -229,7 +229,16 @@ const AdminSidebar = ({ children }) => {
     setIsOpen(!isOpen);
   };
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    // Handle exact matches and partial matches for nested routes
+    if (path === "/admin" && location.pathname === "/admin") {
+      return true;
+    }
+    if (path !== "/admin" && location.pathname.startsWith(path)) {
+      return true;
+    }
+    return location.pathname === path;
+  };
 
   // Fetch unread notification count for admin
   const fetchUnreadCount = async () => {
@@ -307,6 +316,10 @@ const AdminSidebar = ({ children }) => {
               label="Help Section"
               active={isActive("/help")}
             />
+
+            {/* <SidebarLink to="/booking-history" icon={<FaHistory />} label="Booking History" active={isActive("/booking-history")} /> */}
+
+
           </ul>
         </div>
 
@@ -339,6 +352,7 @@ const AdminSidebar = ({ children }) => {
               label="Profile"
               active={isActive("/profile")}
             />
+
             <SidebarLink
               to="/admin-reports"
               icon={<FaChartBar />}
@@ -389,7 +403,9 @@ const SidebarLink = ({ to, icon, label, active = false, unreadCount = 0 }) => (
   <li className={`mb-1 ${active ? "font-semibold bg-[#331108] relative" : ""}`}>
     <Link
       to={to}
-      className="flex items-center gap-4 py-3 px-4 text-white rounded hover:bg-[#331108] relative"
+      className={`flex items-center gap-4 py-3 px-4 text-white rounded hover:bg-[#331108] relative transition-all duration-200 ${
+        active ? "bg-[#331108] font-semibold" : ""
+      }`}
     >
       {active && (
         <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-[#37F568] rounded-r-md"></span>

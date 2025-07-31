@@ -18,7 +18,10 @@ const Navbar = () => {
 
   return (
     <nav
-      className={`absolute top-8 left-1/2 transform -translate-x-1/2 w-11/12 max-w-5xl bg-black/30 backdrop-blur-md px-4 py-2 rounded-xl shadow-md flex justify-between items-center z-10 transition-all duration-700 ease-out ${
+
+      className={`absolute top-8 left-1/2 transform -translate-x-1/2 w-11/12 max-w-5xl bg-black/30 backdrop-blur-md px-4 py-2 rounded-xl shadow-md flex justify-between items-center z-50 transition-all duration-700 ease-out ${
+
+    
         visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
       }`}
     >
