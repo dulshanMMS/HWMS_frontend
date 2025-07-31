@@ -42,19 +42,19 @@ const AuthForm = ({
               type="text"
               value={firstName}
               onChange={(e) => handleChange('firstName', e.target.value)}
-              placeholder="First Name"
+              placeholder="First Name*"
             />
             <GeneralFormInput
               type="text"
               value={lastName}
               onChange={(e) => handleChange('lastName', e.target.value)}
-              placeholder="Last Name"
+              placeholder="Last Name*"
             />
             <GeneralFormInput
               type="email"
               value={email}
               onChange={(e) => handleChange('email', e.target.value)}
-              placeholder="Working Email"
+              placeholder="Working Email*"
             />
           </>
         )}
@@ -63,13 +63,13 @@ const AuthForm = ({
           type="text"
           value={username}
           onChange={(e) => handleChange('username', e.target.value)}
-          placeholder="Username"
+          placeholder="Username*"
         />
         <GeneralFormInput
           type="password"
           value={password}
           onChange={(e) => handleChange('password', e.target.value)}
-          placeholder="Password"
+          placeholder="Password*"
           showToggle={true}
           showPassword={showPassword}
           setShowPassword={setShowPassword}
@@ -80,7 +80,7 @@ const AuthForm = ({
             type="password"
             value={confirmPassword}
             onChange={(e) => handleChange('confirmPassword', e.target.value)}
-            placeholder="Confirm Password"
+            placeholder="Confirm Password*"
             showToggle={true}
             showPassword={showConfirmPassword}
             setShowPassword={setShowConfirmPassword}

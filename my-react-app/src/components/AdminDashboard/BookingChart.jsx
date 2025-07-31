@@ -16,10 +16,22 @@ const BookingChart = () => {
   const [activeTab, setActiveTab] = useState("parking");
   const [activeRange, setActiveRange] = useState("today");
   const [chartData, setChartData] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  });
 
-  const fetchData = async (tab, range) => {
+  const fetchData = async (tab, range, date) => {
     try {
-      const res = await axios.get(`/api/bookings/count-by-floor?type=${tab}&range=${range}`);
+      const params = new URLSearchParams();
+      params.append("type", tab);
+      params.append("range", range);
+
+      if (date) {
+        params.append("date", date);
+      }
+
+      const res = await axios.get(`/api/bookings/count-by-floor?${params.toString()}`);
       if (res.data.success && Array.isArray(res.data.data)) {
         const fixed = res.data.data.map(item => ({
           floor: item.floor?.toString() ?? "unknown",
@@ -37,8 +49,13 @@ const BookingChart = () => {
   };
 
   useEffect(() => {
-    fetchData(activeTab, activeRange);
-  }, [activeTab, activeRange]);
+    const today = new Date().toISOString().split("T")[0];
+
+    // Always send selectedDate if it's not today
+    const sendCustomDate = selectedDate !== today;
+
+    fetchData(activeTab, activeRange, sendCustomDate ? selectedDate : undefined);
+  }, [activeTab, activeRange, selectedDate]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -122,6 +139,17 @@ const BookingChart = () => {
         ) : (
           <p className="text-center text-gray-500 mt-8">No booking data available for this range.</p>
         )}
+      </div>
+
+      {/* Date Filter */}
+      <div className="border-t border-gray-100 px-6 py-4 bg-gray-50">
+        <label className="text-sm font-medium text-gray-600 block mb-1">Choose a specific date</label>
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="border rounded px-3 py-1 text-sm text-gray-700 w-full"
+        />
       </div>
     </div>
   );

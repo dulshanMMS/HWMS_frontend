@@ -5,8 +5,8 @@ import AuthForm from '../components/Login/AuthForm';
 import ForgotPassword from '../components/Login/ForgotPassword';
 import Navbar from '../components/Login/Navbar';
 
-const Login = () => {
-  const [currentState, setCurrentState] = useState('Sign In');
+const SignUp = () => {
+  const [currentState, setCurrentState] = useState('Sign Up');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -63,7 +63,7 @@ const Login = () => {
         }
 
         setFormData({
-          firstName: '*',
+          firstName: '',
           lastName: '',
           username: '',
           email: '',
@@ -118,4 +118,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default SignUp;
