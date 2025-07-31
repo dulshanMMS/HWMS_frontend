@@ -21,33 +21,7 @@ const UserSearchModal = ({ token, onCreateConversation, onBack }) => {
       setSearchResults(response.data.users || []);
     } catch (error) {
       console.error('Error searching users:', error);
-      // Mock users for demo if API not ready
-      setSearchResults([
-        {
-          _id: '1',
-          firstName: 'John',
-          lastName: 'Doe', 
-          username: 'john.doe',
-          email: 'john@company.com',
-          profilePhoto: 'https://i.pravatar.cc/40?img=1',
-          displayName: 'John Doe',
-          teamInfo: { name: 'Development Team' }
-        },
-        {
-          _id: '2',
-          firstName: 'Sarah',
-          lastName: 'Wilson',
-          username: 'sarah.wilson',
-          email: 'sarah@company.com', 
-          profilePhoto: 'https://i.pravatar.cc/40?img=2',
-          displayName: 'Sarah Wilson',
-          teamInfo: { name: 'Design Team' }
-        }
-      ].filter(user => 
-        user.displayName.toLowerCase().includes(query.toLowerCase()) ||
-        user.username.toLowerCase().includes(query.toLowerCase()) ||
-        user.email.toLowerCase().includes(query.toLowerCase())
-      ));
+      setSearchResults([]);
     }
   };
 
@@ -67,6 +41,9 @@ const UserSearchModal = ({ token, onCreateConversation, onBack }) => {
     
     onCreateConversation(participantIds, type, groupName);
   };
+
+  // Debug the button state
+  const isButtonDisabled = selectedUsers.length === 0;
 
   return (
     <div className="space-y-4">
@@ -132,9 +109,20 @@ const UserSearchModal = ({ token, onCreateConversation, onBack }) => {
             />
           )}
           
+          {/* Debug info */}
+          <div className="text-xs text-gray-500">
+            Selected {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''}
+          </div>
+          
           <button
+            type="button"
             onClick={handleCreateConversation}
-            className="w-full p-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors font-medium"
+            disabled={isButtonDisabled}
+            className={`w-full p-3 rounded-xl font-medium transition-colors ${
+              isButtonDisabled 
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                : 'bg-green-500 text-white hover:bg-green-600 cursor-pointer'
+            }`}
           >
             Start Conversation ({selectedUsers.length} {selectedUsers.length === 1 ? 'person' : 'people'})
           </button>
@@ -162,12 +150,27 @@ const UserSearchModal = ({ token, onCreateConversation, onBack }) => {
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                      <span className="text-sm font-semibold text-gray-600">
-                        {user.displayName ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : '?'}
-                      </span>
-                    </div>
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
+                {/* ✅ ADD THIS: Show user profile photo */}
+                {user.profilePhoto ? (
+                  <img 
+                    src={user.profilePhoto} 
+                    alt={user.displayName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <span 
+                  className={`text-sm font-semibold text-gray-600 ${user.profilePhoto ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}
+                  style={{ display: user.profilePhoto ? 'none' : 'flex' }}
+                >
+                  {user.displayName ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase() : '?'}
+                </span>
+              </div>
                     {selectedUsers.some(u => u._id === user._id) && (
                       <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                         <FaCheck className="text-white text-xs" />
@@ -184,8 +187,8 @@ const UserSearchModal = ({ token, onCreateConversation, onBack }) => {
                     )}
                   </div>
                   <div className="text-right">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <p className="text-xs text-gray-400 mt-1">Online</p>
+                    {/* <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <p className="text-xs text-gray-400 mt-1">Online</p> */}
                   </div>
                 </div>
               </div>

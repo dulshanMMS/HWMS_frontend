@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 // Get credentials from environment variables
-const CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
-const UPLOAD_PRESET = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 // Cloudinary upload URL
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
@@ -14,6 +14,8 @@ const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/uplo
  * @returns {Promise<string>} - The URL of the uploaded image
  */
 export const uploadProfileImage = async (file, userId) => {
+    console.log('🔍 Cloud Name:', CLOUD_NAME);
+    console.log('🔍 Upload Preset:', UPLOAD_PRESET);
     try {
         // Validation
         if (!CLOUD_NAME || !UPLOAD_PRESET) {

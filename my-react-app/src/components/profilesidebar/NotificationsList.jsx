@@ -1,196 +1,729 @@
-import React from "react";
-import { FiChevronRight } from "react-icons/fi";
-import { FaCar, FaChair, FaMapMarkerAlt } from "react-icons/fa";
-import NotificationItem from "./NotificationItem";
+import React, { useState, useEffect } from "react";
+import { FiChevronRight, FiChevronDown, FiChevronUp, FiMoreHorizontal } from "react-icons/fi";
+import { 
+  FaCar, 
+  FaChair, 
+  FaMapMarkerAlt, 
+  FaBullhorn, 
+  FaCalendarAlt,
+  FaEnvelope,
+  FaBell,
+  FaEye,
+  FaEyeSlash,
+  FaTrash,
+  FaClock,
+  FaExclamationTriangle,
+  FaInfoCircle,
+  FaChevronLeft,
+  FaEllipsisV
+} from "react-icons/fa";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-/**
- * NotificationsList renders notification sections including:
- * - Booking reminders for today's bookings
- * - New messages
- * - Upcoming booking details
- *
- * Props:
- * - todayBookings (array): bookings for the current day
- * - upcomingBooking (object|null): next upcoming booking info
- * - userNotifications (array): general notifications/messages
- */
 const NotificationsList = ({
   todayBookings = [],
   upcomingBooking = null,
   userNotifications = [],
 }) => {
-  // Ensure userNotifications is an array (fallback to empty array)
-  const safeUserNotifications = Array.isArray(userNotifications)
-    ? userNotifications
-    : [];
+  const navigate = useNavigate();
+  
+  // State for announcements with pagination
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
+  const [announcementsError, setAnnouncementsError] = useState(null);
+  const [announcementsPagination, setAnnouncementsPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasMore: false
+  });
+  
+  // UI state for collapsible sections
+  const [sectionsCollapsed, setSectionsCollapsed] = useState({
+    bookingReminders: false,
+    announcements: false,
+    messages: false,
+    upcoming: false
+  });
 
-  // Count of today's bookings for display
+  // Show/hide read announcements
+  const [showReadAnnouncements, setShowReadAnnouncements] = useState(false);
+  
+  // Pagination and overflow handling
+  const [notificationsPagination, setNotificationsPagination] = useState({
+    currentPage: 1,
+    itemsPerPage: 5,
+    totalItems: 0
+  });
+  
+  const [expandedSections, setExpandedSections] = useState({
+    bookingReminders: false,
+    announcements: false,
+    messages: false,
+    upcoming: false
+  });
+
   const count = todayBookings.length;
 
-  // Example of other notifications (currently only "New Message")
-  const otherNotifications = [
-    { icon: "📩", color: "bg-yellow-100", title: "New Message" },
-  ];
+  // Fetch announcements with pagination
+  useEffect(() => {
+    fetchAnnouncements(1);
+  }, [showReadAnnouncements]);
+
+  const fetchAnnouncements = async (page = 1) => {
+    try {
+      setAnnouncementsLoading(true);
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        setAnnouncementsError("Authentication required");
+        return;
+      }
+
+      const response = await axios.get(
+        `http://localhost:5000/api/announcements?page=${page}&limit=10`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      const newAnnouncements = response.data.announcements || [];
+      
+      // If it's page 1, replace the array; otherwise, append
+      if (page === 1) {
+        setAnnouncements(newAnnouncements);
+      } else {
+        setAnnouncements(prev => [...prev, ...newAnnouncements]);
+      }
+      
+      setAnnouncementsPagination({
+        currentPage: page,
+        totalPages: response.data.totalPages || 1,
+        totalCount: response.data.total || 0,
+        hasMore: page < (response.data.totalPages || 1)
+      });
+      
+      setAnnouncementsError(null);
+    } catch (error) {
+      console.error("Error fetching announcements:", error);
+      setAnnouncementsError("Failed to load announcements");
+      setAnnouncements([]);
+    } finally {
+      setAnnouncementsLoading(false);
+    }
+  };
+
+  // Load more announcements
+  const loadMoreAnnouncements = () => {
+    if (announcementsPagination.hasMore && !announcementsLoading) {
+      fetchAnnouncements(announcementsPagination.currentPage + 1);
+    }
+  };
+
+  // Toggle section collapse
+  const toggleSection = (section) => {
+    setSectionsCollapsed(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  // Toggle section expansion for overflow handling
+  const toggleSectionExpansion = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  // Format time for announcements
+  const formatAnnouncementTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Mark announcement as read
+  const markAnnouncementAsRead = async (announcementId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `http://localhost:5000/api/announcements/${announcementId}/mark-read`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setAnnouncements(prev => 
+        prev.map(ann => 
+          ann._id === announcementId ? { ...ann, read: true } : ann
+        )
+      );
+    } catch (error) {
+      console.error("Error marking announcement as read:", error);
+    }
+  };
+
+  // Delete announcement
+  const deleteAnnouncement = async (announcementId) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(
+        `http://localhost:5000/api/announcements/${announcementId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setAnnouncements(prev => prev.filter(ann => ann._id !== announcementId));
+      setAnnouncementsPagination(prev => ({
+        ...prev,
+        totalCount: prev.totalCount - 1
+      }));
+    } catch (error) {
+      console.error("Error deleting announcement:", error);
+    }
+  };
+
+  // Get limited items for display
+  const getLimitedItems = (items, section, limit = 3) => {
+    if (expandedSections[section]) {
+      return items;
+    }
+    return items.slice(0, limit);
+  };
+
+  // Filter announcements based on read status
+  const filteredAnnouncements = showReadAnnouncements 
+    ? announcements 
+    : announcements.filter(ann => !ann.read);
+
+  // Enhanced Section Header Component with overflow controls
+  const SectionHeader = ({ 
+    title, 
+    count, 
+    icon, 
+    color, 
+    sectionKey, 
+    showActions = false,
+    onAction = null,
+    actionIcon = null,
+    actionTitle = "",
+    hasOverflow = false,
+    totalCount = 0
+  }) => (
+    <div className="flex items-center justify-between mb-3">
+      <button
+        onClick={() => toggleSection(sectionKey)}
+        className="flex items-center gap-2 flex-1 text-left group"
+      >
+        <div className={`p-2 rounded-lg ${color} transition-all duration-200 group-hover:scale-110 shadow-sm`}>
+          {icon}
+        </div>
+        <div className="flex-1">
+          <h4 className="font-semibold text-gray-800 group-hover:text-gray-900 transition-colors">
+            {title} {count !== undefined && `(${count})`}
+            {hasOverflow && totalCount > count && (
+              <span className="text-xs text-gray-500 ml-1">
+                showing {count} of {totalCount}
+              </span>
+            )}
+          </h4>
+        </div>
+        <div className="transition-transform duration-200">
+          {sectionsCollapsed[sectionKey] ? 
+            <FiChevronDown className="text-gray-400" /> : 
+            <FiChevronUp className="text-gray-400" />
+          }
+        </div>
+      </button>
+      
+      <div className="flex items-center gap-1 ml-2">
+        {/* Expand/Collapse for overflow */}
+        {hasOverflow && !sectionsCollapsed[sectionKey] && (
+          <button
+            onClick={() => toggleSectionExpansion(sectionKey)}
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-all duration-200 group"
+            title={expandedSections[sectionKey] ? "Show less" : "Show all"}
+          >
+            {expandedSections[sectionKey] ? 
+              <FiChevronUp size={14} /> : 
+              <FiMoreHorizontal size={14} />
+            }
+          </button>
+        )}
+        
+        {showActions && onAction && (
+          <button
+            onClick={onAction}
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-all duration-200 group"
+            title={actionTitle}
+          >
+            {actionIcon}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="mt-2">
-      {/* Header with title and 'View All' button */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-base font-semibold">Notifications</h3>
-        <button className="bg-gray-100 text-sm font-medium py-2 px-4 rounded-xl shadow hover:bg-gray-200 flex items-center gap-2">
+    <div className="mt-2 space-y-4">
+      {/* Main Header with total count indicator */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-bold bg-gradient-to-r from-green-600 to-green-600 bg-clip-text text-transparent">
+            Notifications
+          </h3>
+          {/* Total notification count indicator */}
+          {(count + filteredAnnouncements.length + userNotifications.length) > 20 && (
+            <div className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-full">
+              {count + filteredAnnouncements.length + userNotifications.length} total
+            </div>
+          )}
+        </div>
+        <button 
+          onClick={() => navigate('/user/notifications')}
+          className="bg-gradient-to-r from-green-500 to-green-400 text-white text-sm font-medium py-2 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 hover:scale-105"
+        >
           View All <FiChevronRight />
         </button>
       </div>
 
-      {/* Booking Reminder Section */}
-      <div className="bg-red-100 p-3 rounded-lg mb-4 max-h-64 overflow-auto">
-        <h4 className="font-semibold mb-2">
-          {count > 0 ? `Booking Reminder (${count})` : "Booking Reminder"}
-        </h4>
-
-        {count === 0 ? (
-          <p className="text-sm text-gray-700">No bookings today.</p>
-        ) : (
-          // Show up to 5 booking reminders with enhanced display
-          todayBookings.slice(0, 5).map((booking, idx) => (
-            <div
-              key={idx}
-              className="mb-3 p-2 bg-white rounded border-l-4 border-red-400"
-            >
-              <div className="flex items-start gap-2">
-                {/* Booking type icon */}
-                <div className="mt-1">
-                  {booking.type === "seat" ? (
-                    <FaChair className="text-green-500 text-sm" />
-                  ) : (
-                    <FaCar className="text-blue-500 text-sm" />
-                  )}
+      {/* Booking Reminders Section with overflow handling */}
+      <div className="bg-gradient-to-br from-red-50 to-pink-50 p-4 rounded-2xl border border-red-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+        <SectionHeader
+          title="Reminders"
+          count={getLimitedItems(todayBookings, 'bookingReminders').length}
+          totalCount={count}
+          icon={<FaCalendarAlt className="text-red-500 text-sm" />}
+          color="bg-red-100"
+          sectionKey="bookingReminders"
+          hasOverflow={count > 3}
+        />
+        
+        {!sectionsCollapsed.bookingReminders && (
+          <div className="max-h-80 overflow-auto custom-scrollbar">
+            {count === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <FaCalendarAlt className="text-red-400 text-xl" />
                 </div>
-
-                <div className="flex-1">
-                  <p className="font-medium text-gray-800 text-sm">
-                    {booking.type === "seat" ? "Seat" : "Parking"}:{" "}
-                    {booking.details}
-                  </p>
-
-                  {/* Enhanced location display */}
-                  {booking.location && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <FaMapMarkerAlt className="text-gray-400 text-xs" />
-                      <p className="text-xs text-gray-600">
-                        {booking.location}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Fallback floor display */}
-                  {!booking.location && booking.floor && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <FaMapMarkerAlt className="text-gray-400 text-xs" />
-                      <p className="text-xs text-gray-600">
-                        Floor: {booking.floor}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Time display */}
-                  {booking.entryTime && booking.exitTime && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      🕐 {booking.entryTime} - {booking.exitTime}
-                    </p>
-                  )}
-                </div>
+                <p className="text-sm text-gray-500 font-medium">No bookings today</p>
+                <p className="text-xs text-gray-400 mt-1">Your schedule is clear! 🎉</p>
               </div>
-            </div>
-          ))
+            ) : (
+              <div className="space-y-3">
+                {getLimitedItems(todayBookings, 'bookingReminders', 3).map((booking, idx) => (
+                  <div
+                    key={idx}
+                    className="group p-3 bg-white rounded-xl border border-red-200 hover:border-red-300 hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-gradient-to-br from-red-100 to-red-200 rounded-lg group-hover:scale-110 transition-transform duration-200 shadow-sm">
+                        {booking.type === "seat" ? (
+                          <FaChair className="text-red-600 text-sm" />
+                        ) : (
+                          <FaCar className="text-red-600 text-sm" />
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-gray-800 text-sm">
+                            {booking.type === "seat" ? "Seat" : "Parking"}: {booking.details}
+                          </p>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                            Today
+                          </span>
+                        </div>
+
+                        {booking.location && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <FaMapMarkerAlt className="text-gray-400 text-xs" />
+                            <p className="text-xs text-gray-600">{booking.location}</p>
+                          </div>
+                        )}
+
+                        {booking.entryTime && booking.exitTime && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <FaClock className="text-gray-400 text-xs" />
+                            <p className="text-xs text-gray-500 font-medium">
+                              {booking.entryTime} - {booking.exitTime}
+                            </p>
+                          </div>
+                        )}
+
+                        {booking.floor && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-400">Floor:</span>
+                            <span className="text-xs text-gray-600 font-medium">{booking.floor}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Show more indicator */}
+                {!expandedSections.bookingReminders && count > 3 && (
+                  <div className="text-center py-2 border-t border-red-100">
+                    <button
+                      onClick={() => toggleSectionExpansion('bookingReminders')}
+                      className="text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1 mx-auto transition-colors"
+                    >
+                      <span>Show {count - 3} more bookings</span>
+                      <FiChevronDown size={14} />
+                    </button>
+                  </div>
+                )}
+                
+                {/* Show less indicator */}
+                {expandedSections.bookingReminders && count > 3 && (
+                  <div className="text-center py-2 border-t border-red-100">
+                    <button
+                      onClick={() => toggleSectionExpansion('bookingReminders')}
+                      className="text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1 mx-auto transition-colors"
+                    >
+                      <span>Show less</span>
+                      <FiChevronUp size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
-        {count > 5 && <p className="text-sm text-gray-700">...and more</p>}
       </div>
 
-      {/* New Messages Section */}
-      <div className="bg-yellow-100 p-3 rounded-lg mb-4 max-h-64 overflow-auto">
-        <h4 className="font-semibold mb-2">
-          New Message{" "}
-          {userNotifications.length > 0 ? `(${userNotifications.length})` : ""}
-        </h4>
+      {/* Announcements Section with enhanced pagination */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-2xl border border-blue-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+        <SectionHeader
+          title="Announcements"
+          count={filteredAnnouncements.length}
+          totalCount={announcementsPagination.totalCount}
+          icon={<FaBullhorn className="text-blue-500 text-sm" />}
+          color="bg-blue-100"
+          sectionKey="announcements"
+          showActions={true}
+          onAction={() => setShowReadAnnouncements(!showReadAnnouncements)}
+          actionIcon={showReadAnnouncements ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
+          actionTitle={showReadAnnouncements ? "Hide read announcements" : "Show all announcements"}
+          hasOverflow={announcementsPagination.totalCount > 5}
+        />
+        
+        {!sectionsCollapsed.announcements && (
+          <div className="max-h-80 overflow-auto custom-scrollbar">
+            {announcementsLoading && filteredAnnouncements.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
+                <p className="text-sm text-gray-500">Loading announcements...</p>
+              </div>
+            ) : announcementsError ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <FaExclamationTriangle className="text-red-400 text-xl" />
+                </div>
+                <p className="text-sm text-red-500 font-medium">{announcementsError}</p>
+                <button
+                  onClick={() => fetchAnnouncements(1)}
+                  className="mt-2 text-xs text-blue-500 hover:text-blue-600 font-medium"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : filteredAnnouncements.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <FaBullhorn className="text-blue-400 text-xl" />
+                </div>
+                <p className="text-sm text-gray-500 font-medium">
+                  {showReadAnnouncements ? "No announcements" : "No unread announcements"}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {showReadAnnouncements ? "Check back later for updates" : "You're all caught up! 🎉"}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredAnnouncements.map((announcement) => (
+                  <div
+                    key={announcement._id}
+                    className={`group p-3 bg-white rounded-xl border transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5 ${
+                      announcement.read 
+                        ? 'border-gray-200 opacity-80' 
+                        : 'border-blue-200 hover:border-blue-300 shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-lg group-hover:scale-110 transition-transform duration-200 shadow-sm ${
+                        announcement.read 
+                          ? 'bg-gray-100' 
+                          : 'bg-gradient-to-br from-blue-100 to-blue-200'
+                      }`}>
+                        <FaBullhorn className={`text-sm ${
+                          announcement.read ? 'text-gray-400' : 'text-blue-600'
+                        }`} />
+                      </div>
 
-        {userNotifications.length === 0 ? (
-          <p className="text-sm text-gray-700">No new messages.</p>
-        ) : (
-          // Show up to 5 messages
-          safeUserNotifications.slice(0, 5).map((notif, idx) => (
-            <div key={idx} className="mb-3 text-sm text-gray-700">
-              <p className="font-medium">{notif.title}</p>
-              <p className="text-xs text-gray-600">{notif.message}</p>
-              <p className="text-xs text-gray-500">
-                {new Date(notif.createdAt).toLocaleString()}
-              </p>
-            </div>
-          ))
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <p className={`font-medium text-sm leading-relaxed ${
+                            announcement.read ? 'text-gray-600' : 'text-gray-800'
+                          }`}>
+                            {announcement.message}
+                          </p>
+                          {!announcement.read && (
+                            <div className="flex-shrink-0">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 font-medium">
+                              {formatAnnouncementTime(announcement.createdAt)}
+                            </span>
+                            {!announcement.read && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                New
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            {!announcement.read && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markAnnouncementAsRead(announcement._id);
+                                }}
+                                className="p-1.5 text-blue-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-all duration-200"
+                                title="Mark as read"
+                              >
+                                <FaEye size={12} />
+                              </button>
+                            )}
+                            
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm('Delete this announcement?')) {
+                                  deleteAnnouncement(announcement._id);
+                                }
+                              }}
+                              className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-100 rounded-lg transition-all duration-200"
+                              title="Delete"
+                            >
+                              <FaTrash size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Load More Button */}
+                {announcementsPagination.hasMore && (
+                  <div className="text-center py-3 border-t border-blue-100">
+                    <button
+                      onClick={loadMoreAnnouncements}
+                      disabled={announcementsLoading}
+                      className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 mx-auto"
+                    >
+                      {announcementsLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          Load More ({announcementsPagination.totalCount - filteredAnnouncements.length} remaining)
+                          <FiChevronDown />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
+      </div>
 
-        {userNotifications.length > 5 && (
-          <p className="text-sm text-gray-700">...and more</p>
+      {/* Messages Section with overflow handling */}
+      <div className="bg-gradient-to-br from-yellow-50 to-orange-50 p-4 rounded-2xl border border-yellow-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+        <SectionHeader
+          title="Notifications"
+          count={getLimitedItems(userNotifications, 'messages', 5).length}
+          totalCount={userNotifications.length}
+          icon={<FaEnvelope className="text-yellow-500 text-sm" />}
+          color="bg-yellow-100"
+          sectionKey="messages"
+          hasOverflow={userNotifications.length > 5}
+        />
+        
+        {!sectionsCollapsed.messages && (
+          <div className="max-h-64 overflow-auto custom-scrollbar">
+            {userNotifications.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <FaEnvelope className="text-yellow-400 text-xl" />
+                </div>
+                <p className="text-sm text-gray-500 font-medium">No new messages</p>
+                <p className="text-xs text-gray-400 mt-1">Your inbox is clean! 📬</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {getLimitedItems(userNotifications, 'messages', 5).map((notif, idx) => (
+                  <div key={idx} className="group p-3 bg-white rounded-xl border border-yellow-200 hover:border-yellow-300 hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg group-hover:scale-110 transition-transform duration-200 shadow-sm">
+                        <FaEnvelope className="text-yellow-600 text-sm" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-800 text-sm leading-relaxed">{notif.title}</p>
+                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">{notif.message}</p>
+                        <p className="text-xs text-gray-500 mt-2 font-medium">
+                          {new Date(notif.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Show more/less controls */}
+                {!expandedSections.messages && userNotifications.length > 5 && (
+                  <div className="text-center py-2 border-t border-yellow-100">
+                    <button
+                      onClick={() => toggleSectionExpansion('messages')}
+                      className="text-sm text-yellow-600 hover:text-yellow-700 font-medium flex items-center gap-1 mx-auto transition-colors"
+                    >
+                      <span>Show {userNotifications.length - 5} more notifications</span>
+                      <FiChevronDown size={14} />
+                    </button>
+                  </div>
+                )}
+                
+                {expandedSections.messages && userNotifications.length > 5 && (
+                  <div className="text-center py-2 border-t border-yellow-100">
+                    <button
+                      onClick={() => toggleSectionExpansion('messages')}
+                      className="text-sm text-yellow-600 hover:text-yellow-700 font-medium flex items-center gap-1 mx-auto transition-colors"
+                    >
+                      <span>Show less</span>
+                      <FiChevronUp size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
       {/* Upcoming Booking Section */}
-      <div className="bg-pink-100 p-3 rounded-lg mb-4 max-h-64 overflow-auto">
-        <h4 className="font-semibold mb-2">Upcoming Booking</h4>
-        {upcomingBooking ? (
-          <div className="p-2 bg-white rounded border-l-4 border-pink-400">
-            <div className="flex items-start gap-2">
-              {/* Booking type icon */}
-              <div className="mt-1">
-                {upcomingBooking.type === "seat" ? (
-                  <FaChair className="text-green-500 text-sm" />
-                ) : (
-                  <FaCar className="text-blue-500 text-sm" />
-                )}
+      <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-2xl border border-purple-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+        <SectionHeader
+          title="Upcoming Bookings"
+          count={upcomingBooking ? (Array.isArray(upcomingBooking) ? upcomingBooking.length : 1) : 0}
+          icon={<FaBell className="text-purple-500 text-sm" />}
+          color="bg-purple-100"
+          sectionKey="upcoming"
+        />
+        
+        {!sectionsCollapsed.upcoming && (
+          <div className="max-h-64 overflow-auto custom-scrollbar">
+            {!upcomingBooking || (Array.isArray(upcomingBooking) && upcomingBooking.length === 0) ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <FaBell className="text-purple-400 text-xl" />
+                </div>
+                <p className="text-sm text-gray-500 font-medium">No upcoming bookings</p>
+                <p className="text-xs text-gray-400 mt-1">Plan your next visit! 📅</p>
               </div>
+            ) : (
+              <div className="space-y-3">
+                {(Array.isArray(upcomingBooking) ? upcomingBooking : [upcomingBooking]).map((booking, idx) => (
+                  <div key={idx} className="group p-3 bg-white rounded-xl border border-purple-200 hover:border-purple-300 hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg group-hover:scale-110 transition-transform duration-200 shadow-sm">
+                        {booking.type === "seat" ? (
+                          <FaChair className="text-purple-600 text-sm" />
+                        ) : (
+                          <FaCar className="text-purple-600 text-sm" />
+                        )}
+                      </div>
 
-              <div className="flex-1">
-                <p className="font-medium text-pink-800 text-sm">
-                  {upcomingBooking.type === "seat" ? "Seat" : "Parking"}:{" "}
-                  {upcomingBooking.details}
-                </p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-purple-800 text-sm">
+                            {booking.type === "seat" ? "Seat" : "Parking"}: {booking.details}
+                          </p>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                            {Array.isArray(upcomingBooking) ? (idx === 0 ? 'Next' : `+${idx + 1}`) : 'Next'}
+                          </span>
+                        </div>
 
-                {/* Enhanced location display */}
-                {upcomingBooking.location && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <FaMapMarkerAlt className="text-gray-400 text-xs" />
-                    <p className="text-xs text-gray-600">
-                      {upcomingBooking.location}
-                    </p>
+                        {booking.location && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <FaMapMarkerAlt className="text-gray-400 text-xs" />
+                            <p className="text-xs text-gray-600">{booking.location}</p>
+                          </div>
+                        )}
+
+                        {booking.entryTime && booking.exitTime && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <FaClock className="text-gray-400 text-xs" />
+                            <p className="text-xs text-gray-500 font-medium">
+                              {booking.entryTime} - {booking.exitTime}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center gap-1 mt-2">
+                          <FaCalendarAlt className="text-gray-400 text-xs" />
+                          <p className="text-xs text-gray-500 font-medium">
+                            {booking.date}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                )}
-
-                {/* Fallback floor display */}
-                {!upcomingBooking.location && upcomingBooking.floor && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <FaMapMarkerAlt className="text-gray-400 text-xs" />
-                    <p className="text-xs text-gray-600">
-                      Floor: {upcomingBooking.floor}
-                    </p>
-                  </div>
-                )}
-
-                {/* Time and date display */}
-                {upcomingBooking.entryTime && upcomingBooking.exitTime && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    🕐 {upcomingBooking.entryTime} - {upcomingBooking.exitTime}
-                  </p>
-                )}
-                <p className="text-xs text-gray-500 mt-1">
-                  📅 Date: {upcomingBooking.date}
-                </p>
+                ))}
               </div>
-            </div>
+            )}
           </div>
-        ) : (
-          <p className="text-sm text-gray-700">No upcoming bookings.</p>
         )}
       </div>
+
+      {/* Custom scrollbar styles */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
     </div>
   );
 };
