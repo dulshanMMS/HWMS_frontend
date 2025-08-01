@@ -28,7 +28,7 @@ const NotificationBadge = ({ isAdmin }) => {
     useEffect(() => {
         fetchUnreadCount();
         // Refresh count every minute
-        const interval = setInterval(fetchUnreadCount, 60);
+        const interval = setInterval(fetchUnreadCount, 6000);
         return () => clearInterval(interval);
     }, [isAdmin]);
 

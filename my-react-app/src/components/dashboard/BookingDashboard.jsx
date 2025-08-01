@@ -1,3 +1,4 @@
+// src/components/dashboard/BookingDashboard.jsx
 import React, { useEffect, useState } from "react";
 import BookingScheduleBlock from "./BookingScheduleBlock";
 import axios from "axios";
@@ -5,9 +6,6 @@ import axios from "axios";
 const BookingDashboard = () => {
   // Active tab state: "seat" or "parking" bookings
   const [activeTab, setActiveTab] = useState("parking");
-
-  // All bookings fetched from backend
-  const [allBookings, setAllBookings] = useState([]);
 
   // Today's seat and parking bookings separately
   const [todaySeatBookings, setTodaySeatBookings] = useState([]);
@@ -17,51 +15,132 @@ const BookingDashboard = () => {
   const [closestSeatBooking, setClosestSeatBooking] = useState([]);
   const [closestParkingBooking, setClosestParkingBooking] = useState([]);
 
-  // Fetch bookings on component mount
-  useEffect(() => {
+  // Loading states for each section
+  const [loadingStates, setLoadingStates] = useState({
+    todaySeats: false,
+    todayParking: false,
+    recentSeats: false,
+    recentParking: false
+  });
+
+  // Pagination parameters - kept small for dashboard performance
+  const PAGINATION_LIMITS = {
+    today: 5,        // Show max 5 today's bookings
+    recent: 3        // Show max 3 recent past bookings
+  };
+
+  const setLoading = (key, value) => {
+    setLoadingStates(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Fetch today's bookings with pagination
+  const fetchTodayBookings = async (type) => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    axios
-      .get("http://localhost:6001/api/calendar/user-view", {
+    const loadingKey = type === "seat" ? "todaySeats" : "todayParking";
+    setLoading(loadingKey, true);
+
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      
+      const response = await axios.get("http://localhost:6001/api/calendar/bookings/today", {
         headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        const bookings = res.data || [];
-        setAllBookings(bookings);
-
-        // Format today's date as 'YYYY-MM-DD'
-        const todayStr = new Date(new Date().setDate(new Date().getDate()))
-          .toISOString()
-          .split("T")[0];
-
-        // Filter bookings for today by type
-        const seatToday = bookings.filter(
-          (b) => b.date === todayStr && b.type === "seat"
-        );
-        setTodaySeatBookings(seatToday);
-
-        const parkingToday = bookings.filter(
-          (b) => b.date === todayStr && b.type === "parking"
-        );
-        setTodayParkingBookings(parkingToday);
-
-        // Get last 3 closest seat bookings before today, sorted descending by date
-        const pastSeatBookings = bookings
-          .filter((b) => b.date < todayStr && b.type === "seat")
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
-        setClosestSeatBooking(pastSeatBookings.slice(0, 3));
-
-        // Get last 3 closest parking bookings before today, sorted descending by date
-        const pastParkingBookings = bookings
-          .filter((b) => b.date < todayStr && b.type === "parking")
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
-        setClosestParkingBooking(pastParkingBookings.slice(0, 3));
-      })
-      .catch((err) => {
-        console.error("Failed to load bookings:", err);
+        params: {
+          type: type,
+          date: todayStr,
+          limit: PAGINATION_LIMITS.today,
+          page: 1
+        }
       });
+
+      const bookings = response.data.bookings || [];
+      
+      if (type === "seat") {
+        setTodaySeatBookings(bookings);
+      } else {
+        setTodayParkingBookings(bookings);
+      }
+    } catch (err) {
+      console.error(`Failed to load today's ${type} bookings:`, err);
+      if (type === "seat") {
+        setTodaySeatBookings([]);
+      } else {
+        setTodayParkingBookings([]);
+      }
+    } finally {
+      setLoading(loadingKey, false);
+    }
+  };
+
+  // Fetch recent past bookings with pagination
+  const fetchRecentBookings = async (type) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const loadingKey = type === "seat" ? "recentSeats" : "recentParking";
+    setLoading(loadingKey, true);
+
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      
+      const response = await axios.get("http://localhost:6001/api/calendar/bookings/recent", {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          type: type,
+          beforeDate: todayStr,
+          limit: PAGINATION_LIMITS.recent,
+          page: 1,
+          sortOrder: 'desc' // Most recent first
+        }
+      });
+
+      const bookings = response.data.bookings || [];
+      
+      if (type === "seat") {
+        setClosestSeatBooking(bookings);
+      } else {
+        setClosestParkingBooking(bookings);
+      }
+    } catch (err) {
+      console.error(`Failed to load recent ${type} bookings:`, err);
+      if (type === "seat") {
+        setClosestSeatBooking([]);
+      } else {
+        setClosestParkingBooking([]);
+      }
+    } finally {
+      setLoading(loadingKey, false);
+    }
+  };
+
+  // Initial data fetch for both seat and parking
+  useEffect(() => {
+    // Fetch today's bookings for both types
+    fetchTodayBookings("seat");
+    fetchTodayBookings("parking");
+    
+    // Fetch recent bookings for both types
+    fetchRecentBookings("seat");
+    fetchRecentBookings("parking");
   }, []);
+
+  // Refresh data when tab changes (optional, for better UX)
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    
+    // Optional: Refresh data for the selected tab
+    const type = newTab === "seat" ? "seat" : "parking";
+    
+    // Only refresh if we don't have data or it's stale
+    if (type === "seat" && todaySeatBookings.length === 0 && !loadingStates.todaySeats) {
+      fetchTodayBookings("seat");
+      fetchRecentBookings("seat");
+    } else if (type === "parking" && todayParkingBookings.length === 0 && !loadingStates.todayParking) {
+      fetchTodayBookings("parking");
+      fetchRecentBookings("parking");
+    }
+  };
 
   return (
     <div>
@@ -76,9 +155,7 @@ const BookingDashboard = () => {
                 ? "border-b-2 border-green-700 text-black"
                 : "text-gray-500"
             }`}
-            onClick={() =>
-              setActiveTab(tabName === "Seat Booking" ? "seat" : "parking")
-            }
+            onClick={() => handleTabChange(tabName === "Seat Booking" ? "seat" : "parking")}
           >
             {tabName}
           </button>
@@ -91,10 +168,14 @@ const BookingDashboard = () => {
           <BookingScheduleBlock
             title="Today's Schedule"
             bookings={todaySeatBookings}
+            loading={loadingStates.todaySeats}
+            onRefresh={() => fetchTodayBookings("seat")}
           />
           <BookingScheduleBlock
             title="Closest Last Booking"
             bookings={closestSeatBooking}
+            loading={loadingStates.recentSeats}
+            onRefresh={() => fetchRecentBookings("seat")}
           />
         </div>
       )}
@@ -104,10 +185,14 @@ const BookingDashboard = () => {
           <BookingScheduleBlock
             title="Today's Schedule"
             bookings={todayParkingBookings}
+            loading={loadingStates.todayParking}
+            onRefresh={() => fetchTodayBookings("parking")}
           />
           <BookingScheduleBlock
             title="Closest Last Booking"
             bookings={closestParkingBooking}
+            loading={loadingStates.recentParking}
+            onRefresh={() => fetchRecentBookings("parking")}
           />
         </div>
       )}

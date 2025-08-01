@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
@@ -106,7 +104,7 @@ const UserNotification = () => {
 
           if (notificationResponse.status === 401) {
             localStorage.removeItem('token');
-            navigate('/userdashboard');
+            navigate('/');
             return;
           }
 
@@ -209,17 +207,23 @@ const UserNotification = () => {
       }
       seenNotifications.add(key);
       setNotifications(prev => {
+        const targetFilter =
+          notification.type === 'feedback_reply' ? 'all' :
+          notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' :
+          notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all';
         const updated = {
           ...prev,
           all: deduplicateNotifications([notification, ...prev.all]).slice(0, notificationsPerPage),
-          [notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' : notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all']: deduplicateNotifications([notification, ...prev[notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' : notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all']]).slice(0, notificationsPerPage),
+          [targetFilter]: deduplicateNotifications([notification, ...prev[targetFilter]]).slice(0, notificationsPerPage),
         };
         notificationCache.delete(`all-${pagination.all.currentPage}`);
-        notificationCache.delete(`${notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' : notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all'}-${pagination[notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' : notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all'].currentPage}`);
-        console.log(`Updated notifications for ${notification.type}:`, updated[notification.type === 'parking_booking' || notification.type === 'parking_cancellation' ? 'parking' : notification.type === 'seat_booking' || notification.type === 'seat_cancellation' ? 'seating' : 'all']);
+        notificationCache.delete(`${targetFilter}-${pagination[targetFilter].currentPage}`);
+        console.log(`Updated notifications for ${targetFilter}:`, updated[targetFilter]);
         return updated;
       });
-      setUnreadCount(prev => prev + 1);
+      if (!notification.read) {
+        setUnreadCount(prev => prev + 1);
+      }
     });
 
     socket.on('announcementReceived', (announcement) => {
@@ -420,24 +424,6 @@ const UserNotification = () => {
     }
   };
 
-  const undoDeleteAll = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/notifications/mark-all-unread', {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to undo delete all notifications');
-
-      await fetchNotifications(filter, pagination[filter].currentPage);
-      setShowDeleteAllSuccess(false);
-      setAllRead(false);
-    } catch (error) {
-      setError('Failed to undo delete all notifications');
-    }
-  };
-
   const deleteNotification = async (notificationId, isAnnouncement = false) => {
     try {
       const token = localStorage.getItem('token');
@@ -470,16 +456,7 @@ const UserNotification = () => {
       if (!notifications[filter].find(n => n._id === notificationId)?.read) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
-
-      const updatedNotifications = notifications[filter].filter(n => n._id !== notificationId);
-      if (updatedNotifications.length < notificationsPerPage && pagination[filter].currentPage < pagination[filter].totalPages) {
-        setPagination(prev => ({
-          ...prev,
-          [filter]: { ...prev[filter], currentPage: prev[filter].currentPage + 1 },
-        }));
-      } else {
-        await fetchNotifications(filter, pagination[filter].currentPage);
-      }
+      await fetchNotifications(filter, pagination[filter].currentPage);
     } catch (error) {
       setError(`Failed to delete ${isAnnouncement ? 'announcement' : 'notification'}`);
     }
@@ -557,7 +534,7 @@ const UserNotification = () => {
           <div className="flex gap-2 mt-2">
             <button
               onClick={deleteAllNotifications}
-              className="px-2 py-1 bg-red-400 text-white rounded text-xs"
+              className="px-2 py-1 bg-red-600 text-white rounded text-xs"
             >
               OK
             </button>
@@ -583,12 +560,6 @@ const UserNotification = () => {
       {showDeleteAllSuccess && (
         <div className="p-2 mb-2 bg-green-100 text-green-800 rounded mx-8">
           All notifications deleted successfully!
-          <button
-            onClick={undoDeleteAll}
-            className="ml-2 text-blue-600 hover:underline"
-          >
-            Undo
-          </button>
         </div>
       )}
       {error && (

@@ -106,7 +106,21 @@ export const conversationApi = {
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Failed to search messages');
     }
+  },
+
+  // Delete conversation
+  deleteConversation: async (conversationId) => {
+    try {
+      const response = await axios.delete(
+        `${API_BASE}/conversations/${conversationId}`,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Failed to delete conversation');
+    }
   }
+
 };
 
 // Messages API
@@ -316,31 +330,31 @@ export const realtimeApi = {
 // Quick message templates for booking-related conversations
 export const messageTemplates = {
   booking: {
-    seatRequest: (date, seatInfo) => 
+    seatRequest: (date, seatInfo) =>
       `Hi! I'd like to book a seat for ${date}. Do you know if ${seatInfo} is available?`,
-    
-    parkingRequest: (date, floor) => 
+
+    parkingRequest: (date, floor) =>
       `Hello! I need parking for ${date}. Any spots available on floor ${floor}?`,
-    
-    seatSwap: (currentSeat, desiredSeat, date) => 
+
+    seatSwap: (currentSeat, desiredSeat, date) =>
       `Hi! I have ${currentSeat} booked for ${date}. Would you like to swap for ${desiredSeat}?`,
-    
-    bookingConfirm: (bookingType, details) => 
+
+    bookingConfirm: (bookingType, details) =>
       `✅ ${bookingType} booking confirmed: ${details}`,
-    
-    bookingCancel: (bookingType, details) => 
+
+    bookingCancel: (bookingType, details) =>
       `❌ ${bookingType} booking cancelled: ${details}`,
-    
-    teamMeeting: (date, location) => 
+
+    teamMeeting: (date, location) =>
       `📅 Team meeting scheduled for ${date} at ${location}. Please book nearby seats!`,
-    
-    floorAvailability: (floor, date) => 
+
+    floorAvailability: (floor, date) =>
       `Floor ${floor} availability check for ${date}. Anyone know the current status?`,
-    
-    urgentBooking: (date, requirement) => 
+
+    urgentBooking: (date, requirement) =>
       `🚨 Urgent: Need ${requirement} for ${date}. Can anyone help or swap?`
   },
-  
+
   general: {
     greeting: () => 'Hi there! 👋',
     thanks: () => 'Thank you! 🙏',

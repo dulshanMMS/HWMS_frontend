@@ -1,4 +1,4 @@
-// components/Home/Header.jsx - Fully Responsive
+// components/Home/Header.jsx - With Even Spacing
 import React, { useState, useEffect } from 'react';
 import { Building, Menu, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -38,12 +38,12 @@ const Header = () => {
 
   return (
     <header className="absolute top-0 w-full z-50">
-      {/* Navigation Bar - Responsive design */}
+      {/* Navigation Bar - Even spacing between all elements */}
       <div className="flex justify-center pt-6 sm:pt-8 lg:pt-12 px-4 sm:px-6">
-        <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-xl sm:rounded-2xl px-4 sm:px-8 lg:px-16 py-3 sm:py-4 w-full max-w-xs sm:max-w-2xl lg:max-w-4xl xl:min-w-[800px]">
+        <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-xl sm:rounded-2xl px-4 sm:px-8 lg:px-16 py-3 sm:py-4 w-full max-w-xs sm:max-w-3xl lg:max-w-5xl xl:min-w-[900px]">
           <nav>
-            {/* Desktop Navigation Links */}
-            <div className="hidden lg:flex items-center justify-center space-x-8 xl:space-x-24">
+            {/* Desktop Navigation Links - Equal spacing */}
+            <div className="hidden lg:flex items-center justify-center space-x-8 xl:space-x-12">
               <button 
                 onClick={() => scrollToSection('home')}
                 className="text-white px-4 xl:px-6 py-2 xl:py-3 text-sm font-medium transition-all duration-300 hover:text-green-300"
@@ -57,34 +57,44 @@ const Header = () => {
                 About Us
               </button>
               <button 
-                onClick={() => navigateToPage('/')}
+                onClick={() => navigateToPage('/login')}
                 className="bg-green-600 text-white px-6 xl:px-8 py-2 xl:py-3 rounded-xl text-sm font-medium hover:bg-green-700 transition-all duration-300 shadow-lg"
               >
                 Sign In
               </button>
+              <button 
+                onClick={() => navigateToPage('/signup')}
+                className="bg-green-600 text-white px-6 xl:px-8 py-2 xl:py-3 rounded-xl text-sm font-medium hover:bg-green-700 transition-all duration-300 shadow-lg"
+              >
+                Sign Up
+              </button>
             </div>
 
-            {/* Tablet Navigation */}
-            <div className="hidden md:flex lg:hidden items-center justify-between">
-              <div className="flex items-center space-x-6">
-                <button 
-                  onClick={() => scrollToSection('home')}
-                  className="text-white px-3 py-2 text-sm font-medium transition-all duration-300 hover:text-green-300"
-                >
-                  Home
-                </button>
-                <button 
-                  onClick={() => navigateToPage('/about/us')}
-                  className="text-white/90 hover:text-white px-3 py-2 text-sm font-medium transition-all duration-300 hover:text-green-300"
-                >
-                  About Us
-                </button>
-              </div>
+            {/* Tablet Navigation - Equal spacing */}
+            <div className="hidden md:flex lg:hidden items-center justify-center space-x-6">
               <button 
-                onClick={() => navigateToPage('/')}
-                className="bg-green-600 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-green-700 transition-all duration-300 shadow-lg"
+                onClick={() => scrollToSection('home')}
+                className="text-white px-3 py-2 text-sm font-medium transition-all duration-300 hover:text-green-300"
+              >
+                Home
+              </button>
+              <button 
+                onClick={() => navigateToPage('/about/us')}
+                className="text-white/90 hover:text-white px-3 py-2 text-sm font-medium transition-all duration-300 hover:text-green-300"
+              >
+                About Us
+              </button>
+              <button 
+                onClick={() => navigateToPage('/login')}
+                className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-green-700 transition-all duration-300 shadow-lg"
               >
                 Sign In
+              </button>
+              <button 
+                onClick={() => navigateToPage('/signup')}
+                className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-green-700 transition-all duration-300 shadow-lg"
+              >
+                Sign Up
               </button>
             </div>
 
@@ -116,10 +126,16 @@ const Header = () => {
                   About Us
                 </button>
                 <button 
-                  onClick={() => navigateToPage('/')}
+                  onClick={() => navigateToPage('/login')}
                   className="w-full bg-green-600 text-white px-3 py-2 rounded-md text-base font-medium hover:bg-green-700 transition-colors mt-3"
                 >
                   Sign In
+                </button>
+                <button 
+                  onClick={() => navigateToPage('/signup')}
+                  className="w-full bg-green-600 text-white px-3 py-2 rounded-md text-base font-medium hover:bg-green-700 transition-colors"
+                >
+                  Sign Up
                 </button>
               </div>
             </div>

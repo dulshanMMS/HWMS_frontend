@@ -12,7 +12,7 @@ const SidebarWrapper = ({ sidebarOpen, closeSidebar }) => (
   <>
     {/* Sidebar panel sliding in/out from right */}
     <div
-      className={`fixed right-0 top-0 h-full w-[320px] bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 z-50 ${
+      className={`fixed right-0 top-0 h-full w-[380px] bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 z-50 ${
         sidebarOpen ? "translate-x-0" : "translate-x-full"
       }`}
     >

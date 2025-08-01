@@ -8,10 +8,11 @@ import AdminNotification from "./pages/AdminNotification";
 import AdminParking from "./pages/AdminParking";
 import AdminViewReports from "./pages/AdminViewReports";
 import AdminTeamManagement from "./pages/AdminTeamManagement";
-
+import ReviewsAndRatings from "./pages/ReviewsAndRatings";
 import AboutUsPage from "./pages/AboutUsPage";
 import BookingHistory from "./pages/BookingHistory";
 import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
 import SeatHistory from "./pages/SeatHistory";
 import BookingPage from './pages/DateBooking';
 import FloorLayout from './pages/FloorLayout';
@@ -19,19 +20,17 @@ import ParkingBooking from "./pages/ParkingBooking";
 import ResetPassword from "./pages/ResetPassword";
 import UserDashboard from "./pages/UserDashboard";
 import UserNotification from "./pages/UserNotification";
-
 import Profile from "./pages/Profile";
 import MessagingPage from "./pages/MessagingPage";
+import HelpPage from './pages/HelpPage';
 
 const App = () => {
   const location = useLocation();
 
   // List of routes that need simple green background (without center)
-  const greenPages = ["/user/parking-booking", "/history", "/about/us", "/admin", "/admin/team-management"]; //  "/history"
-
+  const greenPages = ["/user/parking-booking", "/history", "/about/us", "/admin", "/admin/team-management", "/messaging", "/admin/reviews-ratings"];
 
   // Check if current page matches
-
   const isSimpleGreenPage = greenPages.includes(location.pathname);
 
   const containerClass = isSimpleGreenPage
@@ -41,8 +40,9 @@ const App = () => {
   return (
     <div className={containerClass}>
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/homepage" element={<HomePage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/datebooking" element={<BookingPage />} />
         <Route path="/floorlayout" element={<FloorLayout />} />
         <Route path="/admin" element={<AdminDashboard />} />
@@ -61,6 +61,8 @@ const App = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/messaging" element={<MessagingPage />} />
         <Route path="/admin/team-management" element={<AdminTeamManagement />} />
+        <Route path="/admin/reviews-ratings" element={<ReviewsAndRatings />} />
+        <Route path="/help" element={<HelpPage />} />
       </Routes>
 
       {/* Toast Container for notifications */}

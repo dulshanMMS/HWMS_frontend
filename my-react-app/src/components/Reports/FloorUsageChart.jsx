@@ -99,7 +99,7 @@ const FloorUsageChart = ({ bookings, totalDesksPerFloor }) => {
 
   if (!chartData.length) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-6 mt-6 h-[340px] flex flex-col justify-center">
+      <div className="bg-white rounded-2xl shadow-xl p-6 mt-6 h-[340px] flex flex-col justify-center">
         <h2 className="text-xl font-semibold text-gray-800 mb-2">
           How often are desks being used on average?
         </h2>
@@ -110,7 +110,7 @@ const FloorUsageChart = ({ bookings, totalDesksPerFloor }) => {
 
   if (isLoadingColors) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-6 mt-6 h-[340px] flex flex-col justify-center">
+      <div className="bg-white rounded-2xl shadow-xl p-6 mt-6 h-[340px] flex flex-col justify-center">
         <h2 className="text-xl font-semibold text-gray-800 mb-2">
           How often are desks being used on average?
         </h2>
@@ -120,7 +120,7 @@ const FloorUsageChart = ({ bookings, totalDesksPerFloor }) => {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6 mt-6 h-[340px] flex flex-col justify-center">
+    <div className="bg-white rounded-2xl shadow-xl p-6 mt-6 h-[340px] flex flex-col justify-center">
       <h2 className="text-xl font-semibold text-gray-800 mb-2">
         How often are desks being used on average?
       </h2>

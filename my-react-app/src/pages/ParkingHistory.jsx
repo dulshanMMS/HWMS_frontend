@@ -1,18 +1,17 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-//import ProfileSidebar from '../components/ProfileSidebar';
-//import SidebarWrapper from '../components/profilesidebar/SidebarWrapper';    //* * methn1
-//import AdminSidebar from '../components/AdminSidebar';
 import LeftSidebar from "../components/LeftSidebar";
 
 import BookingStats from '../components/parkingHistory/BookingStats';
 import BookingDatesList from '../components/parkingHistory/BookingDatesList';
 import BookingDetailsPopup from '../components/parkingHistory/BookingDetailsPopup';
 import DeleteBookingPopup from '../components/parkingHistory/DeleteBookingPopup';
+import BookingSelectionPopup from '../components/parkingHistory/BookingSelectionPopup';
 import ErrorMessage from '../components/parkingHistory/ErrorMessage';
 import ViewToggle from '../components/parkingHistory/ViewToggle';
 
 const API_BASE_URL = 'http://localhost:5000/api';
+const BOOKINGS_PER_PAGE = 50; // Pagination constant
 
 export default function BookingHistory() {
   
@@ -23,13 +22,15 @@ export default function BookingHistory() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showDetailsPopup, setShowDetailsPopup] = useState(false);
   const [showDeletePopup, setShowDeletePopup] = useState(false);
+  const [showSelectionPopup, setShowSelectionPopup] = useState(false);
   const [bookingDetails, setBookingDetails] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showAllBookings, setShowAllBookings] = useState(false); // Toggle state
   
-  //profile_side bar wdeta
-  //const [sidebarOpen, setSidebarOpen] = useState(true); // or false based on what you want  // * *methn 2
+  // NEW: Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   
   const [deleteForm, setDeleteForm] = useState({
     slotNumber: '',
@@ -75,15 +76,36 @@ export default function BookingHistory() {
     });
   };
 
-  // Update displayed bookings when toggle changes
+  // NEW: Function to paginate bookings
+  const paginateBookings = (bookings, page, itemsPerPage) => {
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return bookings.slice(startIndex, endIndex);
+  };
+
+  // NEW: Calculate total pages
+  const calculateTotalPages = (totalItems, itemsPerPage) => {
+    return Math.ceil(totalItems / itemsPerPage);
+  };
+
+  // Update displayed bookings when toggle changes or page changes
   useEffect(() => {
     if (showAllBookings) {
-      setDisplayedBookingDates(allBookingDates);
+      // Apply pagination to all bookings
+      const totalPagesCount = calculateTotalPages(allBookingDates.length, BOOKINGS_PER_PAGE);
+      setTotalPages(totalPagesCount);
+      
+      const paginatedBookings = paginateBookings(allBookingDates, currentPage, BOOKINGS_PER_PAGE);
+      setDisplayedBookingDates(paginatedBookings);
     } else {
+      // Reset pagination when switching back to filtered view
+      setCurrentPage(1);
+      setTotalPages(1);
+      
       const filteredDates = filterRelevantDates(allBookingDates);
       setDisplayedBookingDates(filteredDates);
     }
-  }, [showAllBookings, allBookingDates]);
+  }, [showAllBookings, allBookingDates, currentPage]);
 
   // Fetch history data when component mounts
   useEffect(() => {
@@ -230,6 +252,58 @@ export default function BookingHistory() {
   // Toggle between showing all bookings and filtered bookings
   const handleToggleView = () => {
     setShowAllBookings(!showAllBookings);
+    // Reset to first page when toggling view
+    setCurrentPage(1);
+  };
+
+  // NEW: Handle page navigation
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  // NEW: Generate page numbers for pagination controls
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total pages is less than or equal to maxVisiblePages
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      // Show smart pagination with ellipsis
+      const halfVisible = Math.floor(maxVisiblePages / 2);
+      
+      if (currentPage <= halfVisible + 1) {
+        // Show first pages
+        for (let i = 1; i <= maxVisiblePages - 1; i++) {
+          pageNumbers.push(i);
+        }
+        pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      } else if (currentPage >= totalPages - halfVisible) {
+        // Show last pages
+        pageNumbers.push(1);
+        pageNumbers.push('...');
+        for (let i = totalPages - maxVisiblePages + 2; i <= totalPages; i++) {
+          pageNumbers.push(i);
+        }
+      } else {
+        // Show middle pages
+        pageNumbers.push(1);
+        pageNumbers.push('...');
+        for (let i = currentPage - halfVisible + 1; i <= currentPage + halfVisible - 1; i++) {
+          pageNumbers.push(i);
+        }
+        pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
+    }
+    
+    return pageNumbers;
   };
 
   const handleDateClick = (date) => {
@@ -238,16 +312,35 @@ export default function BookingHistory() {
     setShowDetailsPopup(true);
   };
 
+  // UPDATED: Check if multiple bookings exist and show selection popup
   const handleDeleteClick = (booking) => {
     setShowDetailsPopup(false);
+    
+    // If there are multiple bookings, show selection popup
+    if (bookingDetails.length > 1) {
+      setShowSelectionPopup(true);
+    } else {
+      // If only one booking, proceed directly to delete popup
+      proceedToDelete(bookingDetails[0]);
+    }
+  };
+
+  // NEW: Handle booking selection from selection popup
+  const handleBookingSelection = (selectedBookingData) => {
+    setShowSelectionPopup(false);
+    proceedToDelete(selectedBookingData);
+  };
+
+  // NEW: Proceed to delete popup with selected booking data
+  const proceedToDelete = (bookingData) => {
     setShowDeletePopup(true);
     
-    // delete form with selected booking details(it is already pre filled !!!)
+    // Pre-fill delete form with selected booking details
     setDeleteForm({
-      slotNumber: booking.slotNumber.toString(),
-      date: booking.date,
-      entryTime: booking.entryTime,
-      exitTime: booking.exitTime
+      slotNumber: bookingData.slotNumber.toString(),
+      date: bookingData.date,
+      entryTime: bookingData.entryTime,
+      exitTime: bookingData.exitTime
     });
   };
 
@@ -263,15 +356,9 @@ export default function BookingHistory() {
     }));
   };
 
-
   return (
     <div className="flex h-screen w-screen overflow-hidden">
-
-      {/*<div className="w-64 h-full bg-green-800 text-white">
-        <LeftSidebar />
-      </div>  */}      {/*_me widiht _demmam kola pata theeruw nethi unt responsive ek nethi wnw */}
-
-       <LeftSidebar />     
+      <LeftSidebar />     
 
       <div className="flex-1 overflow-y-auto bg-green-50">
         <div className="flex justify-center py-6 px-4">
@@ -296,6 +383,13 @@ export default function BookingHistory() {
                 totalCount={allBookingDates.length}
               />
 
+              {/* NEW: Pagination Info - Always show when viewing all bookings to demonstrate pagination implementation */}
+              {showAllBookings && allBookingDates.length > 0 && (
+                <div className="mb-4 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                  Showing {((currentPage - 1) * BOOKINGS_PER_PAGE) + 1} to {Math.min(currentPage * BOOKINGS_PER_PAGE, allBookingDates.length)} of {allBookingDates.length} total bookings (Page {currentPage} of {totalPages})
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <BookingDatesList
                   bookingDates={displayedBookingDates}
@@ -303,41 +397,105 @@ export default function BookingHistory() {
                   onDateClick={handleDateClick}
                 />
               </div>
+
+              {/* NEW: Pagination Controls - Always show when viewing all bookings to demonstrate pagination implementation */}
+              {showAllBookings && allBookingDates.length > 0 && (
+                <div className="mt-6 flex justify-center items-center space-x-2">
+                  {/* Previous Button */}
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      currentPage === 1
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    Previous
+                  </button>
+
+                  {/* Page Numbers */}
+                  <div className="flex space-x-1">
+                    {getPageNumbers().map((pageNum, index) => (
+                      <button
+                        key={index}
+                        onClick={() => pageNum !== '...' && handlePageChange(pageNum)}
+                        disabled={pageNum === '...'}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          pageNum === currentPage
+                            ? 'bg-green-600 text-white'
+                            : pageNum === '...'
+                            ? 'text-gray-400 cursor-default'
+                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      currentPage === totalPages
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    Next
+                  </button>
+
+                  {/* Jump to Page Input - Only show when there are multiple pages */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center space-x-2 ml-4">
+                      <span className="text-sm text-gray-600">Go to:</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={totalPages}
+                        value={currentPage}
+                        onChange={(e) => {
+                          const page = parseInt(e.target.value);
+                          if (page >= 1 && page <= totalPages) {
+                            handlePageChange(page);
+                          }
+                        }}
+                        className="w-16 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-     {/*<div className="w-64 h-full bg-white shadow-md">
-        <SidebarWrapper/>
-      </div> */}
-
-      {/*<SidebarWrapper                          // * * methn 3
-        sidebarOpen={sidebarOpen}
-        closeSidebar={() => setSidebarOpen(false)}
-      /> */}
-
-      
-
+      {/* Booking Details Popup */}
       {showDetailsPopup && selectedBooking && (
         <BookingDetailsPopup
           selectedBooking={selectedBooking}
           bookingDetails={bookingDetails}
           loading={loading}
           onClose={() => setShowDetailsPopup(false)}
-          onDeleteClick={() => {
-            setShowDetailsPopup(false);
-            setShowDeletePopup(true);
-            setDeleteForm({
-              slotNumber: bookingDetails[0]?.slotNumber.toString() || '',
-              date: bookingDetails[0]?.date || '',
-              entryTime: bookingDetails[0]?.entryTime || '',
-              exitTime: bookingDetails[0]?.exitTime || ''
-            });
-          }}
+          onDeleteClick={() => handleDeleteClick()}
         />
       )}
 
+      {/* NEW: Booking Selection Popup - Shows when multiple bookings exist */}
+      {showSelectionPopup && selectedBooking && (
+        <BookingSelectionPopup
+          selectedBooking={selectedBooking}
+          bookingDetails={bookingDetails}
+          onSelectBooking={handleBookingSelection}
+          onCancel={() => setShowSelectionPopup(false)}
+          loading={loading}
+        />
+      )}
+
+      {/* Delete Booking Popup */}
       {showDeletePopup && (
         <DeleteBookingPopup
           deleteForm={deleteForm}

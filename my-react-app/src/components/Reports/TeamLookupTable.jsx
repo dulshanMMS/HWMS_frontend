@@ -12,7 +12,7 @@ const TeamLookupTable = ({ teamData }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white rounded-lg shadow-xl overflow-hidden">
       {/* Team Summary Header */}
       <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
