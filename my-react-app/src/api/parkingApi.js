@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:6001/api/parking";
+const BASE_URL = "http://localhost:5000/api/parking";
 
 const getToken = () => localStorage.getItem("token");
 
