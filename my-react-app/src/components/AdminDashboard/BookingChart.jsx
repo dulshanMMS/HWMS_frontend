@@ -21,14 +21,23 @@ const BookingChart = () => {
     return today.toISOString().split("T")[0];
   });
 
+  const isToday = () => {
+    const today = new Date().toISOString().split("T")[0];
+    return selectedDate === today;
+  };
+
   const fetchData = async (tab, range, date) => {
     try {
       const params = new URLSearchParams();
       params.append("type", tab);
-      params.append("range", range);
 
-      if (date) {
-        params.append("date", date);
+      if (!isToday()) {
+        // Use custom date, force range=custom
+        params.append("range", "custom");
+        params.append("date", selectedDate);
+      } else {
+        // Default case (today), use range
+        params.append("range", range);
       }
 
       const res = await axios.get(`/api/bookings/count-by-floor?${params.toString()}`);
@@ -49,12 +58,7 @@ const BookingChart = () => {
   };
 
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-
-    // Always send selectedDate if it's not today
-    const sendCustomDate = selectedDate !== today;
-
-    fetchData(activeTab, activeRange, sendCustomDate ? selectedDate : undefined);
+    fetchData(activeTab, activeRange, selectedDate);
   }, [activeTab, activeRange, selectedDate]);
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -90,19 +94,33 @@ const BookingChart = () => {
 
       {/* Range Filters */}
       <div className="flex gap-2 px-6 pt-4 flex-wrap">
-        {ranges.map(r => (
+        {ranges.map((r) => (
           <button
             key={r.key}
             onClick={() => setActiveRange(r.key)}
+            disabled={!isToday()} // ✅ disable if custom date
             className={`text-xs px-3 py-1 rounded-full border font-medium ${
               activeRange === r.key
                 ? "bg-green-700 text-white shadow"
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
+            } ${!isToday() ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             {r.label}
           </button>
         ))}
+      </div>
+
+      {/* Date Filter */}
+      <div className="border-t border-gray-100 px-6 py-4 bg-gray-50">
+        <label className="text-sm font-medium text-gray-600 block mb-1">
+          Choose a specific date
+        </label>
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="border rounded px-3 py-1 text-sm text-gray-700 w-full"
+        />
       </div>
 
       {/* Chart Title */}
@@ -125,7 +143,12 @@ const BookingChart = () => {
                 <Label value="Floors" offset={-5} position="insideBottom" />
               </XAxis>
               <YAxis allowDecimals={false}>
-                <Label value="Booking Count" angle={-90} position="insideLeft" dy={30} />
+                <Label
+                  value="Booking Count"
+                  angle={-90}
+                  position="insideLeft"
+                  dy={30}
+                />
               </YAxis>
               <Tooltip content={<CustomTooltip />} />
               <Bar
@@ -137,19 +160,10 @@ const BookingChart = () => {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-center text-gray-500 mt-8">No booking data available for this range.</p>
+          <p className="text-center text-gray-500 mt-8">
+            No booking data available for this range.
+          </p>
         )}
-      </div>
-
-      {/* Date Filter */}
-      <div className="border-t border-gray-100 px-6 py-4 bg-gray-50">
-        <label className="text-sm font-medium text-gray-600 block mb-1">Choose a specific date</label>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="border rounded px-3 py-1 text-sm text-gray-700 w-full"
-        />
       </div>
     </div>
   );
