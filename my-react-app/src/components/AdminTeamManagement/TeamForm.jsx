@@ -112,13 +112,13 @@ const TeamForm = ({ existingTeam, onSuccess, onCancel }) => {
         ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
         : '';
 
-    const userName = user.username || '';
+    const email = user.email || '';
 
     return {
       value: user._id,
       label: fullName
-        ? `${fullName} (${userName})`
-        : userName ? userName : 'Unnamed',
+        ? `${fullName} (${email})`
+        : email ? email : 'Unnamed',
     };
   };
 
