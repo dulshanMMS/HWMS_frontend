@@ -1,8 +1,13 @@
+// MessageDrawer.jsx
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import api from "../../api/axiosInstance";
-import { FaUserCircle } from "react-icons/fa";
-import ChatWindow from "./ChatWindow";
+import ChatWindow from "./MessageDrawer/ChatWindow";
+import MessageDrawerHeader from "./MessageDrawer/MessageDrawerHeader";
+import InboxList from "./MessageDrawer/InboxList";
+import AdminUserList from "./MessageDrawer/AdminUserList";
+import EmailForm from "./MessageDrawer/EmailForm";
+import MessageDrawerTabs from "./MessageDrawer/MessageDrawerTabs";
 
 const MessageDrawer = ({ onClose, setUnreadCount }) => {
   const [groups, setGroups] = useState([]);
@@ -14,6 +19,7 @@ const MessageDrawer = ({ onClose, setUnreadCount }) => {
   const [emailTo, setEmailTo] = useState("");
   const [subject, setSubject] = useState("");
   const [messageBody, setMessageBody] = useState("");
+  const [attachment, setAttachment] = useState("");
 
   const [groupPage, setGroupPage] = useState(1);
   const [userPage, setUserPage] = useState(1);
@@ -65,7 +71,7 @@ const MessageDrawer = ({ onClose, setUnreadCount }) => {
     fetchGrouped();
   }, []);
 
-  const openChat = async (user, requests) => {
+  const openChat = (user, requests) => {
     setSelectedUser(user);
     setSelectedMessages(requests);
   };
@@ -81,32 +87,39 @@ const MessageDrawer = ({ onClose, setUnreadCount }) => {
     }
   };
 
-  const sendEmailManually = async () => {
-    if (!emailTo || !subject || !messageBody) {
-      toast.error("Please fill in all fields.");
-      return;
-    }
+  const sendEmailManually = async ({ attachments }) => {
+  if (!emailTo || !subject || !messageBody) {
+    toast.error("Please fill in all fields.");
+    return;
+  }
 
-    try {
-      const res = await api.post("/email/send", {
-        email: emailTo,
-        subject,
-        body: messageBody,
-      });
+  try {
+    const formData = new FormData();
+    formData.append("email", emailTo);
+    formData.append("subject", subject);
+    formData.append("body", messageBody);
 
-      if (res.ok || res.status === 200) {
-        toast.success("Email sent successfully!");
-        setEmailTo("");
-        setSubject("");
-        setMessageBody("");
-      } else {
-        toast.error("Failed to send email.");
-      }
-    } catch (err) {
-      console.error("❌ Email send error:", err);
-      toast.error("Something went wrong.");
+    attachments.forEach((file) => {
+      formData.append("files", file); 
+    });
+
+    const res = await api.post("/email/send", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    if (res.status === 200) {
+      toast.success("Email sent successfully!");
+      setEmailTo("");
+      setSubject("");
+      setMessageBody("");
+    } else {
+      toast.error("Failed to send email.");
     }
-  };
+  } catch (err) {
+    console.error("❌ Email send error:", err);
+    toast.error("Something went wrong.");
+  }
+};
 
   const filteredUsers = users.filter((user) =>
     user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -121,12 +134,7 @@ const MessageDrawer = ({ onClose, setUnreadCount }) => {
 
   return (
     <div className="fixed right-2 bottom-4 sm:right-4 sm:bottom-20 w-[95vw] sm:w-[370px] h-[90vh] sm:h-[510px] bg-white rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col border border-gray-300 animate-slide-up">
-      {!selectedUser && (
-        <div className="flex justify-between items-center p-4 border-b bg-gray-50">
-          <h2 className="text-lg font-bold text-gray-800">📬 Admin Inbox</h2>
-          <button className="text-sm text-gray-400 hover:text-red-500" onClick={onClose}>✖</button>
-        </div>
-      )}
+      {!selectedUser && <MessageDrawerHeader onClose={onClose} />}
 
       <div className="flex-1 overflow-y-auto">
         {activeTab === "inbox" && (
@@ -138,88 +146,42 @@ const MessageDrawer = ({ onClose, setUnreadCount }) => {
               onMarkAsReplied={markAsReplied}
             />
           ) : (
-            <div className="px-3 py-2 space-y-2">
-              {paginatedGroups.length === 0 ? (
-                <p className="text-sm text-center text-gray-500 mt-8">
-                  {localStorage.getItem("token") ? "No messages found." : "Unauthorized access. Please log in."}
-                </p>
-              ) : (
-                paginatedGroups.map((group) => (
-                  <button
-                    key={group.sender.email}
-                    onClick={() => openChat(group.sender, group.requests)}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg bg-white border hover:shadow transition"
-                  >
-                    <FaUserCircle className="text-2xl text-green-600" />
-                    <div className="flex-1 text-left">
-                      <p className="font-semibold text-gray-800">
-                        {group.sender.firstName || group.sender.email}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {group.requests.filter((r) => r.status === "pending").length || 0} new message(s)
-                      </p>
-                    </div>
-                  </button>
-                ))
-              )}
-              {groupTotalPages > 1 && (
-                <div className="flex justify-between items-center px-1 pt-3 text-xs text-gray-600">
-                  <button onClick={() => setGroupPage((p) => Math.max(p - 1, 1))} disabled={groupPage === 1} className="px-2 py-1 rounded hover:bg-gray-200 disabled:text-gray-300">← Prev</button>
-                  <span>Page {groupPage} of {groupTotalPages}</span>
-                  <button onClick={() => setGroupPage((p) => Math.min(p + 1, groupTotalPages))} disabled={groupPage === groupTotalPages} className="px-2 py-1 rounded hover:bg-gray-200 disabled:text-gray-300">Next →</button>
-                </div>
-              )}
-            </div>
+            <InboxList
+              paginatedGroups={paginatedGroups}
+              groupPage={groupPage}
+              groupTotalPages={groupTotalPages}
+              setGroupPage={setGroupPage}
+              openChat={openChat}
+            />
           )
         )}
 
         {activeTab === "admin" && (
-          <div className="p-3 space-y-2 overflow-y-auto text-sm">
-            <input type="text" placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-2 border border-gray-300 rounded mb-3 text-sm" />
-            {paginatedUsers.length === 0 ? (
-              <p className="text-gray-500 text-center mt-6">No users found.</p>
-            ) : (
-              paginatedUsers.map((user) => (
-                <div key={user._id} className="border p-3 rounded flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold text-gray-800">{user.firstName} {user.lastName}</p>
-                    <p className="text-xs text-gray-500">{user.email}</p>
-                    <p className="text-xs text-gray-400">Role: {user.role}</p>
-                  </div>
-                  {user.role !== "admin" && (
-                    <button onClick={() => makeAdmin(user._id)} className="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">
-                      Make Admin
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-            {userTotalPages > 1 && (
-              <div className="flex justify-between items-center pt-3 text-xs text-gray-600">
-                <button onClick={() => setUserPage((p) => Math.max(p - 1, 1))} disabled={userPage === 1} className="px-2 py-1 rounded hover:bg-gray-200 disabled:text-gray-300">← Prev</button>
-                <span>Page {userPage} of {userTotalPages}</span>
-                <button onClick={() => setUserPage((p) => Math.min(p + 1, userTotalPages))} disabled={userPage === userTotalPages} className="px-2 py-1 rounded hover:bg-gray-200 disabled:text-gray-300">Next →</button>
-              </div>
-            )}
-          </div>
+          <AdminUserList
+            paginatedUsers={paginatedUsers}
+            userPage={userPage}
+            userTotalPages={userTotalPages}
+            setUserPage={setUserPage}
+            makeAdmin={makeAdmin}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
         )}
 
         {activeTab === "notify" && (
-          <div className="p-4 space-y-3 text-sm">
-            <h3 className="text-lg font-semibold text-gray-800">📤 Send Custom Email</h3>
-            <input type="email" placeholder="Recipient email" value={emailTo} onChange={(e) => setEmailTo(e.target.value)} className="w-full p-2 border border-gray-300 rounded" />
-            <input type="text" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} className="w-full p-2 border border-gray-300 rounded" />
-            <textarea placeholder="Message body" rows={6} value={messageBody} onChange={(e) => setMessageBody(e.target.value)} className="w-full p-2 border border-gray-300 rounded resize-none" />
-            <button onClick={sendEmailManually} className="bg-blue-600 text-white font-semibold px-4 py-2 rounded hover:bg-blue-700 transition">Send Email</button>
-          </div>
+          <EmailForm
+            emailTo={emailTo}
+            subject={subject}
+            messageBody={messageBody}
+            setEmailTo={setEmailTo}
+            setSubject={setSubject}
+            setMessageBody={setMessageBody}
+            sendEmailManually={sendEmailManually}
+          />
         )}
       </div>
 
-      <div className="flex border-t bg-gray-100">
-        <button onClick={() => setActiveTab("inbox")} className={`flex-1 py-2 text-sm font-medium ${activeTab === "inbox" ? "bg-white text-green-700" : "text-gray-600"}`}>📬 Inbox</button>
-        <button onClick={() => { setActiveTab("admin"); fetchUsers(); }} className={`flex-1 py-2 text-sm font-medium ${activeTab === "admin" ? "bg-white text-green-700" : "text-gray-600"}`}>👤 Make Admin</button>
-        <button onClick={() => { setActiveTab("notify"); fetchUsers(); }} className={`flex-1 py-2 text-sm font-medium ${activeTab === "notify" ? "bg-white text-green-700" : "text-gray-600"}`}>📤 Notify</button>
-      </div>
+      <MessageDrawerTabs activeTab={activeTab} setActiveTab={setActiveTab} fetchUsers={fetchUsers} />
     </div>
   );
 };
