@@ -1,32 +1,13 @@
-
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { RefreshCw } from 'lucide-react';
 
 const RecentBookingsTable = ({ bookings, refreshTrigger }) => {
-  const [teams, setTeams] = useState([]);
-  const [teamsLoading, setTeamsLoading] = useState(true);
   const [bookingsLoading, setBookingsLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const bookingsPerPage = 10;
-
-  // Fetch team colors on component mount
-  useEffect(() => {
-    const fetchTeams = async () => {
-      try {
-        const response = await axios.get('/api/teams');
-        setTeams(response.data);
-      } catch (error) {
-        console.error('Failed to fetch team colors:', error);
-      } finally {
-        setTeamsLoading(false);
-      }
-    };
-    fetchTeams();
-  }, []);
 
   // Auto-refresh bookings every 5 minutes and on refreshTrigger change
   useEffect(() => {
@@ -67,16 +48,6 @@ const RecentBookingsTable = ({ bookings, refreshTrigger }) => {
     const diffMs = now - lastRefreshed;
     const diffMins = Math.round(diffMs / 60000);
     return diffMins === 0 ? 'just now' : `${diffMins} min${diffMins === 1 ? '' : 's'} ago`;
-  };
-
-  // Function to get team display name
-  const renderTeamName = (booking) => {
-    const teamName = getTeamName(booking);
-    return (
-      <span className={`text-sm font-medium ${teamName === 'No Team' ? 'text-gray-500' : ''}`}>
-        {teamName || 'No Team'}
-      </span>
-    );
   };
 
   // Function to get username from booking data
@@ -179,7 +150,7 @@ const RecentBookingsTable = ({ bookings, refreshTrigger }) => {
     } : null
   });
 
-  if (teamsLoading || bookingsLoading) {
+  if (bookingsLoading) {
     return (
       <div className="bg-white rounded-lg shadow-xl p-4 mb-6 relative">
         <h2 className="text-xl font-bold mb-4">Upcoming Bookings</h2>
@@ -215,7 +186,7 @@ const RecentBookingsTable = ({ bookings, refreshTrigger }) => {
           <RefreshCw
             className={`h-5 w-5 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`}
           />
-        </button>
+          </button>
       </div>
       {paginatedBookings.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
@@ -255,8 +226,8 @@ const RecentBookingsTable = ({ bookings, refreshTrigger }) => {
                         {getUsername(booking) || 'N/A'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {renderTeamName(booking)}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getTeamName(booking) || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${

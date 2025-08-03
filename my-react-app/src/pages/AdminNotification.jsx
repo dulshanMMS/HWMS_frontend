@@ -425,7 +425,7 @@ const AdminNotification = () => {
       });
       setUnreadCount(0);
       setShowDeleteAllSuccess(true);
-      setTimeout(() => setShowDeleteAllSuccess(false), 15000); // Show success for 5 seconds
+      setTimeout(() => setShowDeleteAllSuccess(false), 5000);
       window.dispatchEvent(new Event('notification-updated')); // Trigger sidebar update
     } catch (error) {
       setError('Failed to delete all notifications');
@@ -435,9 +435,7 @@ const AdminNotification = () => {
     }
   };
 
-
-
-    const deleteNotification = async (notificationId, isAnnouncement = false) => {
+  const deleteNotification = async (notificationId, isAnnouncement = false) => {
     try {
       const token = localStorage.getItem('token');
       const endpoint = isAnnouncement
@@ -501,7 +499,7 @@ const AdminNotification = () => {
 
   if (initialLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
@@ -509,119 +507,118 @@ const AdminNotification = () => {
 
   return (
     <AdminSidebar>
-      <div className="flex items-center justify-between ml-8 mt-6 ">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Notifications</h1>
-          <NotificationBadge isAdmin={true} />
-        </div>
-        <div className="flex gap-2 mr-8">
-          <button
-            onClick={allRead ? markAllAsUnread : markAllAsRead}
-            className={`px-3 py-1 text-sm font-semibold rounded-lg border shadow ${
-              allRead
-                ? 'bg-green-60 text-green-800 border-green-200 hover:bg-green-200'
-                : 'bg-green-700 text-white border-green-700 hover:bg-green-900'
-            }`}
-          >
-            {allRead ? 'Mark All as Unread' : 'Mark All as Read'}
-          </button>
-          <button
-            onClick={() => setShowDeleteAllConfirm(true)}
-            className="px-3 py-1 text-sm font-semibold bg-red-600 text-white rounded-lg border border-red-600 shadow hover:bg-red-800"
-          >
-            Delete All
-          </button>
-        </div>
-      </div>
-      {showDeleteAllConfirm && (
-        <div
-          className="absolute top-20 right-8 bg-white border border-gray-200 rounded shadow-lg p-3 text-sm z-20"
-          ref={deleteAllButtonRef}
-        >
-          <p>Delete all notifications?</p>
-          <div className="flex gap-2 mt-2">
+      <div className="flex flex-col min-h-screen px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Notifications</h1>
+            <NotificationBadge isAdmin={true} />
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
             <button
-              onClick={deleteAllNotifications}
-              className="px-2 py-1 bg-red-600 text-white rounded text-xs"
+              onClick={allRead ? markAllAsUnread : markAllAsRead}
+              className={`px-3 py-1 text-sm font-semibold rounded-lg border shadow w-full sm:w-auto ${
+                allRead
+                  ? 'bg-green-50 text-green-800 border-green-200 hover:bg-green-100'
+                  : 'bg-green-700 text-white border-green-700 hover:bg-green-800'
+              }`}
             >
-              OK
+              {allRead ? 'Mark All as Unread' : 'Mark All as Read'}
             </button>
             <button
-              onClick={() => setShowDeleteAllConfirm(false)}
-              className="px-2 py-1 bg-gray-300 rounded text-xs"
+              onClick={() => setShowDeleteAllConfirm(true)}
+              className="px-3 py-1 text-sm font-semibold bg-red-600 text-white rounded-lg border border-red-600 shadow hover:bg-red-700 w-full sm:w-auto"
             >
-              Cancel
+              Delete All
             </button>
           </div>
         </div>
-      )}
-      {isDeletingAll && (
-        <div className="absolute inset-0 bg-gray-100 bg-opacity-75 flex items-center justify-center z-10">
-          <div className="p-4 bg-white rounded-lg shadow-md text-sm">
-            <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-green-500"></div>
-              <span>Deleting all notifications...</span>
+        {showDeleteAllConfirm && (
+          <div
+            className="fixed sm:absolute top-4 sm:top-20 right-4 sm:right-8 bg-white border border-gray-200 rounded shadow-lg p-3 text-sm z-20 w-[200px] sm:w-auto"
+            ref={deleteAllButtonRef}
+          >
+            <p>Delete all notifications?</p>
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={deleteAllNotifications}
+                className="px-2 py-1 bg-red-600 text-white rounded text-xs"
+              >
+                OK
+              </button>
+              <button
+                onClick={() => setShowDeleteAllConfirm(false)}
+                className="px-2 py-1 bg-gray-300 rounded text-xs"
+              >
+                Cancel
+              </button>
             </div>
           </div>
-        </div>
-      )}
-      {showDeleteAllSuccess && (
-        <div className="p-2 mb-2 bg-green-100 text-green-800 rounded mx-8">
-          All notifications deleted successfully!
-          
-        </div>
-      )}
-      {error && (
-        <div className="p-2 mb-2 bg-red-100 text-red-800 rounded mx-8">
-          {error}
-        </div>
-      )}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md">
-              <NotificationFilters
-                filter={filter}
-                setFilter={setFilter}
-                currentPage={pagination[filter].currentPage}
-                setCurrentPage={(page) => {
-                  console.log('Setting page for filter', filter, 'to', page);
-                  setPagination(prev => ({
-                    ...prev,
-                    [filter]: { ...prev[filter], currentPage: Number(page) },
-                  }));
-                }}
-                totalPages={pagination[filter].totalPages}
-                isFilterLoading={filterLoading}
-              />
-              <NotificationList
-                notifications={filteredNotifications}
-                markAsRead={markAsRead}
-                markAsUnread={markAsUnread}
-                deleteNotification={deleteNotification}
-                error={error}
-                unreadCount={unreadCount}
-              />
-              <PaginationControls
-                currentPage={pagination[filter].currentPage}
-                setCurrentPage={(page) => {
-                  console.log('PaginationControls setCurrentPage:', page);
-                  setPagination(prev => ({
-                    ...prev,
-                    [filter]: { ...prev[filter], currentPage: Number(page) },
-                  }));
-                }}
-                totalPages={pagination[filter].totalPages}
-                isLoading={filterLoading}
-              />
+        )}
+        {isDeletingAll && (
+          <div className="fixed inset-0 bg-gray-100 bg-opacity-75 flex items-center justify-center z-10">
+            <div className="p-4 bg-white rounded-lg shadow-md text-sm">
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-green-500"></div>
+                <span>Deleting all notifications...</span>
+              </div>
             </div>
           </div>
-          <div className="lg:col-span-1 flex flex-col gap-4">
-            <div className="bg-white p-4 rounded shadow w-full">
-              <NotificationPreferences />
+        )}
+        {showDeleteAllSuccess && (
+          <div className="p-2 mb-4 bg-green-100 text-green-800 rounded w-full max-w-7xl mx-auto">
+            All notifications deleted successfully!
+          </div>
+        )}
+        {error && (
+          <div className="p-2 mb-4 bg-red-100 text-red-800 rounded w-full max-w-7xl mx-auto">
+            {error}
+          </div>
+        )}
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg shadow-md">
+                <NotificationFilters
+                  filter={filter}
+                  setFilter={setFilter}
+                  currentPage={pagination[filter].currentPage}
+                  setCurrentPage={(page) => {
+                    console.log('Setting page for filter', filter, 'to', page);
+                    setPagination(prev => ({
+                      ...prev,
+                      [filter]: { ...prev[filter], currentPage: Number(page) },
+                    }));
+                  }}
+                  totalPages={pagination[filter].totalPages}
+                  isFilterLoading={filterLoading}
+                />
+                <NotificationList
+                  notifications={filteredNotifications}
+                  markAsRead={markAsRead}
+                  markAsUnread={markAsUnread}
+                  deleteNotification={deleteNotification}
+                  error={error}
+                  unreadCount={unreadCount}
+                />
+                <PaginationControls
+                  currentPage={pagination[filter].currentPage}
+                  setCurrentPage={(page) => {
+                    console.log('PaginationControls setCurrentPage:', page);
+                    setPagination(prev => ({
+                      ...prev,
+                      [filter]: { ...prev[filter], currentPage: Number(page) },
+                    }));
+                  }}
+                  totalPages={pagination[filter].totalPages}
+                  isLoading={filterLoading}
+                />
+              </div>
             </div>
-            <div className="bg-white p-2 rounded shadow w-full">
-              <div className="w-full max-w-[260px] sm:max-w-[300px] transform origin-top-left">
+            <div className="lg:col-span-1 flex flex-col gap-4">
+              <div className="bg-white p-4 rounded shadow w-full">
+                <NotificationPreferences />
+              </div>
+              <div className="bg-white p-4 rounded shadow w-full">
                 <EventCalendar
                   date={date}
                   setDate={setDate}
@@ -638,7 +635,6 @@ const AdminNotification = () => {
 };
 
 export default AdminNotification;
-
 
 
 

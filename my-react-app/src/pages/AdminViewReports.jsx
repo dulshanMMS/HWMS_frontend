@@ -1,5 +1,3 @@
-
-
 import { saveAs } from 'file-saver';
 import { useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
@@ -7,7 +5,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import { FaCalendar } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import { X } from 'lucide-react';
-
 import AdminSidebar from '../components/AdminSidebar';
 import useAuthGuard from '../components/AuthGuard';
 import BookingLookup from '../components/Reports/BookingLookup';
@@ -18,7 +15,8 @@ import RecentBookingsTable from '../components/Reports/RecentBookingsTable';
 import UserBookingTable from '../components/Reports/UserBookingTable';
 import TeamLookupTable from '../components/Reports/TeamLookupTable';
 import TeamColorPalette from '../components/shared/TeamColorPalette';
-import api from '../config/api';
+import BookingPrediction from '../components/Reports/BookingPrediction';
+import api from '../config/api'; 
 
 const AdminViewReports = () => {
   useAuthGuard('admin');
@@ -39,11 +37,24 @@ const AdminViewReports = () => {
   const [teamStatsError, setTeamStatsError] = useState(null);
   const [loadingTeamStats, setLoadingTeamStats] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Dynamically generate totalDesksPerFloor based on all unique floors in bookings
+  useEffect(() => {
+    const checkMobileView = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobileView();
+    window.addEventListener('resize', checkMobileView);
+
+    return () => {
+      window.removeEventListener('resize', checkMobileView);
+    };
+  }, []);
+
   const getTotalDesksPerFloor = (bookings) => {
     const floors = new Set(bookings.filter(b => b.type === 'seat').map(b => b.slot?.floor));
-    const defaultCapacity = 64; // Default capacity per floor
+    const defaultCapacity = 64;
     const floorMap = {};
     floors.forEach(floor => {
       floorMap[floor] = defaultCapacity;
@@ -52,9 +63,11 @@ const AdminViewReports = () => {
   };
 
   useEffect(() => {
-    fetchAnalyticsData();
-    fetchAllBookings();
-  }, [appliedDateRange]);
+    if (!isMobile) {
+      fetchAnalyticsData();
+      fetchAllBookings();
+    }
+  }, [appliedDateRange, isMobile]);
 
   const handleApplyDateRange = () => {
     if (startDate && endDate) {
@@ -90,60 +103,57 @@ const AdminViewReports = () => {
     }
   };
 
- 
-const handleSearch = async (overrideQuery) => {
-  const query = overrideQuery || searchQuery.trim();
-  if (!query) {
-    setUserError('Please enter a search term');
-    return;
-  }
-  if (searchType === 'team') {
-    setLoadingTeamStats(true);
-    setTeamStats(null);
-    setTeamStatsError(null);
-    try {
-      const [appliedStart, appliedEnd] = appliedDateRange;
-      const res = await api.get('/api/reports/team-stats', {
-        params: {
-          teamName: query,
-          startDate: appliedStart?.toISOString(),
-          endDate: appliedEnd?.toISOString(),
-        },
-      });
-      setTeamStats(res.data);
-    } catch (err) {
-      console.error('Error fetching team stats:', err);
-      setTeamStatsError(`Failed to fetch team stats: ${err.message}`);
-    } finally {
-      setLoadingTeamStats(false);
+  const handleSearch = async (overrideQuery) => {
+    const query = overrideQuery || searchQuery.trim();
+    if (!query) {
+      setUserError('Please enter a search term');
+      return;
     }
-  } else if (searchType === 'name') {
-    fetchUserBookings(query);
-  }
-};
+    if (searchType === 'team') {
+      setLoadingTeamStats(true);
+      setTeamStats(null);
+      setTeamStatsError(null);
+      try {
+        const [appliedStart, appliedEnd] = appliedDateRange;
+        const res = await api.get('/api/reports/team-stats', {
+          params: {
+            teamName: query,
+            startDate: appliedStart?.toISOString(),
+            endDate: appliedEnd?.toISOString(),
+          },
+        });
+        setTeamStats(res.data);
+      } catch (err) {
+        console.error('Error fetching team stats:', err);
+        setTeamStatsError(`Failed to fetch team stats: ${err.message}`);
+      } finally {
+        setLoadingTeamStats(false);
+      }
+    } else if (searchType === 'name') {
+      fetchUserBookings(query);
+    }
+  };
 
-const fetchUserBookings = async (query) => {
-  if (!query) {
-    setUserError('Please enter a search term');
-    return;
-  }
-  try {
-    setUserLoading(true);
-    setUserError(null);
-    setUserBookings(null);
-    console.log('Fetching user bookings for:', query);
-    const response = await api.get('/api/reports/user-lookup', {
-      params: { name: query },
-    });
-    console.log('User bookings response:', response.data);
-    setUserBookings(response.data);
-  } catch (err) {
-    console.error('Error fetching user bookings:', err);
-    setUserError(`Error: Failed to fetch bookings: ${err.message}`);
-  } finally {
-    setUserLoading(false);
-  }
-};
+  const fetchUserBookings = async (query) => {
+    if (!query) {
+      setUserError('Please enter a search term');
+      return;
+    }
+    try {
+      setUserLoading(true);
+      setUserError(null);
+      setUserBookings(null);
+      const response = await api.get('/api/reports/user-lookup', {
+        params: { name: query },
+      });
+      setUserBookings(response.data);
+    } catch (err) {
+      console.error('Error fetching user bookings:', err);
+      setUserError(`Error: Failed to fetch bookings: ${err.message}`);
+    } finally {
+      setUserLoading(false);
+    }
+  };
 
   const handleClearSearch = () => {
     setSearchQuery('');
@@ -152,7 +162,6 @@ const fetchUserBookings = async (query) => {
     setUserError(null);
     setTeamStatsError(null);
   };
-
 
   const fetchAllBookings = async () => {
     try {
@@ -169,7 +178,7 @@ const fetchUserBookings = async (query) => {
       setError('Failed to fetch recent bookings. Please try again later.');
       setAllBookings([]);
     }
-  };// can apply date range
+  };
 
   const getFloorUsageBookings = () => {
     if (!appliedDateRange[0] || !appliedDateRange[1]) {
@@ -187,7 +196,6 @@ const fetchUserBookings = async (query) => {
     const now = new Date();
     const [appliedStart, appliedEnd] = appliedDateRange;
 
-    // Info Sheet
     const infoSheetData = [
       ['Downloaded At', now.toLocaleString()],
       ['Date Range Applied', appliedStart && appliedEnd
@@ -199,7 +207,6 @@ const fetchUserBookings = async (query) => {
     const infoSheet = XLSX.utils.aoa_to_sheet(infoSheetData);
     XLSX.utils.book_append_sheet(workbook, infoSheet, 'Info');
 
-    // Summary Sheet
     const summarySheetData = [
       ['Total Bookings', analyticsData?.overallStats?.totalBookings || 0],
       ['Parking Bookings', analyticsData?.overallStats?.totalParking || 0],
@@ -208,7 +215,6 @@ const fetchUserBookings = async (query) => {
     const summarySheet = XLSX.utils.aoa_to_sheet(summarySheetData);
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
 
-    // Daily Trends Sheet
     const dailyTrendsSheetData = [
       ['Date', 'Seat Bookings', 'Parking Bookings'],
       ...(analyticsData?.dailyTrends || []).map(d => [
@@ -220,7 +226,6 @@ const fetchUserBookings = async (query) => {
     const dailySheet = XLSX.utils.aoa_to_sheet(dailyTrendsSheetData);
     XLSX.utils.book_append_sheet(workbook, dailySheet, 'Daily Trends');
 
-    // Monthly Stats Sheet
     const monthlyStatsSheetData = [
       ['Month', 'Seat Bookings', 'Parking Bookings'],
       ...(analyticsData?.monthlyStats || []).map(m => [
@@ -232,7 +237,6 @@ const fetchUserBookings = async (query) => {
     const monthlySheet = XLSX.utils.aoa_to_sheet(monthlyStatsSheetData);
     XLSX.utils.book_append_sheet(workbook, monthlySheet, 'Monthly Stats');
 
-    // All Bookings Sheet
     const allBookingsSheetData = [
       [
         'Username',
@@ -260,7 +264,6 @@ const fetchUserBookings = async (query) => {
     const allBookingsSheet = XLSX.utils.aoa_to_sheet(allBookingsSheetData);
     XLSX.utils.book_append_sheet(workbook, allBookingsSheet, 'All Bookings');
 
-    // Floor Usage Sheet
     const floorUsageBookings = getFloorUsageBookings();
     const floorUsageSheetData = [
       [
@@ -289,7 +292,6 @@ const fetchUserBookings = async (query) => {
     const floorUsageSheet = XLSX.utils.aoa_to_sheet(floorUsageSheetData);
     XLSX.utils.book_append_sheet(workbook, floorUsageSheet, 'Floor Usage');
 
-    // User Booking Lookup Sheet
     if (userBookings) {
       const lookupSheetData = [
         ['Username', userBookings.user?.username || 'N/A'],
@@ -317,7 +319,6 @@ const fetchUserBookings = async (query) => {
       XLSX.utils.book_append_sheet(workbook, lookupSheet, 'Booking Lookup');
     }
 
-    // Team Stats Sheet
     if (teamStats) {
       const teamStatsSheetData = [
         ['Team Name', teamStats.team.name || 'N/A'],
@@ -352,17 +353,14 @@ const fetchUserBookings = async (query) => {
     const now = new Date();
     const [appliedStart, appliedEnd] = appliedDateRange;
 
-    // Combine all relevant data into a single CSV
     const csvData = [];
 
-    // Summary
     csvData.push(['Summary']);
     csvData.push(['Total Bookings', analyticsData?.overallStats?.totalBookings || 0]);
     csvData.push(['Parking Bookings', analyticsData?.overallStats?.totalParking || 0]);
     csvData.push(['Seat Bookings', analyticsData?.overallStats?.totalSeats || 0]);
     csvData.push([]);
 
-    // Daily Trends
     csvData.push(['Daily Trends']);
     csvData.push(['Date', 'Seat Bookings', 'Parking Bookings']);
     (analyticsData?.dailyTrends || []).forEach(d => {
@@ -374,7 +372,6 @@ const fetchUserBookings = async (query) => {
     });
     csvData.push([]);
 
-    // Monthly Stats
     csvData.push(['Monthly Stats']);
     csvData.push(['Month', 'Seat Bookings', 'Parking Bookings']);
     (analyticsData?.monthlyStats || []).forEach(m => {
@@ -386,7 +383,6 @@ const fetchUserBookings = async (query) => {
     });
     csvData.push([]);
 
-    // All Bookings
     csvData.push(['All Bookings']);
     csvData.push([
       'Username',
@@ -414,7 +410,6 @@ const fetchUserBookings = async (query) => {
     });
     csvData.push([]);
 
-    // Floor Usage
     const floorUsageBookings = getFloorUsageBookings();
     csvData.push(['Floor Usage']);
     csvData.push([
@@ -443,7 +438,6 @@ const fetchUserBookings = async (query) => {
     });
     csvData.push([]);
 
-    // User Booking Lookup
     if (userBookings) {
       csvData.push(['Booking Lookup']);
       csvData.push(['Username', userBookings.user?.username || 'N/A']);
@@ -467,7 +461,6 @@ const fetchUserBookings = async (query) => {
       csvData.push([]);
     }
 
-    // Team Stats
     if (teamStats) {
       csvData.push(['Team Stats']);
       csvData.push(['Team Name', teamStats.team.name || 'N/A']);
@@ -494,6 +487,21 @@ const fetchUserBookings = async (query) => {
   };
 
   const renderContent = () => {
+    if (isMobile) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-100">
+          <div className="bg-white rounded-lg shadow-lg p-6 text-center max-w-sm mx-auto">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+              Desktop Only
+            </h2>
+            <p className="text-gray-600">
+              The View Reports page is only available for desktop view.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     if (loading) {
       return (
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -516,8 +524,11 @@ const fetchUserBookings = async (query) => {
 
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8 mt-6 ml-8">Analytics & Reports</h1>
+        <div className="mb-6">
+          <BookingPrediction />
+        </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8 mt-6 ml-8">Analytics & Reports</h1>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <FaCalendar className="text-gray-500" />
@@ -610,14 +621,14 @@ const fetchUserBookings = async (query) => {
         </div>
         <div className="mt-10">
           <BookingLookup
-  searchType={searchType}
-  setSearchType={setSearchType}
-  searchQuery={searchQuery}
-  setSearchQuery={setSearchQuery}
-  onSearch={handleSearch}
-  onClear={handleClearSearch}
-  error={userError}
-/>
+            searchType={searchType}
+            setSearchType={setSearchType}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onSearch={handleSearch}
+            onClear={handleClearSearch}
+            error={userError}
+          />
           {loadingTeamStats && <div>Loading team stats...</div>}
           {teamStatsError && (
             <div className="mt-3 bg-red-100 border border-red-300 text-red-700 px-4 py-2 rounded text-sm">

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { FaStar } from 'react-icons/fa';
 import api from '../config/api';
@@ -12,6 +11,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId, bookingType }) => {
   const [feedbacks, setFeedbacks] = useState([]);
   const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
   const [feedbackError, setFeedbackError] = useState('');
+  const [shouldShowModal, setShouldShowModal] = useState(false);
 
   // Static team color mapping (fallback if teamColor is missing)
   const teamColorMap = {
@@ -25,9 +25,39 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId, bookingType }) => {
     Sales: 'bg-yellow-500',
   };
 
+  // Check if user has previously submitted feedback
+  useEffect(() => {
+    const checkUserFeedback = async () => {
+      if (!isOpen || !userId) {
+        setShouldShowModal(false);
+        return;
+      }
+
+      try {
+        // Query feedback for the specific user
+        const response = await api.get(`/api/ratings/feedback?userId=${userId}`);
+        const userFeedbacks = response.data.filter(f => f.userId?._id === userId);
+        if (userFeedbacks.length > 0) {
+          // User has submitted feedback before, so don't show modal
+          setShouldShowModal(false);
+          onClose();
+        } else {
+          // No prior feedback, allow modal to show
+          setShouldShowModal(true);
+        }
+      } catch (error) {
+        console.error('Error checking user feedback:', error);
+        // Fallback: allow modal to show if backend check fails
+        setShouldShowModal(true);
+      }
+    };
+
+    checkUserFeedback();
+  }, [isOpen, userId, onClose]);
+
   // Reset fields and fetch data when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && shouldShowModal) {
       setRating(0);
       setFeedback('');
       setErrorMessage('');
@@ -36,7 +66,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId, bookingType }) => {
       setFeedbackError('');
       fetchFeedbacks();
     }
-  }, [isOpen]);
+  }, [isOpen, shouldShowModal]);
 
   // Fetch feedbacks from the database
   const fetchFeedbacks = async () => {
@@ -67,7 +97,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId, bookingType }) => {
 
   // Auto-scroll animation
   useEffect(() => {
-    if (!isOpen || isSubmitted || loadingFeedbacks || feedbackError) return;
+    if (!isOpen || !shouldShowModal || isSubmitted || loadingFeedbacks || feedbackError) return;
 
     const scrollContainer = document.getElementById('feedback-scroll-container');
     if (!scrollContainer) return;
@@ -96,7 +126,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId, bookingType }) => {
         cancelAnimationFrame(animationId);
       }
     };
-  }, [isOpen, isSubmitted, loadingFeedbacks, feedbackError]);
+  }, [isOpen, isSubmitted, loadingFeedbacks, feedbackError, shouldShowModal]);
 
   // Update scroll position
   useEffect(() => {
@@ -106,7 +136,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, userId, bookingType }) => {
     }
   }, [scrollPosition]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !shouldShowModal) return null;
 
   const handleSubmit = async () => {
     if (rating === 0) {
