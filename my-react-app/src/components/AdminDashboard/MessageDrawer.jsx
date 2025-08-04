@@ -8,6 +8,7 @@ import InboxList from "./MessageDrawer/InboxList";
 import AdminUserList from "./MessageDrawer/AdminUserList";
 import EmailForm from "./MessageDrawer/EmailForm";
 import MessageDrawerTabs from "./MessageDrawer/MessageDrawerTabs";
+import { jwtDecode } from "jwt-decode";
 
 const MessageDrawer = ({ onClose, setUnreadCount }) => {
   const [groups, setGroups] = useState([]);
@@ -19,11 +20,22 @@ const MessageDrawer = ({ onClose, setUnreadCount }) => {
   const [emailTo, setEmailTo] = useState("");
   const [subject, setSubject] = useState("");
   const [messageBody, setMessageBody] = useState("");
-  const [attachment, setAttachment] = useState("");
-
+  
   const [groupPage, setGroupPage] = useState(1);
   const [userPage, setUserPage] = useState(1);
   const itemsPerPage = 5;
+
+  const token = localStorage.getItem("token");
+  let currentUserEmail = null;
+
+  if (token) {
+    try {
+      const decoded = jwtDecode(token);
+      currentUserEmail = decoded.email;
+    } catch (err) {
+      console.error("Failed to decode token", err);
+    }
+  }
 
   const fetchGrouped = async () => {
     const token = localStorage.getItem("token");
