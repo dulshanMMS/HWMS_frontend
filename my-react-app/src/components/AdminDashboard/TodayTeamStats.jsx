@@ -1,7 +1,7 @@
 const TodayTeamStats = ({ topTeams }) => {
   return (
     <div className="bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl shadow-xl ring-1 ring-gray-200 transition-all duration-300 animate-fade-in">
-      <h2 className="font-semibold text-gray-800 mb-4 text-lg">📊 Top 5 Teams Today</h2>
+      <h2 className="font-semibold text-gray-800 mb-4 text-lg">📊 Top Active 5 Teams Today</h2>
       <ul className="space-y-3">
         {topTeams.map((team, idx) => (
           <li

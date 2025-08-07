@@ -25,7 +25,6 @@ const AdminDashboard = () => {
   useAuthGuard("admin");
 
   const [date, setDate] = useState(new Date());
-  const [todayBookingCount, setTodayBookingCount] = useState(null);
   const [events, setEvents] = useState([]);
   const [announcement, setAnnouncement] = useState("");
   const [teamBookings, setTeamBookings] = useState([]);
@@ -40,6 +39,12 @@ const AdminDashboard = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showMessageBox, setShowMessageBox] = useState(false);
+
+  const [todayBookingCount, setTodayBookingCount] = useState({
+    total: 0,
+    parkingCount: 0,
+    seatingCount: 0,
+  });
 
   const handleSendAnnouncement = async () => {
     if (!announcement.trim()) return toast.warning("Please enter an announcement.");
@@ -65,7 +70,13 @@ const AdminDashboard = () => {
       ]);
 
       if (teamBookingRes.data.success) setTeamBookings(teamBookingRes.data.teams);
-      if (bookingCountRes.data.success) setTodayBookingCount(bookingCountRes.data.count);
+      if (bookingCountRes.data.success) {
+        setTodayBookingCount({
+          total: bookingCountRes.data.total,
+          parkingCount: bookingCountRes.data.parkingCount,
+          seatingCount: bookingCountRes.data.seatingCount,
+        });
+      }
 
       const allEv = allEventRes.data.events;
       const todayStr = formatDateToYMD(new Date());

@@ -37,7 +37,6 @@ const TeamList = ({ teams, onEdit, onDelete, loading, memberCounts = {}, onTeamC
         <table className="min-w-full text-sm text-left border-collapse">
           <thead className="bg-gray-100 text-gray-700">
             <tr>
-              <th className="py-3 px-4">Team ID</th>
               <th className="py-3 px-4">Team Name</th>
               <th className="py-3 px-4">Team Color</th>
               <th className="py-3 px-4">Members</th>
@@ -55,8 +54,7 @@ const TeamList = ({ teams, onEdit, onDelete, loading, memberCounts = {}, onTeamC
                     className="hover:shadow-sm hover:bg-gray-200 transition duration-150 border-b last:border-none cursor-pointer"
                     onClick={() => onTeamClick?.(team)}
                   >
-                    <td className="py-3 px-4 font-medium">{team.teamId}</td>
-                    <td className="py-3 px-4">{team.teamName}</td>
+                    <td className="py-3 px-4 font-medium">{team.teamName}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-block w-4 h-4 rounded-full ${team.color}`} title={team.color}></span>
                     </td>
@@ -111,7 +109,6 @@ const TeamList = ({ teams, onEdit, onDelete, loading, memberCounts = {}, onTeamC
                   <span className="font-semibold">{team.teamName}</span>
                   <span className={`inline-block w-4 h-4 rounded-full ${team.color}`} title={team.color}></span>
                 </div>
-                <div className="text-sm text-gray-600">ID: {team.teamId}</div>
                 <div className="text-sm">
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${getMemberBadgeClass(count)}`}>
                     {count} {count === 1 ? "member" : "members"}

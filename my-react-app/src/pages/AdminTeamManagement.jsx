@@ -14,15 +14,22 @@ const AdminTeamManagement = () => {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [membersLoading, setMembersLoading] = useState(false);
+  const [teamMembersByTeam, setTeamMembersByTeam] = useState({});
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  const filteredTeams = teams.filter(
-    (team) =>
-      team.teamName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      team.teamId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTeams = teams.filter((team) => {
+    const lowerSearch = searchTerm.toLowerCase();
+
+    const matchesTeamName = team.teamName.toLowerCase().includes(lowerSearch);
+
+    const matchesMemberEmail = teamMembersByTeam[team.teamId]?.some((member) =>
+      member.email?.toLowerCase().includes(lowerSearch)
+    );
+
+    return matchesTeamName || matchesMemberEmail;
+  });
 
   const totalPages = Math.ceil(filteredTeams.length / itemsPerPage);
   const paginatedTeams = filteredTeams.slice(
@@ -33,7 +40,25 @@ const AdminTeamManagement = () => {
   const fetchTeams = async () => {
     try {
       const res = await axios.get("/api/teams");
-      setTeams(res.data);
+      const teamsData = res.data;
+      setTeams(teamsData);
+
+      // Fetch members for all teams
+      const membersMap = {};
+
+      await Promise.all(
+        teamsData.map(async (team) => {
+          try {
+            const res = await axios.get(`/api/user/by-team?teamId=${team.teamId}`);
+            membersMap[team.teamId] = res.data || [];
+          } catch (err) {
+            console.error(`Failed to fetch members for team ${team.teamId}:`, err);
+            membersMap[team.teamId] = [];
+          }
+        })
+      );
+
+      setTeamMembersByTeam(membersMap);
     } catch (err) {
       console.error("Error fetching teams:", err);
     } finally {
@@ -71,6 +96,7 @@ const AdminTeamManagement = () => {
     setMembersLoading(true);
     try {
       const res = await axios.get(`/api/user/by-team?teamId=${team.teamId}`);
+      console.log("Fetched team members:", res.data);
       setTeamMembers(res.data || []);
       setSelectedTeam(team);
     } catch (err) {
@@ -99,7 +125,7 @@ const AdminTeamManagement = () => {
 
         <input
           type="text"
-          placeholder="Search by name or ID..."
+          placeholder="Search by team name or member email..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="mb-4 w-full border border-gray-300 p-2 rounded-md shadow-sm"
@@ -193,13 +219,18 @@ const AdminTeamManagement = () => {
                 <p>Loading members...</p>
               ) : teamMembers.length > 0 ? (
                 <ul className="list-disc pl-5 space-y-1 text-sm text-gray-800 max-h-60 overflow-y-auto">
-                  {teamMembers.map((member, idx) => (
-                    <li key={idx}>
-                      {(member.firstName || member.lastName)
-                        ? `${member.firstName || ''} ${member.lastName || ''}`.trim() + (member.username ? ` (${member.username})` : '')
-                        : member.username || 'Unnamed Member'}
-                    </li>
-                  ))}
+                  {teamMembers.map((member, idx) => {
+                    const fullName = [member.firstName, member.lastName].filter(Boolean).join(" ").trim();
+                    const email = member.email;
+
+                    return (
+                      <li key={idx}>
+                        {fullName
+                          ? `${fullName}${email ? ` (${email})` : ""}`
+                          : email || "Unnamed Member"}
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className="text-sm text-gray-500">No members in this team.</p>
