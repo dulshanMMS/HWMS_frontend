@@ -44,7 +44,7 @@ const BookingDashboard = () => {
     try {
       const todayStr = new Date().toISOString().split("T")[0];
       
-      const response = await axios.get("http://localhost:5000/api/calendar/bookings/today", {
+      const response = await axios.get("http://localhost:6001/api/calendar/bookings/today", {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           type: type,
@@ -84,7 +84,7 @@ const BookingDashboard = () => {
     try {
       const todayStr = new Date().toISOString().split("T")[0];
       
-      const response = await axios.get("http://localhost:5000/api/calendar/bookings/recent", {
+      const response = await axios.get("http://localhost:6001/api/calendar/bookings/recent", {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           type: type,

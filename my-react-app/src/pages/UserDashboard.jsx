@@ -49,7 +49,7 @@ const UserDashboard = () => {
     try {
       setBookingStatsLoading(true);
       const response = await axios.get(
-        "http://localhost:5000/api/calendar/stats",
+        "http://localhost:6001/api/calendar/stats",
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -63,7 +63,7 @@ const UserDashboard = () => {
       // Fallback: calculate from existing data
       try {
         const allBookings = await axios.get(
-          "http://localhost:5000/api/calendar/user-view",
+          "http://localhost:6001/api/calendar/user-view",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -111,7 +111,7 @@ const UserDashboard = () => {
 
     // Fetch booking data for the user from backend API
     axios
-      .get("http://localhost:5000/api/calendar/user-view", {
+      .get("http://localhost:6001/api/calendar/user-view", {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {

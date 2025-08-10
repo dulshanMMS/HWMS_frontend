@@ -449,8 +449,7 @@ const LeftSidebar = ({ children }) => {
 
               active={isActive("/datebooking")}
 
-              active={isActive("/seat-booking")}
-
+            
             />
             <SidebarLink
               to="/user/parking-booking"
@@ -470,8 +469,7 @@ const LeftSidebar = ({ children }) => {
 
               active={isActive("/seathistory")}
 
-              active={isActive("/seat-booking")} // Note: Same path as Seat Booking, consider changing
-
+              
             />
             <SidebarLink
               to="/parkinghistory"
