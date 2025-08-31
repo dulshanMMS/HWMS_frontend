@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -13,30 +13,27 @@ const ranges = [
 ];
 
 const BookingChart = () => {
+  // Capture the "previous today date" once on mount
+  const initialTodayRef = useRef(new Date().toISOString().split("T")[0]);
+
   const [activeTab, setActiveTab] = useState("parking");
   const [activeRange, setActiveRange] = useState("today");
   const [chartData, setChartData] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
-  });
+  const [selectedDate, setSelectedDate] = useState(initialTodayRef.current);
 
-  const isToday = () => {
-    const today = new Date().toISOString().split("T")[0];
-    return selectedDate === today;
-  };
+  const isUsingInitialToday = () => selectedDate === initialTodayRef.current;
 
-  const fetchData = async (tab, range, date) => {
+  const fetchData = async (tab, range) => {
     try {
       const params = new URLSearchParams();
       params.append("type", tab);
 
-      if (!isToday()) {
-        // Use custom date, force range=custom
+      if (!isUsingInitialToday()) {
+        // custom date -> force range=custom
         params.append("range", "custom");
         params.append("date", selectedDate);
       } else {
-        // Default case (today), use range
+        // initial 'today' -> use selected range
         params.append("range", range);
       }
 
@@ -58,7 +55,8 @@ const BookingChart = () => {
   };
 
   useEffect(() => {
-    fetchData(activeTab, activeRange, selectedDate);
+    fetchData(activeTab, activeRange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, activeRange, selectedDate]);
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -72,6 +70,8 @@ const BookingChart = () => {
     }
     return null;
   };
+
+  const showActiveStyle = (key) => isUsingInitialToday() && activeRange === key;
 
   return (
     <div className="bg-white rounded-2xl shadow-lg ring-1 ring-gray-200 overflow-hidden animate-fade-in">
@@ -97,13 +97,23 @@ const BookingChart = () => {
         {ranges.map((r) => (
           <button
             key={r.key}
-            onClick={() => setActiveRange(r.key)}
-            disabled={!isToday()} // ✅ disable if custom date
-            className={`text-xs px-3 py-1 rounded-full border font-medium ${
-              activeRange === r.key
+            onClick={() => {
+              // If currently using a custom date, reset back to the original "today"
+              if (!isUsingInitialToday()) {
+                setSelectedDate(initialTodayRef.current);
+              }
+              setActiveRange(r.key);
+            }}
+            className={`text-xs px-3 py-1 rounded-full border font-medium transition-colors ${
+              showActiveStyle(r.key)
                 ? "bg-green-700 text-white shadow"
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            } ${!isToday() ? "opacity-50 cursor-not-allowed" : ""}`}
+            }`}
+            title={
+              isUsingInitialToday()
+                ? `Viewing: ${r.label}`
+                : "Custom date active — clicking a range resets to Today"
+            }
           >
             {r.label}
           </button>
@@ -121,6 +131,12 @@ const BookingChart = () => {
           onChange={(e) => setSelectedDate(e.target.value)}
           className="border rounded px-3 py-1 text-sm text-gray-700 w-full"
         />
+        {!isUsingInitialToday() && (
+          <p className="text-xs text-gray-500 mt-2">
+            Using custom date: <span className="font-medium">{selectedDate}</span>.  
+            Clicking a range resets to Today.
+          </p>
+        )}
       </div>
 
       {/* Chart Title */}
