@@ -55,11 +55,11 @@ const BookingPrediction = () => {
     const labels = floorData.map(item => `Floor ${item.floor}`);
     const counts = floorData.map(item => item.count);
     const colors = [
-      'rgba(147, 51, 234, 0.6)', // Purple-600
-      'rgba(192, 132, 252, 0.6)', // Purple-400
-      'rgba(237, 233, 254, 0.6)', // Purple-100
-      'rgba(103, 232, 249, 0.6)', // Cyan-300
-      'rgba(34, 211, 238, 0.6)', // Cyan-400
+      'rgba(34, 197, 94, 0.6)', // Green-500
+      'rgba(74, 222, 128, 0.6)', // Green-400
+      'rgba(187, 247, 208, 0.6)', // Green-100
+      'rgba(16, 185, 129, 0.6)', // Emerald-500
+      'rgba(110, 231, 183, 0.6)', // Emerald-400
     ];
 
     return {
@@ -90,7 +90,7 @@ const BookingPrediction = () => {
         },
       },
       tooltip: {
-        backgroundColor: 'rgba(107, 33, 168, 0.8)', // Purple-800
+        backgroundColor: 'rgba(21, 128, 61, 0.8)', // Green-700
         titleFont: { size: 14 },
         bodyFont: { size: 12 },
       },
@@ -99,7 +99,7 @@ const BookingPrediction = () => {
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-      <h3 className="text-3xl font-bold text-gray-900 mb-4 mt-6 ml-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 animate-bounce-cute">
+      <h3 className="text-3xl font-bold text-gray-900 mb-4 mt-6 ml-8 bg-clip-text text-transparent bg-gradient-to-r from-green-600 to-emerald-600 animate-bounce-cute">
         Booking Predictions for {dayOfWeek} (Based on {timePeriods.find(t => t.value === timePeriod)?.label})
       </h3>
       <div className="flex flex-col sm:flex-row gap-4 mb-4 animate-scale-in">
@@ -108,7 +108,7 @@ const BookingPrediction = () => {
           <select
             value={timePeriod}
             onChange={(e) => setTimePeriod(e.target.value)}
-            className="w-full border border-purple-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300 hover:bg-purple-50"
+            className="w-full border border-green-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-300 hover:bg-green-50"
           >
             {timePeriods.map(period => (
               <option key={period.value} value={period.value}>{period.label}</option>
@@ -120,7 +120,7 @@ const BookingPrediction = () => {
           <select
             value={dayOfWeek}
             onChange={(e) => setDayOfWeek(e.target.value)}
-            className="w-full border border-purple-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300 hover:bg-purple-50"
+            className="w-full border border-green-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent transition-all duration-300 hover:bg-green-50"
           >
             {daysOfWeek.map(day => (
               <option key={day} value={day}>{day}</option>
@@ -130,7 +130,7 @@ const BookingPrediction = () => {
       </div>
       {loading && (
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500 animate-pulse-cute"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500 animate-pulse-cute"></div>
         </div>
       )}
       {error && (
@@ -142,12 +142,12 @@ const BookingPrediction = () => {
       {predictions && (
         <div className="animate-fade-in">
           <h4 className="text-md font-medium text-gray-700 mb-2">
-            <span className="text-purple-600 font-bold animate-glow-cute">Predicted</span> Bookings
+            <span className="text-green-600 font-bold animate-glow-cute">Predicted</span> Bookings
           </h4>
-          <div className="bg-purple-50 rounded-lg p-4 mb-6">
+          <div className="bg-green-50 rounded-lg p-4 mb-6">
             <table className="w-full text-sm text-left text-gray-700">
               <thead>
-                <tr className="bg-purple-100 rounded-t-lg">
+                <tr className="bg-green-100 rounded-t-lg">
                   <th className="p-3 font-semibold">Type</th>
                   <th className="p-3 font-semibold text-right">Count</th>
                 </tr>
@@ -160,7 +160,7 @@ const BookingPrediction = () => {
                 ].map(({ type, count }, index) => (
                   <tr
                     key={type}
-                    className="hover:bg-purple-100 hover:scale-105 transition-all duration-300 rounded-lg"
+                    className="hover:bg-green-100 hover:scale-105 transition-all duration-300 rounded-lg"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <td className="p-3">{type}</td>
@@ -171,9 +171,9 @@ const BookingPrediction = () => {
             </table>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-            <div className="bg-purple-50 rounded-lg p-4">
+            <div className="bg-green-50 rounded-lg p-4">
               <h4 className="text-md font-medium text-gray-700 mb-2">
-                <span className="text-purple-600 font-bold animate-glow-cute">Seating</span> Bookings
+                <span className="text-green-600 font-bold animate-glow-cute">Seating</span> Bookings
               </h4>
               {predictions.predictions.seatBookingsByFloor?.length > 0 ? (
                 <div className="h-64">
@@ -186,9 +186,9 @@ const BookingPrediction = () => {
                 <p className="text-sm text-gray-500 text-center">No seating booking data available</p>
               )}
             </div>
-            <div className="bg-purple-50 rounded-lg p-4">
+            <div className="bg-green-50 rounded-lg p-4">
               <h4 className="text-md font-medium text-gray-700 mb-2">
-                <span className="text-purple-600 font-bold animate-glow-cute">Parking</span> Bookings
+                <span className="text-green-600 font-bold animate-glow-cute">Parking</span> Bookings
               </h4>
               {predictions.predictions.parkingBookingsByFloor?.length > 0 ? (
                 <div className="h-64">
@@ -249,11 +249,11 @@ const BookingPrediction = () => {
           @keyframes pulse-cute {
             0%, 100% {
               transform: scale(1);
-              border-color: rgba(168, 85, 247, 0.5);
+              border-color: rgba(34, 197, 94, 0.5);
             }
             50% {
               transform: scale(1.2);
-              border-color: rgba(168, 85, 247, 0.8);
+              border-color: rgba(34, 197, 94, 0.8);
             }
           }
           .animate-pulse-cute {
@@ -262,10 +262,10 @@ const BookingPrediction = () => {
 
           @keyframes glow-cute {
             0%, 100% {
-              text-shadow: 0 0 2px rgba(147, 51, 234, 0.5);
+              text-shadow: 0 0 2px rgba(34, 197, 94, 0.5);
             }
             50% {
-              text-shadow: 0 0 8px rgba(147, 51, 234, 0.8);
+              text-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
             }
           }
           .animate-glow-cute {
